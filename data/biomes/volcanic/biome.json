@@ -1,0 +1,19 @@
+{
+  "id": "volcanic",
+  "name": "Volcanic Wasteland",
+  "tier": 5,
+  "colors": {
+    "primary": "#3a3a3a",
+    "secondary": "#ff4500",
+    "accent": "#2a2a2a"
+  },
+  "terrain": {
+    "elevationScale": 0.035,
+    "moistureScale": 0.015,
+    "treeChance": 0.01,
+    "rockChance": 0.15,
+    "waterLevel": 0.2
+  },
+  "ambientLight": 0.5,
+  "music": "volcanic_theme"
+}

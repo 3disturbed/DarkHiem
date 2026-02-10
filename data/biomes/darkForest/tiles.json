@@ -1,0 +1,10 @@
+{
+  "baseTile": 20,
+  "tileRules": [
+    { "condition": "elevation < 0.25", "tile": 4, "solid": false },
+    { "condition": "elevation < 0.3", "tile": 1, "solid": false },
+    { "condition": "elevation < 0.65", "tile": 20, "solid": false },
+    { "condition": "elevation < 0.75", "tile": 21, "solid": false },
+    { "condition": "elevation >= 0.75", "tile": 3, "solid": false }
+  ]
+}

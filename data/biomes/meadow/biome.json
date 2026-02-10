@@ -1,0 +1,19 @@
+{
+  "id": "meadow",
+  "name": "Meadow",
+  "tier": 1,
+  "colors": {
+    "primary": "#4a7c3f",
+    "secondary": "#5da84e",
+    "accent": "#c2b280"
+  },
+  "terrain": {
+    "elevationScale": 0.02,
+    "moistureScale": 0.03,
+    "treeChance": 0.08,
+    "rockChance": 0.03,
+    "waterLevel": 0.3
+  },
+  "ambientLight": 1.0,
+  "music": "meadow_theme"
+}

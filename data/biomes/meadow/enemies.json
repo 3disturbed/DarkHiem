@@ -1,0 +1,65 @@
+{
+  "enemies": [
+    {
+      "id": "greyling",
+      "name": "Greyling",
+      "health": 20,
+      "damage": 5,
+      "speed": 60,
+      "xpReward": 5,
+      "drops": [
+        { "item": "greyling_hide", "chance": 0.5, "min": 1, "max": 1 }
+      ],
+      "minGradient": 0.0,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.03,
+      "densityAtRight": 0.06,
+      "color": "#7f8c8d",
+      "size": 20,
+      "behavior": "wander",
+      "aggroRange": 128,
+      "deaggroRange": 256
+    },
+    {
+      "id": "boar",
+      "name": "Wild Boar",
+      "health": 30,
+      "damage": 8,
+      "speed": 80,
+      "xpReward": 8,
+      "drops": [
+        { "item": "raw_meat", "chance": 0.8, "min": 1, "max": 2 },
+        { "item": "leather_scrap", "chance": 0.5, "min": 1, "max": 1 }
+      ],
+      "minGradient": 0.2,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.02,
+      "densityAtRight": 0.05,
+      "color": "#6d4c41",
+      "size": 22,
+      "behavior": "passive",
+      "aggroRange": 64,
+      "deaggroRange": 192
+    },
+    {
+      "id": "meadow_skeleton",
+      "name": "Skeleton",
+      "health": 40,
+      "damage": 10,
+      "speed": 55,
+      "xpReward": 12,
+      "drops": [
+        { "item": "bone_fragment", "chance": 0.6, "min": 1, "max": 2 }
+      ],
+      "minGradient": 0.5,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.0,
+      "densityAtRight": 0.03,
+      "color": "#ecf0f1",
+      "size": 20,
+      "behavior": "aggressive",
+      "aggroRange": 160,
+      "deaggroRange": 288
+    }
+  ]
+}

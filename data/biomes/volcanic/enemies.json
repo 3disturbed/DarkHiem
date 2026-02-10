@@ -1,0 +1,66 @@
+{
+  "enemies": [
+    {
+      "id": "surtling",
+      "name": "Surtling",
+      "health": 60,
+      "damage": 35,
+      "speed": 65,
+      "xpReward": 45,
+      "drops": [
+        { "item": "surtling_core", "chance": 0.5, "min": 1, "max": 1 },
+        { "item": "coal", "chance": 0.8, "min": 2, "max": 4 }
+      ],
+      "minGradient": 0.0,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.06,
+      "densityAtRight": 0.08,
+      "color": "#e74c3c",
+      "size": 22,
+      "behavior": "aggressive",
+      "aggroRange": 176,
+      "deaggroRange": 320
+    },
+    {
+      "id": "lava_golem",
+      "name": "Lava Golem",
+      "health": 400,
+      "damage": 60,
+      "speed": 25,
+      "xpReward": 80,
+      "drops": [
+        { "item": "flametal_ore", "chance": 0.6, "min": 1, "max": 2 },
+        { "item": "magma_crystal", "chance": 0.3, "min": 1, "max": 1 }
+      ],
+      "minGradient": 0.5,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.0,
+      "densityAtRight": 0.01,
+      "color": "#ff4500",
+      "size": 44,
+      "behavior": "patrol",
+      "aggroRange": 160,
+      "deaggroRange": 288
+    },
+    {
+      "id": "ash_wraith",
+      "name": "Ash Wraith",
+      "health": 120,
+      "damage": 40,
+      "speed": 80,
+      "xpReward": 55,
+      "drops": [
+        { "item": "ash_essence", "chance": 0.6, "min": 1, "max": 2 }
+      ],
+      "minGradient": 0.3,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.02,
+      "densityAtRight": 0.04,
+      "color": "#555555",
+      "size": 24,
+      "behavior": "aggressive",
+      "aggroRange": 208,
+      "deaggroRange": 352
+    }
+  ]
+}

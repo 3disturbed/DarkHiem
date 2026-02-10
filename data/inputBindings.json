@@ -1,0 +1,62 @@
+{
+  "keyboard": {
+    "moveUp": ["KeyW", "ArrowUp"],
+    "moveDown": ["KeyS", "ArrowDown"],
+    "moveLeft": ["KeyA", "ArrowLeft"],
+    "moveRight": ["KeyD", "ArrowRight"],
+    "action": ["Space", "KeyF"],
+    "interact": ["KeyE"],
+    "cancel": ["Escape"],
+    "inventory": ["KeyI"],
+    "craft": ["KeyC"],
+    "map": ["KeyM"],
+    "menu": ["Escape"],
+    "chat": ["Enter"],
+    "hotbar1": ["Digit1"],
+    "hotbar2": ["Digit2"],
+    "hotbar3": ["Digit3"],
+    "hotbar4": ["Digit4"],
+    "hotbar5": ["Digit5"]
+  },
+  "gamepad": {
+    "buttons": {
+      "0": "action",
+      "1": "cancel",
+      "2": "interact",
+      "3": "menu",
+      "4": "prevTool",
+      "5": "nextTool",
+      "6": "inventory",
+      "7": "map",
+      "12": "dpadUp",
+      "13": "dpadDown",
+      "14": "dpadLeft",
+      "15": "dpadRight"
+    },
+    "axes": {
+      "0": "moveX",
+      "1": "moveY",
+      "2": "aimX",
+      "3": "aimY"
+    },
+    "deadzone": 0.15
+  },
+  "touch": {
+    "leftStick": {
+      "radius": 60,
+      "baseRadius": 30,
+      "opacity": 0.4
+    },
+    "rightStick": {
+      "radius": 60,
+      "baseRadius": 30,
+      "opacity": 0.4
+    },
+    "buttons": [
+      { "id": "action", "label": "A", "radius": 28 },
+      { "id": "interact", "label": "E", "radius": 28 },
+      { "id": "cancel", "label": "B", "radius": 24 },
+      { "id": "inventory", "label": "I", "radius": 24 }
+    ]
+  }
+}

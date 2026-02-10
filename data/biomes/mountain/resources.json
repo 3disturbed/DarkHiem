@@ -1,0 +1,64 @@
+{
+  "resources": [
+    {
+      "id": "silver_vein",
+      "name": "Silver Vein",
+      "tool": "pickaxe",
+      "toolTier": 3,
+      "drops": [{ "item": "silver_ore", "min": 2, "max": 4 }, { "item": "raw_gem_perfect", "chance": 0.15, "min": 1, "max": 1 }],
+      "health": 120,
+      "respawnTime": 900,
+      "minGradient": 0.2,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.02,
+      "densityAtRight": 0.05,
+      "color": "#c0c0c0",
+      "size": 28
+    },
+    {
+      "id": "obsidian_node",
+      "name": "Obsidian Node",
+      "tool": "pickaxe",
+      "toolTier": 3,
+      "drops": [{ "item": "obsidian", "min": 2, "max": 5 }],
+      "health": 100,
+      "respawnTime": 800,
+      "minGradient": 0.4,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.01,
+      "densityAtRight": 0.04,
+      "color": "#1a1a2e",
+      "size": 24
+    },
+    {
+      "id": "frost_pine",
+      "name": "Frost Pine",
+      "tool": "axe",
+      "toolTier": 3,
+      "drops": [{ "item": "frost_wood", "min": 2, "max": 3 }],
+      "health": 90,
+      "respawnTime": 600,
+      "minGradient": 0.0,
+      "maxGradient": 0.8,
+      "densityAtLeft": 0.06,
+      "densityAtRight": 0.02,
+      "color": "#4a6a7a",
+      "size": 34
+    },
+    {
+      "id": "dragon_egg",
+      "name": "Dragon Egg",
+      "tool": "pickaxe",
+      "toolTier": 3,
+      "drops": [{ "item": "dragon_egg", "min": 1, "max": 1 }],
+      "health": 200,
+      "respawnTime": 3600,
+      "minGradient": 0.8,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.0,
+      "densityAtRight": 0.005,
+      "color": "#9b59b6",
+      "size": 20
+    }
+  ]
+}

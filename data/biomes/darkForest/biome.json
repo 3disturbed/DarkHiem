@@ -1,0 +1,19 @@
+{
+  "id": "darkForest",
+  "name": "Dark Forest",
+  "tier": 2,
+  "colors": {
+    "primary": "#2d5a1e",
+    "secondary": "#1a3d0c",
+    "accent": "#3d2e1e"
+  },
+  "terrain": {
+    "elevationScale": 0.025,
+    "moistureScale": 0.035,
+    "treeChance": 0.25,
+    "rockChance": 0.05,
+    "waterLevel": 0.25
+  },
+  "ambientLight": 0.6,
+  "music": "dark_forest_theme"
+}

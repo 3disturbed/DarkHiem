@@ -1,0 +1,19 @@
+{
+  "id": "mountain",
+  "name": "Mountain",
+  "tier": 4,
+  "colors": {
+    "primary": "#a0a0a0",
+    "secondary": "#f0f0f0",
+    "accent": "#555555"
+  },
+  "terrain": {
+    "elevationScale": 0.04,
+    "moistureScale": 0.02,
+    "treeChance": 0.03,
+    "rockChance": 0.12,
+    "waterLevel": 0.15
+  },
+  "ambientLight": 0.8,
+  "music": "mountain_theme"
+}

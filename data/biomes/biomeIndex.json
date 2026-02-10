@@ -1,0 +1,57 @@
+{
+  "biomes": [
+    {
+      "id": "meadow",
+      "name": "Meadow",
+      "tier": 1,
+      "startChunkX": -10,
+      "endChunkX": 30,
+      "startChunkY": -50,
+      "endChunkY": 50,
+      "gradientCurve": "linear"
+    },
+    {
+      "id": "darkForest",
+      "name": "Dark Forest",
+      "tier": 2,
+      "startChunkX": 30,
+      "endChunkX": 70,
+      "startChunkY": -50,
+      "endChunkY": 50,
+      "gradientCurve": "ease-in"
+    },
+    {
+      "id": "swamp",
+      "name": "Swamp",
+      "tier": 3,
+      "startChunkX": 70,
+      "endChunkX": 110,
+      "startChunkY": -50,
+      "endChunkY": 50,
+      "gradientCurve": "ease-in-out"
+    },
+    {
+      "id": "mountain",
+      "name": "Mountain",
+      "tier": 4,
+      "startChunkX": 110,
+      "endChunkX": 150,
+      "startChunkY": -50,
+      "endChunkY": 50,
+      "gradientCurve": "ease-in"
+    },
+    {
+      "id": "volcanic",
+      "name": "Volcanic Wasteland",
+      "tier": 5,
+      "startChunkX": 150,
+      "endChunkX": 190,
+      "startChunkY": -50,
+      "endChunkY": 50,
+      "gradientCurve": "ease-in-out"
+    }
+  ],
+  "townChunkX": 0,
+  "townChunkY": 0,
+  "townRadius": 5
+}

@@ -1,0 +1,64 @@
+{
+  "resources": [
+    {
+      "id": "wood_pine",
+      "name": "Pine Tree",
+      "tool": "axe",
+      "toolTier": 1,
+      "drops": [{ "item": "fine_wood", "min": 2, "max": 4 }, { "item": "resin", "min": 1, "max": 2 }],
+      "health": 60,
+      "respawnTime": 400,
+      "minGradient": 0.0,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.15,
+      "densityAtRight": 0.08,
+      "color": "#2e4a1a",
+      "size": 36
+    },
+    {
+      "id": "tin_node",
+      "name": "Tin Deposit",
+      "tool": "pickaxe",
+      "toolTier": 0,
+      "drops": [{ "item": "tin_ore", "min": 1, "max": 3 }, { "item": "raw_gem_flawed", "chance": 0.10, "min": 1, "max": 1 }],
+      "health": 60,
+      "respawnTime": 600,
+      "minGradient": 0.1,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.04,
+      "densityAtRight": 0.06,
+      "color": "#8ca0a8",
+      "size": 24
+    },
+    {
+      "id": "mushroom_cluster",
+      "name": "Mushroom Cluster",
+      "tool": "none",
+      "toolTier": 0,
+      "drops": [{ "item": "mushroom", "min": 1, "max": 3 }],
+      "health": 1,
+      "respawnTime": 120,
+      "minGradient": 0.0,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.1,
+      "densityAtRight": 0.05,
+      "color": "#d4a574",
+      "size": 12
+    },
+    {
+      "id": "thistle",
+      "name": "Thistle",
+      "tool": "none",
+      "toolTier": 0,
+      "drops": [{ "item": "thistle", "min": 1, "max": 1 }],
+      "health": 1,
+      "respawnTime": 200,
+      "minGradient": 0.3,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.02,
+      "densityAtRight": 0.04,
+      "color": "#9b59b6",
+      "size": 10
+    }
+  ]
+}

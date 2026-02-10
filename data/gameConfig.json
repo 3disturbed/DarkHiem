@@ -1,0 +1,18 @@
+{
+  "server": {
+    "port": 3000,
+    "tickRate": 20,
+    "maxPlayers": 32
+  },
+  "world": {
+    "seed": 42,
+    "tileSize": 32,
+    "chunkSize": 16,
+    "viewDistance": 3
+  },
+  "player": {
+    "moveSpeed": 160,
+    "spawnX": 512,
+    "spawnY": 512
+  }
+}

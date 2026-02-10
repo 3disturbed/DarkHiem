@@ -1,0 +1,64 @@
+{
+  "resources": [
+    {
+      "id": "flametal_node",
+      "name": "Flametal Deposit",
+      "tool": "pickaxe",
+      "toolTier": 4,
+      "drops": [{ "item": "flametal_ore", "min": 1, "max": 3 }, { "item": "raw_gem_pristine", "chance": 0.18, "min": 1, "max": 1 }],
+      "health": 180,
+      "respawnTime": 1200,
+      "minGradient": 0.3,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.01,
+      "densityAtRight": 0.04,
+      "color": "#ff6347",
+      "size": 28
+    },
+    {
+      "id": "obsidian_large",
+      "name": "Obsidian Formation",
+      "tool": "pickaxe",
+      "toolTier": 4,
+      "drops": [{ "item": "obsidian", "min": 3, "max": 6 }],
+      "health": 150,
+      "respawnTime": 900,
+      "minGradient": 0.0,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.04,
+      "densityAtRight": 0.02,
+      "color": "#1a1a2e",
+      "size": 32
+    },
+    {
+      "id": "surtling_core_node",
+      "name": "Surtling Core",
+      "tool": "pickaxe",
+      "toolTier": 3,
+      "drops": [{ "item": "surtling_core", "min": 1, "max": 2 }],
+      "health": 60,
+      "respawnTime": 800,
+      "minGradient": 0.1,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.02,
+      "densityAtRight": 0.03,
+      "color": "#e74c3c",
+      "size": 20
+    },
+    {
+      "id": "charred_bone_pile",
+      "name": "Charred Bones",
+      "tool": "none",
+      "toolTier": 0,
+      "drops": [{ "item": "charred_bone", "min": 2, "max": 4 }],
+      "health": 30,
+      "respawnTime": 600,
+      "minGradient": 0.0,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.03,
+      "densityAtRight": 0.05,
+      "color": "#444444",
+      "size": 18
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "resources": [
+    {
+      "id": "ancient_tree",
+      "name": "Ancient Tree",
+      "tool": "axe",
+      "toolTier": 2,
+      "drops": [{ "item": "ancient_bark", "min": 2, "max": 4 }, { "item": "fine_wood", "min": 1, "max": 2 }],
+      "health": 80,
+      "respawnTime": 500,
+      "minGradient": 0.0,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.08,
+      "densityAtRight": 0.04,
+      "color": "#3d2e1e",
+      "size": 40
+    },
+    {
+      "id": "iron_deposit",
+      "name": "Iron Scrap Pile",
+      "tool": "pickaxe",
+      "toolTier": 2,
+      "drops": [{ "item": "iron_scrap", "min": 2, "max": 4 }, { "item": "raw_gem_clear", "chance": 0.12, "min": 1, "max": 1 }],
+      "health": 80,
+      "respawnTime": 700,
+      "minGradient": 0.2,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.03,
+      "densityAtRight": 0.06,
+      "color": "#8b4513",
+      "size": 28
+    },
+    {
+      "id": "guck_sac",
+      "name": "Guck Sac",
+      "tool": "none",
+      "toolTier": 0,
+      "drops": [{ "item": "guck", "min": 1, "max": 2 }],
+      "health": 20,
+      "respawnTime": 400,
+      "minGradient": 0.3,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.01,
+      "densityAtRight": 0.04,
+      "color": "#27ae60",
+      "size": 16
+    },
+    {
+      "id": "bloodbag",
+      "name": "Bloodbag Plant",
+      "tool": "none",
+      "toolTier": 0,
+      "drops": [{ "item": "bloodbag", "min": 1, "max": 1 }],
+      "health": 1,
+      "respawnTime": 300,
+      "minGradient": 0.1,
+      "maxGradient": 0.9,
+      "densityAtLeft": 0.03,
+      "densityAtRight": 0.03,
+      "color": "#c0392b",
+      "size": 12
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "swamp",
+  "name": "Swamp",
+  "tier": 3,
+  "colors": {
+    "primary": "#3b5323",
+    "secondary": "#5c4033",
+    "accent": "#4a6741"
+  },
+  "terrain": {
+    "elevationScale": 0.015,
+    "moistureScale": 0.04,
+    "treeChance": 0.12,
+    "rockChance": 0.04,
+    "waterLevel": 0.45
+  },
+  "ambientLight": 0.45,
+  "music": "swamp_theme"
+}

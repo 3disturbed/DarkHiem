@@ -1,0 +1,67 @@
+{
+  "enemies": [
+    {
+      "id": "greydwarf",
+      "name": "Greydwarf",
+      "health": 40,
+      "damage": 12,
+      "speed": 65,
+      "xpReward": 15,
+      "drops": [
+        { "item": "greydwarf_eye", "chance": 0.4, "min": 1, "max": 1 },
+        { "item": "resin", "chance": 0.5, "min": 1, "max": 2 },
+        { "item": "stone", "chance": 0.3, "min": 1, "max": 2 }
+      ],
+      "minGradient": 0.0,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.05,
+      "densityAtRight": 0.08,
+      "color": "#556b2f",
+      "size": 22,
+      "behavior": "aggressive",
+      "aggroRange": 144,
+      "deaggroRange": 256
+    },
+    {
+      "id": "troll",
+      "name": "Forest Troll",
+      "health": 150,
+      "damage": 30,
+      "speed": 45,
+      "xpReward": 40,
+      "drops": [
+        { "item": "troll_hide", "chance": 0.8, "min": 2, "max": 4 },
+        { "item": "troll_bone", "chance": 0.3, "min": 1, "max": 1 }
+      ],
+      "minGradient": 0.4,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.0,
+      "densityAtRight": 0.015,
+      "color": "#2980b9",
+      "size": 36,
+      "behavior": "patrol",
+      "aggroRange": 192,
+      "deaggroRange": 320
+    },
+    {
+      "id": "forest_ghost",
+      "name": "Ghost",
+      "health": 25,
+      "damage": 18,
+      "speed": 50,
+      "xpReward": 20,
+      "drops": [
+        { "item": "ectoplasm", "chance": 0.6, "min": 1, "max": 1 }
+      ],
+      "minGradient": 0.6,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.0,
+      "densityAtRight": 0.025,
+      "color": "#bdc3c7",
+      "size": 20,
+      "behavior": "aggressive",
+      "aggroRange": 176,
+      "deaggroRange": 320
+    }
+  ]
+}
