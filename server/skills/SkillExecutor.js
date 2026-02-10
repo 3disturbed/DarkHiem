@@ -1,0 +1,271 @@
+import { SKILL, SKILL_DB } from '../../shared/SkillTypes.js';
+import PositionComponent from '../ecs/components/PositionComponent.js';
+import HealthComponent from '../ecs/components/HealthComponent.js';
+import CombatComponent from '../ecs/components/CombatComponent.js';
+import StatusEffectComponent from '../ecs/components/StatusEffectComponent.js';
+import SkillComponent from '../ecs/components/SkillComponent.js';
+import StatsComponent from '../ecs/components/StatsComponent.js';
+import PlayerComponent from '../ecs/components/PlayerComponent.js';
+import HitDetector from '../combat/HitDetector.js';
+
+export default class SkillExecutor {
+  constructor(combatResolver) {
+    this.combatResolver = combatResolver;
+  }
+
+  execute(entity, skillId, entityManager) {
+    const skills = entity.getComponent(SkillComponent);
+    if (!skills || !skills.hasSkill(skillId)) {
+      return { success: false, message: 'Skill not learned' };
+    }
+    if (!skills.canUseSkill(skillId)) {
+      return { success: false, message: 'Not ready' };
+    }
+
+    const def = SKILL_DB[skillId];
+    if (!def) return { success: false, message: 'Unknown skill' };
+
+    let result;
+    switch (skillId) {
+      case SKILL.POWER_STRIKE:
+        result = this.executePowerStrike(entity, def);
+        break;
+      case SKILL.HEAL:
+        result = this.executeHeal(entity, def);
+        break;
+      case SKILL.DASH:
+        result = this.executeDash(entity, def);
+        break;
+      case SKILL.CLEAVE:
+        result = this.executeCleave(entity, def, entityManager);
+        break;
+      case SKILL.WAR_CRY:
+        result = this.executeBuff(entity, def, 'skill_war_cry');
+        break;
+      case SKILL.IRON_SKIN:
+        result = this.executeBuff(entity, def, 'skill_iron_skin');
+        break;
+      case SKILL.WHIRLWIND:
+        result = this.executeWhirlwind(entity, def, entityManager);
+        break;
+      case SKILL.EXECUTE:
+        result = this.executeExecute(entity, def, entityManager);
+        break;
+      case SKILL.REGENERATION:
+        result = this.executeRegeneration(entity, def);
+        break;
+      case SKILL.BERSERKER_RAGE:
+        result = this.executeBuff(entity, def, 'skill_berserker_rage');
+        break;
+      default:
+        return { success: false, message: 'Unknown skill' };
+    }
+
+    if (result.success) {
+      skills.startCooldown(skillId);
+    }
+    return result;
+  }
+
+  getScaleMult(entity, def) {
+    if (!def.scaleStat || !def.scaleBase) return 1.0;
+    const stats = entity.getComponent(StatsComponent);
+    if (!stats) return def.scaleBase;
+    const total = stats.getTotal(def.scaleStat);
+    return def.scaleBase + (total - 5) * (def.scalePerPoint || 0);
+  }
+
+  executePowerStrike(entity, def) {
+    const se = entity.getComponent(StatusEffectComponent);
+    const skills = entity.getComponent(SkillComponent);
+    if (!se) return { success: false, message: 'No status effects' };
+
+    const mult = this.getScaleMult(entity, def);
+    se.addEffect({
+      type: 'skill_power_strike',
+      duration: def.duration,
+      damageMod: mult,
+    });
+    skills.powerStrikeActive = true;
+
+    return { success: true, skillId: def.id, type: 'buff', name: 'Power Strike' };
+  }
+
+  executeHeal(entity, def) {
+    const health = entity.getComponent(HealthComponent);
+    if (!health || !health.isAlive()) return { success: false, message: 'Cannot heal' };
+
+    const mult = this.getScaleMult(entity, def);
+    const healAmount = Math.round(health.max * mult);
+    const actual = health.heal(healAmount);
+
+    return { success: true, skillId: def.id, type: 'heal', amount: actual };
+  }
+
+  executeDash(entity, def) {
+    const pos = entity.getComponent(PositionComponent);
+    const health = entity.getComponent(HealthComponent);
+    const se = entity.getComponent(StatusEffectComponent);
+    if (!pos || !health) return { success: false, message: 'Cannot dash' };
+
+    // Use player facing direction
+    const pc = entity.getComponent(PlayerComponent);
+    let dx = 0, dy = 0;
+    if (pc) {
+      switch (pc.facing) {
+        case 'up': dy = -1; break;
+        case 'down': dy = 1; break;
+        case 'left': dx = -1; break;
+        case 'right': dx = 1; break;
+      }
+    }
+    // Default to down if no facing
+    if (dx === 0 && dy === 0) dy = 1;
+
+    pos.x += dx * def.distance;
+    pos.y += dy * def.distance;
+
+    // Brief invulnerability
+    if (se) {
+      se.addEffect({
+        type: 'skill_dash_invuln',
+        duration: def.invulnDuration,
+      });
+    }
+    health.invulnerable = true;
+
+    return {
+      success: true, skillId: def.id, type: 'dash',
+      x: pos.x, y: pos.y,
+    };
+  }
+
+  executeCleave(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    const combat = entity.getComponent(CombatComponent);
+    if (!pos || !combat) return { success: false, message: 'Cannot cleave' };
+
+    const range = def.range || combat.range;
+    const targets = HitDetector.queryArea(
+      entityManager, pos.x, pos.y, range, entity.id, 'enemy'
+    );
+
+    if (targets.length === 0) {
+      return { success: true, skillId: def.id, type: 'aoe', hits: 0 };
+    }
+
+    const mult = this.getScaleMult(entity, def);
+    const baseDamage = Math.round(combat.damage * mult);
+    let totalHits = 0;
+
+    for (const target of targets) {
+      this.combatResolver.applyDamage(entity, target, baseDamage);
+      totalHits++;
+    }
+
+    return { success: true, skillId: def.id, type: 'aoe', hits: totalHits };
+  }
+
+  executeBuff(entity, def, effectType) {
+    const se = entity.getComponent(StatusEffectComponent);
+    if (!se) return { success: false, message: 'No status effects' };
+
+    const effect = {
+      type: effectType,
+      duration: def.duration,
+    };
+
+    if (def.effects) {
+      if (def.effects.damageMod != null) effect.damageMod = def.effects.damageMod;
+      if (def.effects.armorFlat != null) effect.armorFlat = def.effects.armorFlat;
+      if (def.effects.attackSpeedMod != null) effect.attackSpeedMod = def.effects.attackSpeedMod;
+      if (def.effects.armorMod != null) effect.armorMod = def.effects.armorMod;
+    }
+
+    se.addEffect(effect);
+    return { success: true, skillId: def.id, type: 'buff', name: def.name };
+  }
+
+  executeWhirlwind(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    const combat = entity.getComponent(CombatComponent);
+    if (!pos || !combat) return { success: false, message: 'Cannot whirlwind' };
+
+    const range = def.range || 64;
+    const targets = HitDetector.queryArea(
+      entityManager, pos.x, pos.y, range, entity.id, 'enemy'
+    );
+
+    if (targets.length === 0) {
+      return { success: true, skillId: def.id, type: 'aoe', hits: 0 };
+    }
+
+    const mult = this.getScaleMult(entity, def);
+    const hitDamage = Math.round(combat.damage * mult);
+    const hitCount = def.hits || 3;
+    let totalHits = 0;
+
+    for (const target of targets) {
+      const health = target.getComponent(HealthComponent);
+      for (let i = 0; i < hitCount; i++) {
+        if (health && health.isAlive()) {
+          this.combatResolver.applyDamage(entity, target, hitDamage);
+          totalHits++;
+        }
+      }
+    }
+
+    return { success: true, skillId: def.id, type: 'aoe', hits: totalHits };
+  }
+
+  executeExecute(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    const combat = entity.getComponent(CombatComponent);
+    if (!pos || !combat) return { success: false, message: 'Cannot execute' };
+
+    const range = combat.range;
+    const target = HitDetector.findNearest(
+      entityManager, pos.x, pos.y, range, entity.id, 'enemy'
+    );
+
+    if (!target) {
+      return { success: false, message: 'No target in range' };
+    }
+
+    const targetHealth = target.getComponent(HealthComponent);
+    if (!targetHealth || !targetHealth.isAlive()) {
+      return { success: false, message: 'No target in range' };
+    }
+
+    const hpPercent = targetHealth.current / targetHealth.max;
+    const mult = this.getScaleMult(entity, def);
+    const isExecute = hpPercent <= (def.executeThreshold || 0.3);
+    const finalMult = isExecute ? (def.executeMult || 3.0) : mult;
+    const baseDamage = Math.round(combat.damage * finalMult);
+
+    this.combatResolver.applyDamage(entity, target, baseDamage);
+
+    return {
+      success: true, skillId: def.id, type: 'execute',
+      isExecute, hits: 1,
+    };
+  }
+
+  executeRegeneration(entity, def) {
+    const se = entity.getComponent(StatusEffectComponent);
+    const health = entity.getComponent(HealthComponent);
+    if (!se || !health) return { success: false, message: 'Cannot regenerate' };
+
+    const mult = this.getScaleMult(entity, def);
+    // Negative tickDamage = healing per tick
+    const healPerSec = health.max * mult;
+
+    se.addEffect({
+      type: 'skill_regeneration',
+      duration: def.duration,
+      tickDamage: -healPerSec,
+    });
+
+    return { success: true, skillId: def.id, type: 'buff', name: 'Regeneration' };
+  }
+}
