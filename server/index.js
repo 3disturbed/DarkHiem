@@ -29,7 +29,7 @@ app.get('/', (req, res) => {
 const gameServer = new GameServer(io);
 const socketManager = new SocketManager(io, gameServer);
 
-const PORT = process.env.PORT || 3550;
+const PORT = process.env.PORT || 3000;
 
 async function boot() {
   await gameServer.init();
