@@ -15,6 +15,7 @@ export default class InventoryPanel {
     this.visible = false;
     this.selectedSlot = -1;
     this.hoveredSlot = -1;
+    this.swapSource = -1; // slot index when in swap mode, -1 otherwise
     this.mouseX = 0;
     this.mouseY = 0;
     this.x = 0;
@@ -25,7 +26,11 @@ export default class InventoryPanel {
 
   toggle() {
     this.visible = !this.visible;
-    if (!this.visible) this.selectedSlot = -1;
+    if (!this.visible) { this.selectedSlot = -1; this.swapSource = -1; }
+  }
+
+  cancelSwap() {
+    this.swapSource = -1;
   }
 
   position(canvasWidth, canvasHeight) {
@@ -33,10 +38,21 @@ export default class InventoryPanel {
     this.y = canvasHeight / 2 - this.height / 2 + 40;
   }
 
-  handleClick(mx, my, inventory, onEquip, onUse, onDrop) {
+  handleClick(mx, my, inventory, onEquip, onUse, onDrop, onSwap) {
     if (!this.visible) return false;
     if (mx < this.x || mx > this.x + this.width) return false;
     if (my < this.y || my > this.y + this.height) return false;
+
+    // In swap mode: clicking any slot completes the swap
+    if (this.swapSource >= 0) {
+      const slotIndex = this.getSlotAt(mx, my);
+      if (slotIndex >= 0 && slotIndex !== this.swapSource) {
+        if (onSwap) onSwap(this.swapSource, slotIndex);
+        this.selectedSlot = slotIndex;
+      }
+      this.swapSource = -1;
+      return true;
+    }
 
     // Check action buttons first
     const action = this._getActionAt(mx, my, inventory);
@@ -51,6 +67,8 @@ export default class InventoryPanel {
           if (onDrop) onDrop(this.selectedSlot, 1);
         } else if (action === 'dropAll') {
           if (onDrop) onDrop(this.selectedSlot, slot.count);
+        } else if (action === 'swap') {
+          this.swapSource = this.selectedSlot;
         }
       }
       return true;
@@ -143,34 +161,32 @@ export default class InventoryPanel {
     if (!slot) return null;
 
     const actionY = this.y + this.height - ACTION_BAR_H + 4;
-    const itemDef = ITEM_DB[slot.itemId];
-    const hasPrimary = itemDef && (itemDef.type === 'equipment' || itemDef.type === 'consumable');
-    const isStackable = slot.count > 1;
-    const btnCount = (hasPrimary ? 1 : 0) + 1 + (isStackable ? 1 : 0);
-    const totalW = btnCount * BTN_W + (btnCount - 1) * BTN_GAP;
+    const btns = this._getButtons(slot);
+    const totalW = btns.length * BTN_W + (btns.length - 1) * BTN_GAP;
     const startBtnX = this.x + (this.width - totalW) / 2;
 
-    let idx = 0;
-    if (hasPrimary) {
-      if (mx >= startBtnX && mx < startBtnX + BTN_W && my >= actionY && my < actionY + BTN_H) {
-        return 'primary';
-      }
-      idx++;
-    }
-
-    const dropX = startBtnX + idx * (BTN_W + BTN_GAP);
-    if (mx >= dropX && mx < dropX + BTN_W && my >= actionY && my < actionY + BTN_H) {
-      return 'drop';
-    }
-    idx++;
-
-    if (isStackable) {
-      const dropAllX = startBtnX + idx * (BTN_W + BTN_GAP);
-      if (mx >= dropAllX && mx < dropAllX + BTN_W && my >= actionY && my < actionY + BTN_H) {
-        return 'dropAll';
+    for (let i = 0; i < btns.length; i++) {
+      const bx = startBtnX + i * (BTN_W + BTN_GAP);
+      if (mx >= bx && mx < bx + BTN_W && my >= actionY && my < actionY + BTN_H) {
+        return btns[i].action;
       }
     }
     return null;
+  }
+
+  _getButtons(slot) {
+    const itemDef = ITEM_DB[slot.itemId];
+    const btns = [];
+    if (itemDef && (itemDef.type === 'equipment' || itemDef.type === 'consumable')) {
+      const label = itemDef.type === 'equipment' ? 'Equip' : 'Use';
+      btns.push({ action: 'primary', label, bg: '#2a6e3a', border: '#3a8' });
+    }
+    btns.push({ action: 'swap', label: 'Swap', bg: '#2a4a6e', border: '#58a' });
+    btns.push({ action: 'drop', label: 'Drop 1', bg: '#6e2a2a', border: '#a55' });
+    if (slot.count > 1) {
+      btns.push({ action: 'dropAll', label: 'Drop All', bg: '#6e2a4a', border: '#a5a' });
+    }
+    return btns;
   }
 
   handleMouseMove(mx, my) {
@@ -207,12 +223,13 @@ export default class InventoryPanel {
         const sy = startY + row * (SLOT_SIZE + SLOT_PAD);
 
         // Slot background
+        const isSwapSrc = index === this.swapSource;
         const isSelected = index === this.selectedSlot;
         const isHovered = index === this.hoveredSlot;
-        ctx.fillStyle = isSelected ? '#3a3a4a' : isHovered ? '#333344' : '#2a2a3a';
+        ctx.fillStyle = isSwapSrc ? '#4a3a1a' : isSelected ? '#3a3a4a' : isHovered ? '#333344' : '#2a2a3a';
         ctx.fillRect(sx, sy, SLOT_SIZE, SLOT_SIZE);
-        ctx.strokeStyle = isSelected ? '#88f' : isHovered ? '#668' : '#444';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = isSwapSrc ? '#fa0' : isSelected ? '#88f' : isHovered ? '#668' : '#444';
+        ctx.lineWidth = isSwapSrc ? 2 : 1;
         ctx.strokeRect(sx, sy, SLOT_SIZE, SLOT_SIZE);
 
         const slot = inventory.getSlot(index);
@@ -315,32 +332,29 @@ export default class InventoryPanel {
   }
 
   _renderActionBar(ctx, inventory) {
+    if (this.swapSource >= 0) {
+      // Swap mode indicator
+      const actionY = this.y + this.height - ACTION_BAR_H + 4;
+      ctx.fillStyle = '#ff0';
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('Click a slot to swap', this.x + this.width / 2, actionY + BTN_H / 2 + 3);
+      return;
+    }
+
     if (this.selectedSlot < 0) return;
     const slot = inventory.getSlot(this.selectedSlot);
     if (!slot) return;
 
-    const itemDef = ITEM_DB[slot.itemId];
+    const btns = this._getButtons(slot);
     const actionY = this.y + this.height - ACTION_BAR_H + 4;
-    const hasPrimary = itemDef && (itemDef.type === 'equipment' || itemDef.type === 'consumable');
-    const isStackable = slot.count > 1;
-    const btnCount = (hasPrimary ? 1 : 0) + 1 + (isStackable ? 1 : 0);
-    const totalW = btnCount * BTN_W + (btnCount - 1) * BTN_GAP;
+    const totalW = btns.length * BTN_W + (btns.length - 1) * BTN_GAP;
     const startBtnX = this.x + (this.width - totalW) / 2;
 
-    let idx = 0;
-    if (hasPrimary) {
-      const label = itemDef.type === 'equipment' ? 'Equip' : 'Use';
-      this._renderBtn(ctx, startBtnX, actionY, BTN_W, BTN_H, label, '#2a6e3a', '#3a8');
-      idx++;
-    }
-
-    const dropX = startBtnX + idx * (BTN_W + BTN_GAP);
-    this._renderBtn(ctx, dropX, actionY, BTN_W, BTN_H, 'Drop 1', '#6e2a2a', '#a55');
-    idx++;
-
-    if (isStackable) {
-      const dropAllX = startBtnX + idx * (BTN_W + BTN_GAP);
-      this._renderBtn(ctx, dropAllX, actionY, BTN_W, BTN_H, 'Drop All', '#6e2a4a', '#a5a');
+    for (let i = 0; i < btns.length; i++) {
+      const b = btns[i];
+      const bx = startBtnX + i * (BTN_W + BTN_GAP);
+      this._renderBtn(ctx, bx, actionY, BTN_W, BTN_H, b.label, b.bg, b.border);
     }
   }
 

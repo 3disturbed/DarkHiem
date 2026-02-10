@@ -475,6 +475,8 @@ export default class Game {
       } else if (this.craftingOpen) {
         this.craftingPanel.close();
         this.craftingOpen = false;
+      } else if (this.panelsOpen && this.inventoryPanel.swapSource >= 0) {
+        this.inventoryPanel.cancelSwap();
       } else if (this.panelsOpen) {
         this.panelsOpen = false;
         this.inventoryPanel.visible = false;
@@ -652,7 +654,8 @@ export default class Game {
       } else {
         const mx = actions.mouseScreenX;
         const my = actions.mouseScreenY;
-        this.inventoryPanel.handleClick(mx, my, this.inventory, onEquip, onUse, onDrop);
+        const onSwap = (from, to) => this.network.sendItemMove(from, to);
+        this.inventoryPanel.handleClick(mx, my, this.inventory, onEquip, onUse, onDrop, onSwap);
         this.equipmentPanel.handleClick(mx, my, this.equipment, (slotName) => {
           this.network.sendUnequip(slotName);
         });

@@ -1,8 +1,13 @@
 import Game from './Game.js';
+import tileSprites from './world/TileSprites.js';
 
 const canvas = document.getElementById('game');
-const game = new Game(canvas);
-game.start();
+
+// Load tile sprites, then start the game
+tileSprites.load().then(() => {
+  const game = new Game(canvas);
+  game.start();
+});
 
 // Fullscreen button for mobile - only show on touch devices when not fullscreen
 const fsBtn = document.getElementById('fullscreen-btn');

@@ -1,5 +1,6 @@
 import { CHUNK_SIZE, TILE_SIZE } from '../../shared/Constants.js';
 import { TILE_COLORS, SOLID_TILES, TILE } from '../../shared/TileTypes.js';
+import tileSprites from './TileSprites.js';
 
 const WATER_TILES = new Set([TILE.WATER, TILE.DEEP_WATER, TILE.LAVA, TILE.MARSH_WATER]);
 
@@ -62,14 +63,18 @@ export default class ClientChunk {
     for (let ty = 0; ty < CHUNK_SIZE; ty++) {
       for (let tx = 0; tx < CHUNK_SIZE; tx++) {
         const tileId = this.tiles[ty * CHUNK_SIZE + tx];
-        const color = TILE_COLORS[tileId] || '#ff00ff';
         const px = tx * TILE_SIZE;
         const py = ty * TILE_SIZE;
 
-        ctx.fillStyle = color;
-        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+        const sprite = tileSprites.get(tileId);
+        if (sprite) {
+          ctx.drawImage(sprite, px, py, TILE_SIZE, TILE_SIZE);
+        } else {
+          ctx.fillStyle = TILE_COLORS[tileId] || '#ff00ff';
+          ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+        }
 
-        // Water tile wave pattern
+        // Water tile wave pattern (layered on top of sprite)
         if (WATER_TILES.has(tileId)) {
           this.renderWaterTile(ctx, px, py, tileId, tx, ty);
         }
