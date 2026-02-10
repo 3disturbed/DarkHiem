@@ -20,6 +20,7 @@ const io = new Server(httpServer, {
 app.use('/client', express.static(join(ROOT, 'client')));
 app.use('/shared', express.static(join(ROOT, 'shared')));
 app.use('/data', express.static(join(ROOT, 'data')));
+app.use('/tileArt', express.static(join(ROOT, 'tileArt')));
 
 app.get('/', (req, res) => {
   res.sendFile(join(ROOT, 'client', 'index.html'));
@@ -29,7 +30,7 @@ app.get('/', (req, res) => {
 const gameServer = new GameServer(io);
 const socketManager = new SocketManager(io, gameServer);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3550;
 
 async function boot() {
   await gameServer.init();
