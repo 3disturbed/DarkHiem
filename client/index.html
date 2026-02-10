@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+  <title>Darkheim</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    #fullscreen-btn {
+      display: none;
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 100;
+      width: 44px;
+      height: 44px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-radius: 8px;
+      background: rgba(0,0,0,0.5);
+      color: #fff;
+      font-size: 20px;
+      line-height: 40px;
+      text-align: center;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #fullscreen-btn:active {
+      background: rgba(255,255,255,0.2);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <button id="fullscreen-btn" aria-label="Fullscreen">&#x26F6;</button>
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="/client/main.js"></script>
+</body>
+</html>

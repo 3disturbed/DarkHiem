@@ -1,0 +1,196 @@
+import { INPUT_DEADZONE } from '../../shared/Constants.js';
+
+export default class TouchInput {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.active = false;
+
+    // Stick states
+    this.leftStick = { active: false, x: 0, y: 0, touchId: null, originX: 0, originY: 0 };
+    this.rightStick = { active: false, x: 0, y: 0, touchId: null, originX: 0, originY: 0 };
+
+    // Button states
+    this.buttonStates = new Map(); // id -> {pressed, justPressed}
+    this.buttonZones = []; // set by TouchControls
+
+    this.stickRadius = 60;
+
+    // Screen tap tracking (for UI panel interaction)
+    this.tapX = 0;
+    this.tapY = 0;
+    this.hasTap = false;
+    this._pendingTouches = new Map(); // touchId -> {x, y, time}
+
+    canvas.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: false });
+    canvas.addEventListener('touchmove', (e) => this.onTouchMove(e), { passive: false });
+    canvas.addEventListener('touchend', (e) => this.onTouchEnd(e), { passive: false });
+    canvas.addEventListener('touchcancel', (e) => this.onTouchEnd(e), { passive: false });
+  }
+
+  setButtonZones(zones) {
+    this.buttonZones = zones;
+  }
+
+  onTouchStart(e) {
+    e.preventDefault();
+    this.active = true;
+    const rect = this.canvas.getBoundingClientRect();
+
+    for (const touch of e.changedTouches) {
+      const tx = touch.clientX - rect.left;
+      const ty = touch.clientY - rect.top;
+      const halfW = rect.width / 2;
+
+      // Track all touches for tap detection
+      this._pendingTouches.set(touch.identifier, { x: tx, y: ty, time: performance.now() });
+
+      // Check button zones first
+      let hitButton = false;
+      for (const zone of this.buttonZones) {
+        const dx = tx - zone.x;
+        const dy = ty - zone.y;
+        if (dx * dx + dy * dy < zone.radius * zone.radius) {
+          this.buttonStates.set(zone.id, { pressed: true, justPressed: true, touchId: touch.identifier });
+          hitButton = true;
+          break;
+        }
+      }
+      if (hitButton) continue;
+
+      // Left half = move stick
+      if (tx < halfW && this.leftStick.touchId === null) {
+        this.leftStick.active = true;
+        this.leftStick.touchId = touch.identifier;
+        this.leftStick.originX = tx;
+        this.leftStick.originY = ty;
+        this.leftStick.x = 0;
+        this.leftStick.y = 0;
+      }
+      // Right half = aim stick
+      else if (tx >= halfW && this.rightStick.touchId === null) {
+        this.rightStick.active = true;
+        this.rightStick.touchId = touch.identifier;
+        this.rightStick.originX = tx;
+        this.rightStick.originY = ty;
+        this.rightStick.x = 0;
+        this.rightStick.y = 0;
+      }
+    }
+  }
+
+  onTouchMove(e) {
+    e.preventDefault();
+    const rect = this.canvas.getBoundingClientRect();
+
+    for (const touch of e.changedTouches) {
+      const tx = touch.clientX - rect.left;
+      const ty = touch.clientY - rect.top;
+
+      // Mark touch as moved (invalidates tap if moved too far)
+      const pending = this._pendingTouches.get(touch.identifier);
+      if (pending) {
+        const dx = tx - pending.x;
+        const dy = ty - pending.y;
+        if (dx * dx + dy * dy > 15 * 15) {
+          this._pendingTouches.delete(touch.identifier);
+        }
+      }
+
+      if (touch.identifier === this.leftStick.touchId) {
+        this.updateStick(this.leftStick, tx, ty);
+      }
+      if (touch.identifier === this.rightStick.touchId) {
+        this.updateStick(this.rightStick, tx, ty);
+      }
+    }
+  }
+
+  onTouchEnd(e) {
+    const rect = this.canvas.getBoundingClientRect();
+
+    for (const touch of e.changedTouches) {
+      // Check for screen tap (short duration, minimal movement)
+      const pending = this._pendingTouches.get(touch.identifier);
+      if (pending) {
+        const elapsed = performance.now() - pending.time;
+        if (elapsed < 400) {
+          const tx = touch.clientX - rect.left;
+          const ty = touch.clientY - rect.top;
+          this.tapX = tx;
+          this.tapY = ty;
+          this.hasTap = true;
+        }
+        this._pendingTouches.delete(touch.identifier);
+      }
+
+      if (touch.identifier === this.leftStick.touchId) {
+        this.leftStick.active = false;
+        this.leftStick.touchId = null;
+        this.leftStick.x = 0;
+        this.leftStick.y = 0;
+      }
+      if (touch.identifier === this.rightStick.touchId) {
+        this.rightStick.active = false;
+        this.rightStick.touchId = null;
+        this.rightStick.x = 0;
+        this.rightStick.y = 0;
+      }
+
+      // Release buttons
+      for (const [id, state] of this.buttonStates) {
+        if (state.touchId === touch.identifier) {
+          state.pressed = false;
+        }
+      }
+    }
+  }
+
+  updateStick(stick, tx, ty) {
+    let dx = (tx - stick.originX) / this.stickRadius;
+    let dy = (ty - stick.originY) / this.stickRadius;
+    const mag = Math.sqrt(dx * dx + dy * dy);
+    if (mag > 1) { dx /= mag; dy /= mag; }
+    if (mag < INPUT_DEADZONE) { dx = 0; dy = 0; }
+    stick.x = dx;
+    stick.y = dy;
+  }
+
+  getMoveAxes() {
+    return { x: this.leftStick.x, y: this.leftStick.y };
+  }
+
+  getAimAxes() {
+    return { x: this.rightStick.x, y: this.rightStick.y };
+  }
+
+  isButtonDown(id) {
+    return this.buttonStates.get(id)?.pressed || false;
+  }
+
+  wasButtonJustPressed(id) {
+    return this.buttonStates.get(id)?.justPressed || false;
+  }
+
+  consumeTap() {
+    if (this.hasTap) {
+      this.hasTap = false;
+      return { x: this.tapX, y: this.tapY };
+    }
+    return null;
+  }
+
+  update() {
+    // Clear justPressed flags
+    for (const state of this.buttonStates.values()) {
+      state.justPressed = false;
+    }
+    // Remove released buttons
+    for (const [id, state] of this.buttonStates) {
+      if (!state.pressed && !state.justPressed) {
+        this.buttonStates.delete(id);
+      }
+    }
+    // Clear tap flag
+    this.hasTap = false;
+  }
+}
