@@ -51,7 +51,7 @@ export default class NetworkClient {
       auth = { playerId: storedId };
     }
 
-    this.socket = io({ auth, transports: ['websocket', 'polling'] });
+    this.socket = io({ auth, transports: ['websocket'] });
 
     this.socket.on('connect', () => {
       this.connected = true;

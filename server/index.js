@@ -15,6 +15,7 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: { origin: '*' },
+  transports: ['websocket'],
 });
 
 // Parse JSON bodies for auth endpoints

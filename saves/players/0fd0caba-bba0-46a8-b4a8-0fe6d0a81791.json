@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "id": "0fd0caba-bba0-46a8-b4a8-0fe6d0a81791",
+  "name": "Hero",
+  "color": "#e74c3c",
+  "savedAt": 1770774654396,
+  "position": {
+    "x": 500,
+    "y": 500
+  },
+  "health": {
+    "current": 100,
+    "max": 100
+  },
+  "stats": {
+    "level": 1,
+    "xp": 0,
+    "statPoints": 0,
+    "str": 5,
+    "dex": 5,
+    "vit": 5,
+    "end": 5,
+    "lck": 3
+  },
+  "inventory": {
+    "slots": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "equipment": {
+    "weapon": null,
+    "head": null,
+    "body": null,
+    "legs": null,
+    "feet": null,
+    "shield": null,
+    "ring1": null,
+    "ring2": null,
+    "tool": null
+  },
+  "skills": {
+    "learnedSkills": [
+      "power_strike",
+      "heal"
+    ],
+    "cooldowns": {},
+    "hotbar": [
+      "power_strike",
+      "heal",
+      null,
+      null
+    ]
+  }
+}
