@@ -36,9 +36,22 @@ export default class NetworkClient {
   }
 
   connect() {
-    // Read or generate persistent player ID
-    let storedId = localStorage.getItem('darkheim_player_id');
-    this.socket = io({ auth: { playerId: storedId } });
+    // Use JWT auth if available, otherwise fall back to legacy player ID
+    const token = localStorage.getItem('darkheim_token');
+    const characterId = localStorage.getItem('darkheim_character_id');
+    const characterName = localStorage.getItem('darkheim_character_name');
+    const characterColor = localStorage.getItem('darkheim_character_color');
+
+    let auth;
+    if (token && characterId) {
+      auth = { token, characterId, characterName, characterColor };
+    } else {
+      // Legacy: old-style UUID
+      const storedId = localStorage.getItem('darkheim_player_id');
+      auth = { playerId: storedId };
+    }
+
+    this.socket = io({ auth });
 
     this.socket.on('connect', () => {
       this.connected = true;

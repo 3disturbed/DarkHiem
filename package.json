@@ -9,7 +9,9 @@
     "dev": "nodemon server/index.js"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "express": "^4.21.0",
+    "jsonwebtoken": "^9.0.3",
     "simplex-noise": "^4.0.3",
     "socket.io": "^4.7.5",
     "uuid": "^9.0.1"

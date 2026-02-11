@@ -2,11 +2,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { PLAYER_COLORS } from '../../shared/Constants.js';
 
 export default class PlayerConnection {
-  constructor(socket, persistentId) {
+  constructor(socket, persistentId, characterName, characterColor) {
     this.socket = socket;
     this.id = persistentId || uuidv4();
-    this.name = `Player_${this.id.slice(0, 4)}`;
-    this.color = PLAYER_COLORS[Math.floor(Math.random() * PLAYER_COLORS.length)];
+    this.name = characterName || `Player_${this.id.slice(0, 4)}`;
+    this.color = characterColor || PLAYER_COLORS[Math.floor(Math.random() * PLAYER_COLORS.length)];
 
     this.x = 0;
     this.y = 0;
