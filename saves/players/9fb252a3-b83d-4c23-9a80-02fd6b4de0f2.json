@@ -1,0 +1,108 @@
+{
+  "version": 1,
+  "id": "9fb252a3-b83d-4c23-9a80-02fd6b4de0f2",
+  "name": "Player_9fb2",
+  "color": "#ecf0f1",
+  "savedAt": 1770581123512,
+  "position": {
+    "x": 7312.953390837644,
+    "y": -4809.259288683121
+  },
+  "health": {
+    "current": 108,
+    "max": 108
+  },
+  "stats": {
+    "level": 8,
+    "xp": 710,
+    "statPoints": 6,
+    "str": 18,
+    "dex": 5,
+    "vit": 7,
+    "end": 5,
+    "lck": 3
+  },
+  "inventory": {
+    "slots": [
+      {
+        "itemId": "stone",
+        "count": 43
+      },
+      {
+        "itemId": "berries",
+        "count": 45
+      },
+      {
+        "itemId": "stick",
+        "count": 50
+      },
+      {
+        "itemId": "flax",
+        "count": 25
+      },
+      {
+        "itemId": "stick",
+        "count": 49
+      },
+      {
+        "itemId": "raw_meat",
+        "count": 15
+      },
+      {
+        "itemId": "leather_scrap",
+        "count": 9
+      },
+      {
+        "itemId": "greyling_hide",
+        "count": 16
+      },
+      {
+        "itemId": "wooden_club",
+        "count": 1
+      },
+      {
+        "itemId": "stone_hatchet",
+        "count": 1
+      },
+      {
+        "itemId": "bone_fragment",
+        "count": 36
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "equipment": {
+    "weapon": {
+      "id": "wooden_club",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    },
+    "head": null,
+    "body": null,
+    "legs": null,
+    "feet": null,
+    "shield": {
+      "id": "wooden_shield",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    },
+    "ring1": null,
+    "ring2": null,
+    "tool": {
+      "id": "stone_pickaxe",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    }
+  }
+}

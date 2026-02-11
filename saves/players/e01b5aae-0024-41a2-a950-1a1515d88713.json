@@ -1,0 +1,138 @@
+{
+  "version": 1,
+  "id": "e01b5aae-0024-41a2-a950-1a1515d88713",
+  "name": "Player_e01b",
+  "color": "#00cec9",
+  "savedAt": 1770766696991,
+  "position": {
+    "x": 56081.645300325275,
+    "y": -36139.670962935845
+  },
+  "health": {
+    "current": 0,
+    "max": 104
+  },
+  "stats": {
+    "level": 6,
+    "xp": 383,
+    "statPoints": 0,
+    "str": 11,
+    "dex": 5,
+    "vit": 6,
+    "end": 13,
+    "lck": 3
+  },
+  "inventory": {
+    "slots": [
+      {
+        "itemId": "stick",
+        "count": 50
+      },
+      {
+        "itemId": "stone_hatchet",
+        "count": 1
+      },
+      {
+        "itemId": "stone_pickaxe",
+        "count": 1
+      },
+      {
+        "itemId": "stone_pickaxe",
+        "count": 1
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone_pickaxe",
+        "count": 1
+      },
+      {
+        "itemId": "berries",
+        "count": 50
+      },
+      {
+        "itemId": "flax",
+        "count": 5
+      },
+      {
+        "itemId": "raw_meat",
+        "count": 14
+      },
+      {
+        "itemId": "leather_scrap",
+        "count": 8
+      },
+      {
+        "itemId": "stick",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "greyling_hide",
+        "count": 18
+      },
+      {
+        "itemId": "stone_hatchet",
+        "count": 1
+      },
+      {
+        "itemId": "stone_hatchet",
+        "count": 1
+      },
+      {
+        "itemId": "stone_hatchet",
+        "count": 1
+      },
+      {
+        "itemId": "stick",
+        "count": 43
+      },
+      {
+        "itemId": "stone",
+        "count": 19
+      },
+      {
+        "itemId": "bone_fragment",
+        "count": 3
+      },
+      null
+    ]
+  },
+  "equipment": {
+    "weapon": null,
+    "head": null,
+    "body": null,
+    "legs": null,
+    "feet": null,
+    "shield": null,
+    "ring1": null,
+    "ring2": null,
+    "tool": {
+      "id": "stone_pickaxe",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    }
+  },
+  "skills": {
+    "learnedSkills": [
+      "power_strike",
+      "heal",
+      "dash",
+      "cleave",
+      "war_cry"
+    ],
+    "cooldowns": {},
+    "hotbar": [
+      "power_strike",
+      "heal",
+      "dash",
+      "cleave"
+    ]
+  }
+}

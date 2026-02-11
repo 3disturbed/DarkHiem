@@ -537,6 +537,8 @@ export default class GameServer {
     const statsComp = entity.getComponent(StatsComponent);
     const invComp = entity.getComponent(InventoryComponent);
     const equipComp = entity.getComponent(EquipmentComponent);
+    // Recalc equip bonuses before sending stats so client gets correct derived values
+    if (statsComp && equipComp) statsComp.recalcEquipBonuses(equipComp.slots);
     if (statsComp) playerConn.emit(MSG.PLAYER_STATS, statsComp.serialize());
     if (invComp) playerConn.emit(MSG.INVENTORY_UPDATE, { slots: invComp.serialize().slots });
     if (equipComp) playerConn.emit(MSG.EQUIPMENT_UPDATE, equipComp.serialize());

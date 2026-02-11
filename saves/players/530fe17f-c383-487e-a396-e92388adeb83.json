@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "id": "530fe17f-c383-487e-a396-e92388adeb83",
+  "name": "Player_530f",
+  "color": "#e74c3c",
+  "savedAt": 1770500510651,
+  "position": {
+    "x": 472,
+    "y": 467.99999999999994
+  },
+  "health": {
+    "current": 100,
+    "max": 100
+  },
+  "stats": {
+    "level": 1,
+    "xp": 0,
+    "statPoints": 0,
+    "str": 5,
+    "dex": 5,
+    "vit": 5,
+    "end": 5,
+    "lck": 3
+  },
+  "inventory": {
+    "slots": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "equipment": {
+    "weapon": null,
+    "head": null,
+    "body": null,
+    "legs": null,
+    "feet": null,
+    "shield": null,
+    "ring1": null,
+    "ring2": null,
+    "tool": null
+  }
+}

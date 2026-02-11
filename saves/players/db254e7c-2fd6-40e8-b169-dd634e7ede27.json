@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "id": "db254e7c-2fd6-40e8-b169-dd634e7ede27",
+  "name": "Player_db25",
+  "color": "#fdcb6e",
+  "savedAt": 1770500613972,
+  "position": {
+    "x": 483.5056631879441,
+    "y": 522.612400988976
+  },
+  "health": {
+    "current": 100,
+    "max": 100
+  },
+  "stats": {
+    "level": 1,
+    "xp": 0,
+    "statPoints": 0,
+    "str": 5,
+    "dex": 5,
+    "vit": 5,
+    "end": 5,
+    "lck": 3
+  },
+  "inventory": {
+    "slots": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "equipment": {
+    "weapon": null,
+    "head": null,
+    "body": null,
+    "legs": null,
+    "feet": null,
+    "shield": null,
+    "ring1": null,
+    "ring2": null,
+    "tool": null
+  }
+}

@@ -1,0 +1,174 @@
+{
+  "version": 1,
+  "id": "091d472e-762c-48d3-941b-3c5d6cdab225",
+  "name": "Player_091d",
+  "color": "#1abc9c",
+  "savedAt": 1770766598231,
+  "position": {
+    "x": 180,
+    "y": 725.2273555976838
+  },
+  "health": {
+    "current": 112,
+    "max": 112
+  },
+  "stats": {
+    "level": 14,
+    "xp": 4030,
+    "statPoints": 0,
+    "str": 41,
+    "dex": 6,
+    "vit": 7,
+    "end": 5,
+    "lck": 3
+  },
+  "inventory": {
+    "slots": [
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stick",
+        "count": 50
+      },
+      {
+        "itemId": "stick",
+        "count": 31
+      },
+      {
+        "itemId": "berries",
+        "count": 50
+      },
+      {
+        "itemId": "leather_tunic",
+        "count": 1
+      },
+      {
+        "itemId": "linen_thread",
+        "count": 9
+      },
+      {
+        "itemId": "berries",
+        "count": 29
+      },
+      {
+        "itemId": "raw_meat",
+        "count": 50
+      },
+      {
+        "itemId": "bone_fragment",
+        "count": 34
+      },
+      {
+        "itemId": "wood",
+        "count": 50
+      },
+      {
+        "itemId": "stone_pickaxe",
+        "count": 1
+      },
+      {
+        "itemId": "greyling_hide",
+        "count": 47
+      },
+      {
+        "itemId": "raw_meat",
+        "count": 50
+      },
+      {
+        "itemId": "leather_scrap",
+        "count": 6
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 8
+      },
+      {
+        "itemId": "stick",
+        "count": 50
+      },
+      {
+        "itemId": "wood",
+        "count": 50
+      },
+      {
+        "itemId": "flax",
+        "count": 16
+      },
+      {
+        "itemId": "raw_meat",
+        "count": 50
+      }
+    ]
+  },
+  "equipment": {
+    "weapon": {
+      "id": "bone_sword",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    },
+    "head": {
+      "id": "leather_cap",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    },
+    "body": {
+      "id": "leather_tunic",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    },
+    "legs": {
+      "id": "leather_pants",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    },
+    "feet": {
+      "id": "hide_boots",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    },
+    "shield": {
+      "id": "wooden_shield",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    },
+    "ring1": null,
+    "ring2": null,
+    "tool": {
+      "id": "stone_hatchet",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    }
+  },
+  "skills": {
+    "learnedSkills": [
+      "power_strike",
+      "heal",
+      "dash",
+      "cleave",
+      "war_cry",
+      "iron_skin",
+      "whirlwind",
+      "execute"
+    ],
+    "cooldowns": {},
+    "hotbar": [
+      "power_strike",
+      "heal",
+      "dash",
+      "cleave"
+    ]
+  }
+}

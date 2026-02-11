@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "id": "8496e383-6789-4f82-838f-9e14d09f7389",
+  "name": "Player_8496",
+  "color": "#3498db",
+  "savedAt": 1770558902062,
+  "position": {
+    "x": -524,
+    "y": -940
+  },
+  "health": {
+    "current": 100,
+    "max": 100
+  },
+  "stats": {
+    "level": 1,
+    "xp": 0,
+    "statPoints": 0,
+    "str": 5,
+    "dex": 5,
+    "vit": 5,
+    "end": 5,
+    "lck": 3
+  },
+  "inventory": {
+    "slots": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "equipment": {
+    "weapon": null,
+    "head": null,
+    "body": null,
+    "legs": null,
+    "feet": null,
+    "shield": null,
+    "ring1": null,
+    "ring2": null,
+    "tool": null
+  }
+}
