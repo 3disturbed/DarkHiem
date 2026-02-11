@@ -1,0 +1,13 @@
+{
+  "username": "dark",
+  "passwordHash": "$2b$10$5cvIhqdqaSkxk2CEpI37GeCa7j6GEQf2MHDr3oeH2JUvPIYRvKjmy",
+  "createdAt": 1770809179603,
+  "characters": [
+    {
+      "id": "9cec94d6-97f6-4e3e-88da-8566b626dabc",
+      "name": "Dad",
+      "color": "#e74c3c",
+      "createdAt": 1770809195864
+    }
+  ]
+}

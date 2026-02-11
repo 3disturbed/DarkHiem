@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "id": "5ec46831-e560-46f4-9fd3-0202df017717",
+  "name": "Mousy",
+  "color": "#e84393",
+  "savedAt": 1770810080003,
+  "position": {
+    "x": 2256.0083563693825,
+    "y": 1140
+  },
+  "health": {
+    "current": 100,
+    "max": 100
+  },
+  "stats": {
+    "level": 3,
+    "xp": 53,
+    "statPoints": 3,
+    "str": 5,
+    "dex": 5,
+    "vit": 5,
+    "end": 5,
+    "lck": 6
+  },
+  "inventory": {
+    "slots": [
+      {
+        "itemId": "berries",
+        "count": 11
+      },
+      {
+        "itemId": "stone",
+        "count": 10
+      },
+      {
+        "itemId": "stick",
+        "count": 26
+      },
+      {
+        "itemId": "greyling_hide",
+        "count": 1
+      },
+      {
+        "itemId": "raw_meat",
+        "count": 5
+      },
+      {
+        "itemId": "flax",
+        "count": 8
+      },
+      {
+        "itemId": "leather_scrap",
+        "count": 1
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "equipment": {
+    "weapon": {
+      "id": "wooden_club",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    },
+    "head": null,
+    "body": null,
+    "legs": null,
+    "feet": null,
+    "shield": null,
+    "ring1": null,
+    "ring2": null,
+    "tool": null
+  },
+  "skills": {
+    "learnedSkills": [
+      "power_strike",
+      "heal",
+      "dash"
+    ],
+    "cooldowns": {},
+    "hotbar": [
+      "power_strike",
+      "heal",
+      "dash",
+      null
+    ]
+  }
+}

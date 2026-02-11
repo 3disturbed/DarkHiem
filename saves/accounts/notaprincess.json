@@ -1,0 +1,13 @@
+{
+  "username": "notaprincess",
+  "passwordHash": "$2b$10$Z7h7RrHNysSuI40EufHAT..CxNYU7Tp6yePmg.VFGdHQ9iC2W2Gf2",
+  "createdAt": 1770809493569,
+  "characters": [
+    {
+      "id": "5ec46831-e560-46f4-9fd3-0202df017717",
+      "name": "Mousy",
+      "color": "#e84393",
+      "createdAt": 1770809510500
+    }
+  ]
+}

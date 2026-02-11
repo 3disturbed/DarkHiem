@@ -16,6 +16,8 @@ export default class InventoryPanel {
     this.selectedSlot = -1;
     this.hoveredSlot = -1;
     this.swapSource = -1; // slot index when in swap mode, -1 otherwise
+    this._lastClickSlot = -1;
+    this._lastClickTime = 0;
     this.mouseX = 0;
     this.mouseY = 0;
     this.x = 0;
@@ -83,14 +85,19 @@ export default class InventoryPanel {
       return true;
     }
 
-    // Click on item: equip/use + select
+    // Click on item: equip immediately, or select consumable (double-click to consume)
     const itemDef = ITEM_DB[slot.itemId];
+    const now = Date.now();
+    const isDoubleClick = slotIndex === this._lastClickSlot && (now - this._lastClickTime) < 400;
+
     if (itemDef && itemDef.type === 'equipment') {
       if (onEquip) onEquip(slotIndex);
-    } else if (itemDef && itemDef.type === 'consumable') {
+    } else if (itemDef && itemDef.type === 'consumable' && isDoubleClick) {
       if (onUse) onUse(slotIndex);
     }
 
+    this._lastClickSlot = slotIndex;
+    this._lastClickTime = now;
     this.selectedSlot = slotIndex;
     return true;
   }
@@ -178,7 +185,7 @@ export default class InventoryPanel {
     const itemDef = ITEM_DB[slot.itemId];
     const btns = [];
     if (itemDef && (itemDef.type === 'equipment' || itemDef.type === 'consumable')) {
-      const label = itemDef.type === 'equipment' ? 'Equip' : 'Use';
+      const label = itemDef.type === 'equipment' ? 'Equip' : 'Consume';
       btns.push({ action: 'primary', label, bg: '#2a6e3a', border: '#3a8' });
     }
     btns.push({ action: 'swap', label: 'Swap', bg: '#2a4a6e', border: '#58a' });
@@ -429,7 +436,7 @@ export default class InventoryPanel {
       lines.push('[Click: equip] [Right-click: drop]');
       colors.push('#666');
     } else if (itemDef.type === 'consumable') {
-      lines.push('[Click: use] [Right-click: drop]');
+      lines.push('[Dbl-click: consume] [Right-click: drop]');
       colors.push('#666');
     } else {
       lines.push('[Right-click: drop]');

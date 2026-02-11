@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "id": "9cec94d6-97f6-4e3e-88da-8566b626dabc",
+  "name": "Dad",
+  "color": "#e74c3c",
+  "savedAt": 1770815942710,
+  "position": {
+    "x": 3080.126712211949,
+    "y": -1825.6663139815882
+  },
+  "health": {
+    "current": 100,
+    "max": 100
+  },
+  "stats": {
+    "level": 3,
+    "xp": 62,
+    "statPoints": 3,
+    "str": 8,
+    "dex": 5,
+    "vit": 5,
+    "end": 5,
+    "lck": 3
+  },
+  "inventory": {
+    "slots": [
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stick",
+        "count": 50
+      },
+      {
+        "itemId": "berries",
+        "count": 3
+      },
+      {
+        "itemId": "stick",
+        "count": 43
+      },
+      {
+        "itemId": "raw_meat",
+        "count": 6
+      },
+      {
+        "itemId": "leather_scrap",
+        "count": 2
+      },
+      {
+        "itemId": "greyling_hide",
+        "count": 4
+      },
+      {
+        "itemId": "stone",
+        "count": 27
+      },
+      {
+        "itemId": "stone_pickaxe",
+        "count": 1
+      },
+      {
+        "itemId": "wood",
+        "count": 50
+      },
+      {
+        "itemId": "wood",
+        "count": 50
+      },
+      {
+        "itemId": "wood",
+        "count": 50
+      },
+      {
+        "itemId": "wood",
+        "count": 13
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "equipment": {
+    "weapon": {
+      "id": "wooden_club",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    },
+    "head": null,
+    "body": null,
+    "legs": null,
+    "feet": null,
+    "shield": null,
+    "ring1": null,
+    "ring2": null,
+    "tool": {
+      "id": "stone_hatchet",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    }
+  },
+  "skills": {
+    "learnedSkills": [
+      "power_strike",
+      "heal",
+      "dash"
+    ],
+    "cooldowns": {},
+    "hotbar": [
+      "power_strike",
+      "heal",
+      "dash",
+      null
+    ]
+  }
+}
