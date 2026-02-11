@@ -51,11 +51,24 @@ export default class NetworkClient {
       auth = { playerId: storedId };
     }
 
-    this.socket = io({ auth });
+    this.socket = io({ auth, transports: ['websocket', 'polling'] });
 
     this.socket.on('connect', () => {
       this.connected = true;
       console.log('[Network] Connected');
+    });
+
+    this.socket.on('connect_error', (err) => {
+      console.error('[Network] Connection error:', err.message);
+      // Auth rejected — stop retrying and redirect to login
+      if (err.message === 'Authentication required' ||
+          err.message === 'Invalid or expired token' ||
+          err.message === 'Character selection required') {
+        this.socket.disconnect();
+        localStorage.removeItem('darkheim_token');
+        localStorage.removeItem('darkheim_character_id');
+        window.location.href = '/';
+      }
     });
 
     this.socket.on('disconnect', () => {

@@ -2,7 +2,14 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
+import { readFile, writeFile, mkdir } from 'fs/promises';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import AccountRepository from './AccountRepository.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const SECRET_PATH = join(__dirname, '..', '..', 'saves', 'jwt_secret');
 
 const SALT_ROUNDS = 10;
 const MAX_CHARACTERS_PER_ACCOUNT = 5;
@@ -10,15 +17,34 @@ const MAX_CHARACTERS_PER_ACCOUNT = 5;
 export default class AuthManager {
   constructor() {
     this.accountRepo = new AccountRepository();
-    // Generate a random secret on startup; persisted sessions won't survive server restarts
-    // For production, use an env variable instead
-    this.jwtSecret = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
+    this.jwtSecret = null;
     this.tokenExpiry = '7d';
   }
 
   async init() {
     await this.accountRepo.init();
+    this.jwtSecret = await this.loadOrCreateSecret();
     console.log('[AuthManager] Initialized');
+  }
+
+  async loadOrCreateSecret() {
+    // Use env var if set (recommended for production)
+    if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
+
+    // Otherwise persist to file so tokens survive restarts
+    try {
+      const secret = await readFile(SECRET_PATH, 'utf-8');
+      if (secret.trim()) return secret.trim();
+    } catch {}
+
+    const secret = crypto.randomBytes(32).toString('hex');
+    try {
+      await mkdir(dirname(SECRET_PATH), { recursive: true });
+      await writeFile(SECRET_PATH, secret, 'utf-8');
+    } catch (err) {
+      console.warn('[AuthManager] Could not persist JWT secret:', err.message);
+    }
+    return secret;
   }
 
   async register(username, password) {
