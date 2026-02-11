@@ -38,7 +38,7 @@ export default class DespawnSystem extends System {
         }
       }
 
-      if (!nearPlayer) {
+      if (!nearPlayer && !enemy.isBoss) {
         entityManager.markForDestroy(enemy);
       }
     }

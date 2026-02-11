@@ -60,6 +60,32 @@
       "behavior": "aggressive",
       "aggroRange": 160,
       "deaggroRange": 288
+    },
+    {
+      "id": "bramblethorn",
+      "name": "Bramblethorn",
+      "health": 200,
+      "damage": 12,
+      "speed": 40,
+      "armor": 3,
+      "knockback": 8,
+      "xpReward": 150,
+      "drops": [
+        { "item": "copper_ore", "chance": 1.0, "min": 8, "max": 15 },
+        { "item": "copper_ore", "chance": 0.6, "min": 3, "max": 8 },
+        { "item": "bone_fragment", "chance": 1.0, "min": 2, "max": 4 }
+      ],
+      "minGradient": 0.3,
+      "maxGradient": 0.7,
+      "densityAtLeft": 0.0003,
+      "densityAtRight": 0.0003,
+      "color": "#B87333",
+      "size": 40,
+      "behavior": "boss",
+      "isBoss": true,
+      "leashRange": 512,
+      "aggroRange": 192,
+      "deaggroRange": 384
     }
   ]
 }

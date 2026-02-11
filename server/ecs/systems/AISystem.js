@@ -4,11 +4,13 @@ import VelocityComponent from '../components/VelocityComponent.js';
 import AIComponent from '../components/AIComponent.js';
 import CombatComponent from '../components/CombatComponent.js';
 import AIController from '../../ai/AIController.js';
+import BossAIController from '../../ai/BossAIController.js';
 
 export default class AISystem extends System {
   constructor() {
     super(5); // priority 5 - runs before movement
     this.controller = new AIController();
+    this.bossController = new BossAIController();
   }
 
   update(dt, entityManager, context) {
@@ -20,7 +22,11 @@ export default class AISystem extends System {
       const ai = entity.getComponent(AIComponent);
       const combat = entity.getComponent(CombatComponent);
 
-      this.controller.update(entity, ai, pos, vel, combat, entityManager, dt);
+      if (ai.behavior === 'boss') {
+        this.bossController.update(entity, ai, pos, vel, combat, entityManager, dt, context);
+      } else {
+        this.controller.update(entity, ai, pos, vel, combat, entityManager, dt);
+      }
     }
   }
 }

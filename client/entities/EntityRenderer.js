@@ -30,23 +30,49 @@ export default class EntityRenderer {
   }
 
   // Render an enemy entity
-  static renderEnemy(r, x, y, color, size, name, hp, maxHp, aiState) {
+  static renderEnemy(r, x, y, color, size, name, hp, maxHp, aiState, isBoss = false) {
     const half = size / 2;
+    const ctx = r.ctx;
+
+    // Boss: pulsing copper glow behind entity
+    if (isBoss) {
+      const pulse = 0.4 + Math.sin(Date.now() / 400) * 0.15;
+      ctx.save();
+      ctx.globalAlpha = pulse;
+      ctx.fillStyle = '#B87333';
+      ctx.beginPath();
+      ctx.arc(Math.round(x), Math.round(y), half + 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
 
     // Body
     r.drawRect(x - half, y - half, size, size, color);
 
-    // Outline - red if aggro
-    r.ctx.strokeStyle = (aiState === 'chase' || aiState === 'attack') ? '#ff0000' : '#000';
-    r.ctx.lineWidth = (aiState === 'chase' || aiState === 'attack') ? 2 : 1;
-    r.ctx.strokeRect(Math.round(x - half), Math.round(y - half), size, size);
+    // Outline - red if aggro, gold for boss
+    if (isBoss) {
+      ctx.strokeStyle = (aiState === 'chase' || aiState === 'attack') ? '#ff4444' : '#ffd700';
+      ctx.lineWidth = 3;
+    } else {
+      ctx.strokeStyle = (aiState === 'chase' || aiState === 'attack') ? '#ff0000' : '#000';
+      ctx.lineWidth = (aiState === 'chase' || aiState === 'attack') ? 2 : 1;
+    }
+    ctx.strokeRect(Math.round(x - half), Math.round(y - half), size, size);
 
-    // Name tag
-    r.drawText(name, x, y - half - 12, '#ddd', 9, 'center');
+    // Name tag — gold for boss
+    if (isBoss) {
+      r.drawText(name, x, y - half - 18, '#ffd700', 12, 'center');
+    } else {
+      r.drawText(name, x, y - half - 12, '#ddd', 9, 'center');
+    }
 
-    // Health bar
+    // Health bar — wider and copper-tinted for boss
     if (maxHp > 0) {
-      EntityRenderer.renderHealthBar(r, x, y - half - 4, Math.max(size, 28), 3, hp, maxHp, '#e74c3c');
+      if (isBoss) {
+        EntityRenderer.renderHealthBar(r, x, y - half - 8, Math.max(size + 16, 56), 5, hp, maxHp, '#B87333');
+      } else {
+        EntityRenderer.renderHealthBar(r, x, y - half - 4, Math.max(size, 28), 3, hp, maxHp, '#e74c3c');
+      }
     }
   }
 

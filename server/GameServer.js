@@ -292,7 +292,7 @@ export default class GameServer {
     this.tickCount++;
 
     // Run ECS systems
-    this.systemManager.update(dt, this.entityManager, { worldManager: this.worldManager });
+    this.systemManager.update(dt, this.entityManager, { worldManager: this.worldManager, combatResolver: this.combatResolver });
 
     // Destroy marked entities
     this.entityManager.flushDestroyed();
@@ -355,6 +355,7 @@ export default class GameServer {
         hp: health ? health.current : 0,
         maxHp: health ? health.max : 0,
         aiState: ai ? ai.state : 'idle',
+        isBoss: entity.isBoss || false,
       };
     }
 

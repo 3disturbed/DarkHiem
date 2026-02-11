@@ -3,20 +3,20 @@
   "id": "9cec94d6-97f6-4e3e-88da-8566b626dabc",
   "name": "Dad",
   "color": "#e74c3c",
-  "savedAt": 1770815942710,
+  "savedAt": 1770827530298,
   "position": {
-    "x": 3080.126712211949,
-    "y": -1825.6663139815882
+    "x": 540.8589998996422,
+    "y": 510.15254764636524
   },
   "health": {
-    "current": 100,
-    "max": 100
+    "current": 104,
+    "max": 104
   },
   "stats": {
-    "level": 3,
-    "xp": 62,
-    "statPoints": 3,
-    "str": 8,
+    "level": 11,
+    "xp": 1735,
+    "statPoints": 0,
+    "str": 35,
     "dex": 5,
     "vit": 5,
     "end": 5,
@@ -26,63 +26,75 @@
     "slots": [
       {
         "itemId": "stone",
-        "count": 50
+        "count": 45
       },
       {
-        "itemId": "stick",
-        "count": 50
-      },
-      {
-        "itemId": "berries",
-        "count": 3
-      },
-      {
-        "itemId": "stick",
-        "count": 43
-      },
-      {
-        "itemId": "raw_meat",
-        "count": 6
-      },
-      {
-        "itemId": "leather_scrap",
-        "count": 2
-      },
-      {
-        "itemId": "greyling_hide",
+        "itemId": "bone_fragment",
         "count": 4
       },
       {
-        "itemId": "stone",
-        "count": 27
+        "itemId": "berries",
+        "count": 7
       },
       {
-        "itemId": "stone_pickaxe",
-        "count": 1
+        "itemId": "stick",
+        "count": 2
       },
       {
-        "itemId": "wood",
+        "itemId": "raw_meat",
         "count": 50
       },
       {
-        "itemId": "wood",
-        "count": 50
-      },
-      {
-        "itemId": "wood",
-        "count": 50
-      },
-      {
-        "itemId": "wood",
+        "itemId": "cured_leather",
         "count": 13
       },
+      {
+        "itemId": "greyling_hide",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone_hatchet",
+        "count": 1
+      },
       null,
+      {
+        "itemId": "wood",
+        "count": 42
+      },
       null,
+      {
+        "itemId": "wood",
+        "count": 23
+      },
+      {
+        "itemId": "oak_plank",
+        "count": 29
+      },
+      {
+        "itemId": "stone",
+        "count": 10
+      },
       null,
-      null,
-      null,
-      null,
-      null
+      {
+        "itemId": "raw_meat",
+        "count": 50
+      },
+      {
+        "itemId": "greyling_hide",
+        "count": 5
+      },
+      {
+        "itemId": "raw_meat",
+        "count": 50
+      },
+      {
+        "itemId": "raw_meat",
+        "count": 15
+      }
     ]
   },
   "equipment": {
@@ -92,15 +104,30 @@
       "upgradeLevel": 0,
       "upgradeXp": 0
     },
-    "head": null,
+    "head": {
+      "id": "leather_cap",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    },
     "body": null,
-    "legs": null,
-    "feet": null,
+    "legs": {
+      "id": "leather_pants",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    },
+    "feet": {
+      "id": "hide_boots",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    },
     "shield": null,
     "ring1": null,
     "ring2": null,
     "tool": {
-      "id": "stone_hatchet",
+      "id": "stone_pickaxe",
       "gems": [],
       "upgradeLevel": 0,
       "upgradeXp": 0
@@ -110,14 +137,20 @@
     "learnedSkills": [
       "power_strike",
       "heal",
-      "dash"
+      "dash",
+      "cleave",
+      "war_cry",
+      "iron_skin",
+      "whirlwind"
     ],
-    "cooldowns": {},
+    "cooldowns": {
+      "cleave": 3.5440000000000014
+    },
     "hotbar": [
       "power_strike",
       "heal",
       "dash",
-      null
+      "cleave"
     ]
   }
 }

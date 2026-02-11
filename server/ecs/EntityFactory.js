@@ -136,7 +136,8 @@ export default class EntityFactory {
       damage: config.damage || 10,
       attackSpeed: config.attackSpeed || 0.8,
       range: config.size ? config.size + 12 : 36,
-      knockback: 4,
+      knockback: config.knockback ?? 4,
+      armor: config.armor || 0,
     }));
 
     entity.addComponent(new AIComponent({
@@ -146,6 +147,7 @@ export default class EntityFactory {
       attackRange: config.size ? config.size + 12 : 36,
       homeX: spawnData.x,
       homeY: spawnData.y,
+      leashRange: config.leashRange || 384,
     }));
 
     const loot = new LootTableComponent(config.drops || []);
@@ -154,6 +156,8 @@ export default class EntityFactory {
 
     entity.addComponent(new StatusEffectComponent());
     entity.addComponent(new AnimationStateComponent());
+
+    entity.isBoss = config.isBoss || false;
 
     entity.addTag('enemy');
     entity.enemyConfig = config;
