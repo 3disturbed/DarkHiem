@@ -41,8 +41,8 @@ export default class TouchControls {
   render(ctx) {
     if (!this.visible) return;
 
-    const w = this.renderer.width;
-    const h = this.renderer.height;
+    // Zones are in CSS pixel space; rendering is inside beginUI() so divide by uiScale
+    const s = this.renderer.uiScale;
 
     // Draw left stick area
     const ls = this.touchInput.leftStick;
@@ -51,14 +51,14 @@ export default class TouchControls {
       ctx.globalAlpha = 0.2;
       ctx.fillStyle = '#fff';
       ctx.beginPath();
-      ctx.arc(ls.originX, ls.originY, 50, 0, Math.PI * 2);
+      ctx.arc(ls.originX / s, ls.originY / s, 50 / s, 0, Math.PI * 2);
       ctx.fill();
 
       // Thumb position
       ctx.globalAlpha = 0.5;
       ctx.fillStyle = '#fff';
       ctx.beginPath();
-      ctx.arc(ls.originX + ls.x * 40, ls.originY + ls.y * 40, 20, 0, Math.PI * 2);
+      ctx.arc((ls.originX + ls.x * 40) / s, (ls.originY + ls.y * 40) / s, 20 / s, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -68,13 +68,13 @@ export default class TouchControls {
       ctx.globalAlpha = 0.2;
       ctx.fillStyle = '#fff';
       ctx.beginPath();
-      ctx.arc(rs.originX, rs.originY, 50, 0, Math.PI * 2);
+      ctx.arc(rs.originX / s, rs.originY / s, 50 / s, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.globalAlpha = 0.5;
       ctx.fillStyle = '#fff';
       ctx.beginPath();
-      ctx.arc(rs.originX + rs.x * 40, rs.originY + rs.y * 40, 20, 0, Math.PI * 2);
+      ctx.arc((rs.originX + rs.x * 40) / s, (rs.originY + rs.y * 40) / s, 20 / s, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -87,15 +87,15 @@ export default class TouchControls {
       ctx.globalAlpha = pressed ? 0.7 : 0.35;
       ctx.fillStyle = btn.color;
       ctx.beginPath();
-      ctx.arc(zone.x, zone.y, zone.radius, 0, Math.PI * 2);
+      ctx.arc(zone.x / s, zone.y / s, zone.radius / s, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.globalAlpha = pressed ? 1.0 : 0.6;
       ctx.fillStyle = '#fff';
-      ctx.font = '16px monospace';
+      ctx.font = `${16 / s}px monospace`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(btn.label, zone.x, zone.y);
+      ctx.fillText(btn.label, zone.x / s, zone.y / s);
     }
 
     ctx.globalAlpha = 1.0;

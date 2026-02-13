@@ -32,7 +32,7 @@ export default class EntityRenderer {
     }
 
     // Name tag
-    r.drawText(name, x, y - half - 12, '#fff', 10, 'center');
+    r.drawText(name, x, y - half - 12, '#fff', 10 * r.uiScale, 'center');
 
     // Health bar (only show if damaged)
     if (hp < maxHp && maxHp > 0) {
@@ -78,9 +78,9 @@ export default class EntityRenderer {
 
     // Name tag — gold for boss
     if (isBoss) {
-      r.drawText(name, x, y - half - 18, '#ffd700', 12, 'center');
+      r.drawText(name, x, y - half - 18, '#ffd700', 12 * r.uiScale, 'center');
     } else {
-      r.drawText(name, x, y - half - 12, '#ddd', 9, 'center');
+      r.drawText(name, x, y - half - 12, '#ddd', 9 * r.uiScale, 'center');
     }
 
     // Health bar — wider and copper-tinted for boss
@@ -108,7 +108,7 @@ export default class EntityRenderer {
     r.ctx.stroke();
 
     // Name tag
-    r.drawText(name, x, y - half - 12, '#c8d6e5', 8, 'center');
+    r.drawText(name, x, y - half - 12, '#c8d6e5', 8 * r.uiScale, 'center');
 
     // Health bar (only show if damaged)
     if (hp < maxHp && maxHp > 0) {
@@ -143,7 +143,7 @@ export default class EntityRenderer {
 
     // Name tag (show level if > 1)
     const label = level > 1 ? `${name} Lv${level}` : name;
-    r.drawText(label, x, y - half - 8, '#ffd700', 9, 'center');
+    r.drawText(label, x, y - half - 8, '#ffd700', 9 * r.uiScale, 'center');
   }
 
   // Render a chest entity
@@ -175,7 +175,7 @@ export default class EntityRenderer {
     }
 
     // Name tag
-    r.drawText(name, x, y - half - 8, '#ffd700', 9, 'center');
+    r.drawText(name, x, y - half - 8, '#ffd700', 9 * r.uiScale, 'center');
   }
 
   // Render a summoning shrine/altar
@@ -219,11 +219,11 @@ export default class EntityRenderer {
     }
 
     // Name tag
-    r.drawText(name, x, y - half - 12, '#ffd700', 11, 'center');
+    r.drawText(name, x, y - half - 12, '#ffd700', 11 * r.uiScale, 'center');
 
     // Status hint
     const status = isActive ? 'Boss Active' : 'Press E';
-    r.drawText(status, x, y + half + 14, isActive ? '#e74c3c' : '#aaa', 8, 'center');
+    r.drawText(status, x, y + half + 14, isActive ? '#e74c3c' : '#aaa', 8 * r.uiScale, 'center');
   }
 
   // Render an NPC entity
@@ -255,7 +255,7 @@ export default class EntityRenderer {
     }
 
     // Name tag
-    r.drawText(name, x, y - half - 14, '#fff', 10, 'center');
+    r.drawText(name, x, y - half - 14, '#fff', 10 * r.uiScale, 'center');
 
     // Citizens: no type indicator, no "Press E"
     if (npcType === 'citizen') return;
@@ -263,10 +263,10 @@ export default class EntityRenderer {
     // Type indicator above name
     if (npcType === 'quest_giver') {
       // Yellow exclamation mark
-      r.drawText('!', x, y - half - 26, '#ffd700', 16, 'center');
+      r.drawText('!', x, y - half - 26, '#ffd700', 16 * r.uiScale, 'center');
     } else if (npcType === 'vendor') {
       // Gold coin symbol
-      r.drawText('$', x, y - half - 26, '#f1c40f', 14, 'center');
+      r.drawText('$', x, y - half - 26, '#f1c40f', 14 * r.uiScale, 'center');
     } else if (npcType === 'guard') {
       // Shield indicator - blue outline around body
       ctx.strokeStyle = '#3498db';
@@ -278,7 +278,7 @@ export default class EntityRenderer {
 
     // "Press E" hint
     if (npcType !== 'guard') {
-      r.drawText('Press E', x, y + half + 10, '#aaa', 7, 'center');
+      r.drawText('Press E', x, y + half + 10, '#aaa', 7 * r.uiScale, 'center');
     }
   }
 
@@ -316,7 +316,7 @@ export default class EntityRenderer {
 
     // Name tag
     ctx.globalAlpha = 0.7;
-    r.drawText(name, x, y - half - 8, isValid ? '#2ecc71' : '#e74c3c', 9, 'center');
+    r.drawText(name, x, y - half - 8, isValid ? '#2ecc71' : '#e74c3c', 9 * r.uiScale, 'center');
 
     ctx.restore();
   }
@@ -370,7 +370,7 @@ export default class EntityRenderer {
 
     // Name tag
     const nameColor = tamed ? '#90ee90' : '#ddd';
-    r.drawText(name, x, y - half - 10, nameColor, 9, 'center');
+    r.drawText(name, x, y - half - 10, nameColor, 9 * r.uiScale, 'center');
   }
 
   static renderHealthBar(r, cx, y, width, height, current, max, color) {

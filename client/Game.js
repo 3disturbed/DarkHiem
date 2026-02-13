@@ -311,7 +311,7 @@ export default class Game {
     // Crafting callbacks
     this.network.onInteractResult = (data) => {
       if (data.success && data.type === 'station') {
-        this.craftingPanel.position(this.renderer.width, this.renderer.height);
+        this.craftingPanel.position(this.renderer.logicalWidth, this.renderer.logicalHeight);
         this.craftingPanel.open(data.stationId, data.stationLevel, data.recipes);
         this.craftingOpen = true;
       }
@@ -418,7 +418,7 @@ export default class Game {
 
     // Dialog callbacks
     this.network.onDialogStart = (data) => {
-      this.dialogPanel.position(this.renderer.width, this.renderer.height);
+      this.dialogPanel.position(this.renderer.logicalWidth, this.renderer.logicalHeight);
       this.dialogPanel.open(data);
       this.dialogOpen = true;
       // Close other panels
@@ -438,7 +438,7 @@ export default class Game {
     // Quest callbacks
     this.network.onQuestList = (data) => {
       this.questLog.updateFromQuestList(data);
-      this.questPanel.position(this.renderer.width, this.renderer.height);
+      this.questPanel.position(this.renderer.logicalWidth, this.renderer.logicalHeight);
       this.questPanel.openNpcQuests(data);
       this.questPanelOpen = true;
     };
@@ -487,7 +487,7 @@ export default class Game {
 
     // Shop callbacks
     this.network.onShopData = (data) => {
-      this.shopPanel.position(this.renderer.width, this.renderer.height);
+      this.shopPanel.position(this.renderer.logicalWidth, this.renderer.logicalHeight);
       this.shopPanel.open(data);
       this.shopOpen = true;
     };
@@ -505,7 +505,7 @@ export default class Game {
     // Chest
     this.network.onChestData = (data) => {
       if (!this.chestOpen) {
-        this.chestPanel.position(this.renderer.width, this.renderer.height);
+        this.chestPanel.position(this.renderer.logicalWidth, this.renderer.logicalHeight);
         this.chestPanel.open(data);
         this.chestOpen = true;
       } else {
@@ -607,6 +607,10 @@ export default class Game {
   update(dt) {
     // Poll input
     const actions = this.input.update(this.camera, this.renderer);
+    const r = this.renderer;
+    const s = r.uiScale;
+    const uiMX = actions.mouseScreenX / s;
+    const uiMY = actions.mouseScreenY / s;
 
     // Death screen
     this.deathScreen.update(dt);
@@ -616,7 +620,7 @@ export default class Game {
         if (actions.action) {
           this.network.sendRespawn();
         } else if (actions.screenTap) {
-          if (this.deathScreen.handleClick(actions.mouseScreenX, actions.mouseScreenY, this.renderer.width, this.renderer.height)) {
+          if (this.deathScreen.handleClick(uiMX, uiMY, r.logicalWidth, r.logicalHeight)) {
             this.network.sendRespawn();
           }
         }
@@ -711,9 +715,9 @@ export default class Game {
       this.equipmentPanel.visible = this.panelsOpen;
       this.statsPanel.visible = this.panelsOpen;
       if (this.panelsOpen) {
-        this.inventoryPanel.position(this.renderer.width, this.renderer.height);
-        this.equipmentPanel.position(this.renderer.width, this.renderer.height);
-        this.statsPanel.position(this.renderer.width, this.renderer.height);
+        this.inventoryPanel.position(r.logicalWidth, r.logicalHeight);
+        this.equipmentPanel.position(r.logicalWidth, r.logicalHeight);
+        this.statsPanel.position(r.logicalWidth, r.logicalHeight);
       }
     }
 
@@ -723,7 +727,7 @@ export default class Game {
         this.questPanel.close();
         this.questPanelOpen = false;
       } else {
-        this.questPanel.position(this.renderer.width, this.renderer.height);
+        this.questPanel.position(r.logicalWidth, r.logicalHeight);
         this.questPanel.openQuestLog(this.questLog.getActiveQuests(), this.questLog.getCompletedQuests());
         this.questPanelOpen = true;
       }
@@ -736,7 +740,7 @@ export default class Game {
         this.fishingRodOpen = !this.fishingRodOpen;
         if (this.fishingRodOpen) {
           this.fishingRodPanel.open(equippedTool);
-          this.fishingRodPanel.position(this.renderer.width, this.renderer.height);
+          this.fishingRodPanel.position(r.logicalWidth, r.logicalHeight);
         } else {
           this.fishingRodPanel.close();
         }
@@ -775,7 +779,7 @@ export default class Game {
         this.upgradePanel.close();
         this.upgradeOpen = false;
       } else if (!this.panelsOpen) {
-        this.upgradePanel.position(this.renderer.width, this.renderer.height);
+        this.upgradePanel.position(r.logicalWidth, r.logicalHeight);
         this.upgradePanel.open();
         this.upgradeOpen = true;
         // Close crafting if open
@@ -792,7 +796,7 @@ export default class Game {
         this.skillsPanel.close();
         this.skillsOpen = false;
       } else if (!this.panelsOpen) {
-        this.skillsPanel.position(this.renderer.width, this.renderer.height);
+        this.skillsPanel.position(r.logicalWidth, r.logicalHeight);
         this.skillsPanel.open();
         this.skillsOpen = true;
         // Close crafting/upgrade if open
@@ -809,10 +813,10 @@ export default class Game {
     // World map drag panning
     if (this.worldMap.visible) {
       if (actions.action) {
-        this.worldMap.handleMouseDown(actions.mouseScreenX, actions.mouseScreenY);
+        this.worldMap.handleMouseDown(uiMX, uiMY);
       }
       if (actions.actionHeld) {
-        this.worldMap.handleMouseMove(actions.mouseScreenX, actions.mouseScreenY);
+        this.worldMap.handleMouseMove(uiMX, uiMY);
       } else {
         this.worldMap.handleMouseUp();
       }
@@ -876,7 +880,7 @@ export default class Game {
         // Mouse → world coordinates
         const world = this.camera.screenToWorld(
           actions.mouseScreenX, actions.mouseScreenY,
-          this.renderer.width, this.renderer.height
+          r.width, r.height
         );
         this.ghostX = Math.floor(world.x / TILE_SIZE) * TILE_SIZE + TILE_SIZE / 2;
         this.ghostY = Math.floor(world.y / TILE_SIZE) * TILE_SIZE + TILE_SIZE / 2;
@@ -1009,9 +1013,7 @@ export default class Game {
           this.network.sendCraftRequest(recipeId);
         });
       } else {
-        const mx = actions.mouseScreenX;
-        const my = actions.mouseScreenY;
-        this.craftingPanel.handleClick(mx, my, this.inventory, (recipeId) => {
+        this.craftingPanel.handleClick(uiMX, uiMY, this.inventory, (recipeId) => {
           this.network.sendCraftRequest(recipeId);
         });
         if (!this.craftingPanel.visible) {
@@ -1023,7 +1025,7 @@ export default class Game {
     // Handle upgrade panel interaction
     if (this.upgradeOpen) {
       this.upgradePanel.update(dt);
-      this.upgradePanel.handleMouseMove(actions.mouseScreenX, actions.mouseScreenY, this.inventory);
+      this.upgradePanel.handleMouseMove(uiMX, uiMY, this.inventory);
       if (actions.action || actions.screenTap) {
         const onUpgrade = (targetSlot, sacrificeSlot) => {
           this.network.sendUpgradeRequest(targetSlot, sacrificeSlot);
@@ -1031,7 +1033,7 @@ export default class Game {
         if (this.input.activeMethod === 'gamepad') {
           this.upgradePanel.confirmSelected(this.inventory, onUpgrade);
         } else {
-          this.upgradePanel.handleClick(actions.mouseScreenX, actions.mouseScreenY, this.inventory, onUpgrade);
+          this.upgradePanel.handleClick(uiMX, uiMY, this.inventory, onUpgrade);
           if (!this.upgradePanel.visible) {
             this.upgradeOpen = false;
           }
@@ -1047,15 +1049,15 @@ export default class Game {
       if (this.input.activeMethod === 'gamepad') {
         this.skillsPanel.confirmSelected(this.skills, onHotbarSet);
       } else {
-        this.skillsPanel.handleClick(actions.mouseScreenX, actions.mouseScreenY, this.skills, onHotbarSet);
+        this.skillsPanel.handleClick(uiMX, uiMY, this.skills, onHotbarSet);
       }
     }
 
     // Handle dialog panel interaction
     if (this.dialogOpen) {
-      this.dialogPanel.handleMouseMove(actions.mouseScreenX, actions.mouseScreenY);
+      this.dialogPanel.handleMouseMove(uiMX, uiMY);
       if (actions.action || actions.screenTap) {
-        const result = this.dialogPanel.handleClick(actions.mouseScreenX, actions.mouseScreenY);
+        const result = this.dialogPanel.handleClick(uiMX, uiMY);
         if (result) {
           if (result.action === 'close') {
             this.network.sendDialogEnd(this.dialogPanel.npcId);
@@ -1070,9 +1072,9 @@ export default class Game {
 
     // Handle quest panel interaction
     if (this.questPanelOpen) {
-      this.questPanel.handleMouseMove(actions.mouseScreenX, actions.mouseScreenY);
+      this.questPanel.handleMouseMove(uiMX, uiMY);
       if (actions.action || actions.screenTap) {
-        const result = this.questPanel.handleClick(actions.mouseScreenX, actions.mouseScreenY);
+        const result = this.questPanel.handleClick(uiMX, uiMY);
         if (result) {
           if (result.action === 'close') {
             this.questPanel.close();
@@ -1091,9 +1093,9 @@ export default class Game {
 
     // Handle shop panel interaction
     if (this.shopOpen) {
-      this.shopPanel.handleMouseMove(actions.mouseScreenX, actions.mouseScreenY, this.inventory);
+      this.shopPanel.handleMouseMove(uiMX, uiMY, this.inventory);
       if (actions.action || actions.screenTap) {
-        const result = this.shopPanel.handleClick(actions.mouseScreenX, actions.mouseScreenY, this.inventory);
+        const result = this.shopPanel.handleClick(uiMX, uiMY, this.inventory);
         if (result) {
           if (result.action === 'close') {
             this.shopPanel.close();
@@ -1109,9 +1111,9 @@ export default class Game {
 
     // Handle chest panel interaction
     if (this.chestOpen) {
-      this.chestPanel.handleMouseMove(actions.mouseScreenX, actions.mouseScreenY, this.inventory);
+      this.chestPanel.handleMouseMove(uiMX, uiMY, this.inventory);
       if (actions.action || actions.screenTap) {
-        const result = this.chestPanel.handleClick(actions.mouseScreenX, actions.mouseScreenY, this.inventory);
+        const result = this.chestPanel.handleClick(uiMX, uiMY, this.inventory);
         if (result) {
           if (result.action === 'close') {
             this.network.sendChestClose(this.chestPanel.entityId);
@@ -1128,9 +1130,9 @@ export default class Game {
 
     // Handle fishing rod panel interaction
     if (this.fishingRodOpen) {
-      this.fishingRodPanel.handleMouseMove(actions.mouseScreenX, actions.mouseScreenY);
+      this.fishingRodPanel.handleMouseMove(uiMX, uiMY);
       if (actions.action || actions.screenTap) {
-        const result = this.fishingRodPanel.handleClick(actions.mouseScreenX, actions.mouseScreenY, this.inventory);
+        const result = this.fishingRodPanel.handleClick(uiMX, uiMY, this.inventory);
         if (result) {
           if (result.action === 'close') {
             this.fishingRodPanel.close();
@@ -1149,7 +1151,7 @@ export default class Game {
 
     // Skill bar tap/click handling
     if ((actions.action || actions.screenTap) && !this.panelsOpen && !this.craftingOpen && !this.upgradeOpen && !this.skillsOpen && !this.placementMode && !this.dialogOpen && !this.questPanelOpen && !this.shopOpen && !this.chestOpen && !this.fishingRodOpen) {
-      const slot = this.skillBar.handleClick(actions.mouseScreenX, actions.mouseScreenY);
+      const slot = this.skillBar.handleClick(uiMX, uiMY);
       if (slot >= 0) {
         this.network.sendSkillUse(slot);
       }
@@ -1157,16 +1159,16 @@ export default class Game {
 
     // Track mouse hover for tooltips
     if (this.panelsOpen) {
-      this.inventoryPanel.handleMouseMove(actions.mouseScreenX, actions.mouseScreenY);
-      this.equipmentPanel.handleMouseMove(actions.mouseScreenX, actions.mouseScreenY);
-      this.statsPanel.handleMouseMove(actions.mouseScreenX, actions.mouseScreenY);
+      this.inventoryPanel.handleMouseMove(uiMX, uiMY);
+      this.equipmentPanel.handleMouseMove(uiMX, uiMY);
+      this.statsPanel.handleMouseMove(uiMX, uiMY);
     }
 
     // Context menu interaction (must come before other panel handlers)
     if (this.contextMenu.visible) {
-      this.contextMenu.handleMouseMove(actions.mouseScreenX, actions.mouseScreenY);
+      this.contextMenu.handleMouseMove(uiMX, uiMY);
       if (actions.action || actions.screenTap) {
-        const result = this.contextMenu.handleClick(actions.mouseScreenX, actions.mouseScreenY);
+        const result = this.contextMenu.handleClick(uiMX, uiMY);
         if (result && result !== 'close') {
           this._handleContextMenuAction(result);
         }
@@ -1182,13 +1184,13 @@ export default class Game {
         this.inventoryPanel.dropSelected(this.inventory, onDrop);
       } else {
         const menuDesc = this.inventoryPanel.handleRightClick(
-          actions.mouseScreenX, actions.mouseScreenY,
+          uiMX, uiMY,
           this.inventory
         );
         if (menuDesc) {
           this.contextMenu.open(
             menuDesc.x, menuDesc.y, menuDesc.options, menuDesc.slotIndex,
-            this.renderer.width, this.renderer.height
+            r.logicalWidth, r.logicalHeight
           );
         }
       }
@@ -1208,14 +1210,12 @@ export default class Game {
           this.network.sendStatAllocate(stat);
         });
       } else {
-        const mx = actions.mouseScreenX;
-        const my = actions.mouseScreenY;
         const onSwap = (from, to) => this.network.sendItemMove(from, to);
-        this.inventoryPanel.handleClick(mx, my, this.inventory, onEquip, onUse, onDrop, onSwap);
-        this.equipmentPanel.handleClick(mx, my, this.equipment, (slotName) => {
+        this.inventoryPanel.handleClick(uiMX, uiMY, this.inventory, onEquip, onUse, onDrop, onSwap);
+        this.equipmentPanel.handleClick(uiMX, uiMY, this.equipment, (slotName) => {
           this.network.sendUnequip(slotName);
         });
-        this.statsPanel.handleClick(mx, my, this.playerStats, (stat) => {
+        this.statsPanel.handleClick(uiMX, uiMY, this.playerStats, (stat) => {
           this.network.sendStatAllocate(stat);
         });
       }
@@ -1449,16 +1449,17 @@ export default class Game {
     this.renderEnemies(r);
     this.renderPlayers(r);
     this.renderFishingBobber(r);
-    this.damageNumbers.render(ctx);
+    this.damageNumbers.render(ctx, r.uiScale);
     r.endCamera();
 
-    // Screen-space UI
+    // Screen-space UI (scaled)
+    r.beginUI();
     this.touchControls.render(ctx);
     this.renderHUD(r);
     this.renderPlayerArrows(ctx, r);
 
     // Skill bar (always visible, above health bar)
-    this.skillBar.position(r.width, r.height);
+    this.skillBar.position(r.logicalWidth, r.logicalHeight);
     this.skillBar.render(ctx, this.skills, this.input.getActiveMethod());
 
     // Panels (screen space)
@@ -1471,25 +1472,25 @@ export default class Game {
 
     // Dialog panel
     if (this.dialogOpen) {
-      this.dialogPanel.position(r.width, r.height);
+      this.dialogPanel.position(r.logicalWidth, r.logicalHeight);
       this.dialogPanel.render(ctx);
     }
 
     // Quest panel
     if (this.questPanelOpen) {
-      this.questPanel.position(r.width, r.height);
+      this.questPanel.position(r.logicalWidth, r.logicalHeight);
       this.questPanel.render(ctx);
     }
 
     // Shop panel
     if (this.shopOpen) {
-      this.shopPanel.position(r.width, r.height);
+      this.shopPanel.position(r.logicalWidth, r.logicalHeight);
       this.shopPanel.render(ctx, this.inventory);
     }
 
     // Chest panel
     if (this.chestOpen) {
-      this.chestPanel.position(r.width, r.height);
+      this.chestPanel.position(r.logicalWidth, r.logicalHeight);
       this.chestPanel.render(ctx, this.inventory);
     }
 
@@ -1500,7 +1501,7 @@ export default class Game {
       if (rodTool && rodTool.rodParts) {
         this.fishingRodPanel.rodParts = { ...rodTool.rodParts };
       }
-      this.fishingRodPanel.position(r.width, r.height);
+      this.fishingRodPanel.position(r.logicalWidth, r.logicalHeight);
       this.fishingRodPanel.render(ctx);
     }
 
@@ -1512,15 +1513,16 @@ export default class Game {
 
     // Minimap (always visible when not in world map)
     if (!this.worldMap.visible) {
-      this.minimap.position(r.width);
+      this.minimap.position(r.logicalWidth);
       this.minimap.render(ctx, this.worldManager, this.exploredChunks, this.localPlayer, this.remotePlayers);
     }
 
     // World map (full-screen overlay)
-    this.worldMap.render(ctx, r.width, r.height, this.exploredChunks, this.biomeCache, this.localPlayer, this.remotePlayers);
+    this.worldMap.render(ctx, r.logicalWidth, r.logicalHeight, this.exploredChunks, this.biomeCache, this.localPlayer, this.remotePlayers);
 
     // Death screen (renders on top of everything)
-    this.deathScreen.render(ctx, r.width, r.height);
+    this.deathScreen.render(ctx, r.logicalWidth, r.logicalHeight);
+    r.endUI();
   }
 
   renderWorld(r) {
@@ -1617,7 +1619,7 @@ export default class Game {
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist < 100) {
           const half = (horse.size || 30) / 2;
-          r.drawText('Press Q to capture', horse.x, horse.y + half + 12, '#aaa', 8, 'center');
+          r.drawText('Press Q to capture', horse.x, horse.y + half + 12, '#aaa', 8 * r.uiScale, 'center');
         }
       }
     }
@@ -1653,11 +1655,11 @@ export default class Game {
       const labelX = plot.x + plot.width / 2;
       const labelY = plot.y - 6;
       if (isOwnedByMe) {
-        r.drawText(`${plot.name} (Yours)`, labelX, labelY, '#2ecc71', 10, 'center');
+        r.drawText(`${plot.name} (Yours)`, labelX, labelY, '#2ecc71', 10 * r.uiScale, 'center');
       } else if (isOwned) {
-        r.drawText(`${owner.ownerName}'s Plot`, labelX, labelY, '#e74c3c', 10, 'center');
+        r.drawText(`${owner.ownerName}'s Plot`, labelX, labelY, '#e74c3c', 10 * r.uiScale, 'center');
       } else {
-        r.drawText(`${plot.name} — ${plot.price}g`, labelX, labelY, '#f1c40f', 10, 'center');
+        r.drawText(`${plot.name} — ${plot.price}g`, labelX, labelY, '#f1c40f', 10 * r.uiScale, 'center');
       }
     }
   }
@@ -1699,7 +1701,7 @@ export default class Game {
     if (this.hasHorse && !this.mounted && this.followHorse.initialized && this.localPlayer) {
       const fh = this.followHorse;
       EntityRenderer.renderHorse(r, fh.x, fh.y, '#8B6C42', 30, 'Horse', true, null);
-      r.drawText('Press Q to ride', fh.x, fh.y + 26, '#90ee90', 8, 'center');
+      r.drawText('Press Q to ride', fh.x, fh.y + 26, '#90ee90', 8 * r.uiScale, 'center');
     }
 
     // Render local player
@@ -1718,7 +1720,7 @@ export default class Game {
       );
       // Mounted hint
       if (this.mounted) {
-        r.drawText('Press Q to dismount', p.x, p.y + 28, '#aaa', 8, 'center');
+        r.drawText('Press Q to dismount', p.x, p.y + 28, '#aaa', 8 * r.uiScale, 'center');
       }
     }
   }
@@ -1733,6 +1735,8 @@ export default class Game {
 
   renderHUD(r) {
     const ctx = r.ctx;
+    const w = r.logicalWidth;
+    const h = r.logicalHeight;
     // Connection status
     const status = this.network.connected ? 'Connected' : 'Connecting...';
     const statusColor = this.network.connected ? '#2ecc71' : '#e74c3c';
@@ -1750,8 +1754,8 @@ export default class Game {
     if (this.localPlayer) {
       const barWidth = 200;
       const barHeight = 18;
-      const barX = (r.width - barWidth) / 2;
-      const barY = r.height - 40;
+      const barX = (w - barWidth) / 2;
+      const barY = h - 40;
       this.healthBar.render(ctx, barX, barY, barWidth, barHeight);
 
       // XP bar below health bar
@@ -1789,8 +1793,8 @@ export default class Game {
         const pipSize = 8;
         const pipGap = 4;
         const totalPipW = buffSkills.length * (pipSize + pipGap) - pipGap;
-        const pipStartX = (r.width - totalPipW) / 2;
-        const pipY = r.height - 108; // above skill bar
+        const pipStartX = (w - totalPipW) / 2;
+        const pipY = h - 108; // above skill bar
         for (let i = 0; i < buffSkills.length; i++) {
           ctx.fillStyle = buffSkills[i].color || '#fff';
           ctx.globalAlpha = 0.9;
@@ -1804,12 +1808,12 @@ export default class Game {
     if (this.localPlayer) {
       const x = Math.round(this.localPlayer.x);
       const y = Math.round(this.localPlayer.y);
-      r.drawText(`${x}, ${y}`, r.width - 10, 20, '#636e72', 10, 'right');
+      r.drawText(`${x}, ${y}`, w - 10, 20, '#636e72', 10, 'right');
 
       // Current biome from loaded chunks
       const chunk = this.worldManager.chunks.values().next().value;
       if (chunk) {
-        r.drawText(chunk.biomeId || '', r.width - 10, 36, '#95a5a6', 10, 'right');
+        r.drawText(chunk.biomeId || '', w - 10, 36, '#95a5a6', 10, 'right');
       }
     }
 
@@ -1817,8 +1821,8 @@ export default class Game {
     if (this.recallTimer > 0 && this.localPlayer) {
       const barWidth = 160;
       const barHeight = 14;
-      const barX = (r.width - barWidth) / 2;
-      const barY = r.height - 80;
+      const barX = (w - barWidth) / 2;
+      const barY = h - 80;
       const progress = this.recallTimer / this.recallDuration;
 
       // Background
@@ -1838,7 +1842,7 @@ export default class Game {
       ctx.fillStyle = '#fff';
       ctx.font = 'bold 11px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('Recalling to Town...', r.width / 2, barY - 4);
+      ctx.fillText('Recalling to Town...', w / 2, barY - 4);
     }
 
     // Placement mode hint
@@ -1848,8 +1852,8 @@ export default class Game {
         : this.input.activeMethod === 'gamepad'
           ? 'A to place | B to cancel'
           : 'Click to place | Esc to cancel';
-      r.drawText(`Placing: ${this.placementMode.name}`, r.width / 2, 30, '#ffd700', 14, 'center');
-      r.drawText(hint, r.width / 2, 48, '#bbb', 11, 'center');
+      r.drawText(`Placing: ${this.placementMode.name}`, w / 2, 30, '#ffd700', 14, 'center');
+      r.drawText(hint, w / 2, 48, '#bbb', 11, 'center');
     }
   }
 
@@ -1857,8 +1861,8 @@ export default class Game {
     if (!this.localPlayer) return;
 
     const margin = 40;
-    const w = r.width;
-    const h = r.height;
+    const w = r.logicalWidth;
+    const h = r.logicalHeight;
     const cx = w / 2;
     const cy = h / 2;
 
@@ -1922,8 +1926,8 @@ export default class Game {
   renderFishingHUD(ctx, r) {
     // Fishing state indicator near center-bottom
     if (this.fishingState) {
-      const cx = r.width / 2;
-      const baseY = r.height - 140;
+      const cx = r.logicalWidth / 2;
+      const baseY = r.logicalHeight - 140;
 
       ctx.font = 'bold 16px monospace';
       ctx.textAlign = 'center';
@@ -1946,8 +1950,8 @@ export default class Game {
 
     // Fishing message (catch result / error)
     if (this.fishingMessage && this.fishingMessageTimer > 0) {
-      const cx = r.width / 2;
-      const msgY = r.height / 2 - 60;
+      const cx = r.logicalWidth / 2;
+      const msgY = r.logicalHeight / 2 - 60;
       ctx.font = 'bold 18px monospace';
       ctx.textAlign = 'center';
       ctx.globalAlpha = Math.min(1, this.fishingMessageTimer);
@@ -2049,7 +2053,7 @@ export default class Game {
         this.contextMenu.open(
           this.contextMenu.x, this.contextMenu.y + 10,
           gemOptions, sourceSlot,
-          this.renderer.width, this.renderer.height
+          this.renderer.logicalWidth, this.renderer.logicalHeight
         );
       }
     } else if (action === 'socket_gem') {

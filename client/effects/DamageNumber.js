@@ -29,10 +29,10 @@ export default class DamageNumber {
     }
   }
 
-  render(ctx) {
+  render(ctx, uiScale = 1) {
     for (const n of this.numbers) {
       const alpha = Math.max(0, 1 - n.age / LIFETIME);
-      const size = n.isCrit ? 16 : 12;
+      const size = (n.isCrit ? 16 : 12) * uiScale;
       ctx.globalAlpha = alpha;
       ctx.fillStyle = n.color || (n.isCrit ? '#ff4444' : '#ffcc00');
       ctx.font = `bold ${size}px monospace`;

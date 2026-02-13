@@ -3,6 +3,7 @@ export default class Renderer {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.dpr = window.devicePixelRatio || 1;
+    this.uiScale = 1.4;
 
     this.resize();
     window.addEventListener('resize', () => this.resize());
@@ -16,6 +17,8 @@ export default class Renderer {
     this.canvas.height = rect.height * this.dpr;
     this.ctx.scale(this.dpr, this.dpr);
     this.ctx.imageSmoothingEnabled = false;
+    this.logicalWidth = this.width / this.uiScale;
+    this.logicalHeight = this.height / this.uiScale;
   }
 
   clear() {
@@ -32,6 +35,15 @@ export default class Renderer {
   }
 
   endCamera() {
+    this.ctx.restore();
+  }
+
+  beginUI() {
+    this.ctx.save();
+    this.ctx.setTransform(this.dpr * this.uiScale, 0, 0, this.dpr * this.uiScale, 0, 0);
+  }
+
+  endUI() {
     this.ctx.restore();
   }
 
