@@ -9,7 +9,7 @@
       "color": "#d4a574",
       "size": 26,
       "dialogId": "elder_thorvald_dialog",
-      "questIds": ["quest_welcome", "quest_gather_wood", "quest_craft_weapon", "quest_kill_greylings", "quest_slay_bramblethorn"],
+      "questIds": ["quest_welcome", "quest_gather_wood", "quest_craft_weapon", "quest_kill_greylings", "quest_slay_bramblethorn", "quest_forge_alliance"],
       "interactRange": 64
     },
     {
@@ -33,7 +33,7 @@
       "color": "#2ecc71",
       "size": 24,
       "dialogId": "scout_renna_dialog",
-      "questIds": ["quest_deliver_supplies", "quest_explore_darkforest", "quest_portal_to_hell"],
+      "questIds": ["quest_deliver_supplies", "quest_explore_darkforest", "quest_portal_to_hell", "quest_volcanic_recon"],
       "interactRange": 64
     },
     {
@@ -69,7 +69,7 @@
       "color": "#2980b9",
       "size": 26,
       "dialogId": "fishmonger_olaf_dialog",
-      "questIds": ["quest_first_catch", "quest_deep_water_fishing"],
+      "questIds": ["quest_first_catch", "quest_deep_water_fishing", "quest_legendary_catch"],
       "interactRange": 64
     },
     {
@@ -106,6 +106,30 @@
       "size": 26,
       "dialogId": "farmer_bjorn_dialog",
       "questIds": ["quest_feed_village", "quest_flax_harvest", "quest_mushroom_forager", "quest_rare_herb_hunt"],
+      "interactRange": 64
+    },
+    {
+      "id": "stablemaster_astrid",
+      "name": "Stablemaster Astrid",
+      "type": "quest_giver",
+      "x": 800,
+      "y": 1000,
+      "color": "#8B6C42",
+      "size": 26,
+      "dialogId": "stablemaster_astrid_dialog",
+      "questIds": ["quest_tame_the_wilds", "quest_first_ride", "quest_horse_endurance"],
+      "shopId": "stable_shop",
+      "interactRange": 64
+    },
+    {
+      "id": "surveyor_halfdan",
+      "name": "Surveyor Halfdan",
+      "type": "quest_giver",
+      "x": 100,
+      "y": 100,
+      "color": "#b8860b",
+      "size": 24,
+      "dialogId": "surveyor_halfdan_dialog",
       "interactRange": 64
     },
     {

@@ -60,6 +60,15 @@ export default class DialogHandler {
       return;
     }
 
+    if (choice.action === 'buy_plot') {
+      this.dialogStates.delete(player.id);
+      player.emit(MSG.DIALOG_END, { npcId: state.npcId });
+      if (this.gameServer.landPlotHandler) {
+        this.gameServer.landPlotHandler.handlePurchase(player, { plotId: choice.plotId });
+      }
+      return;
+    }
+
     // Navigate to next dialog node
     if (choice.nextNode && dialog.nodes[choice.nextNode]) {
       state.currentNode = choice.nextNode;

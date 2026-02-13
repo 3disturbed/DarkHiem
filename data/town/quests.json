@@ -222,6 +222,81 @@
       ],
       "rewards": { "xp": 150, "items": [{ "itemId": "gold", "count": 80 }] },
       "prerequisiteQuests": ["quest_mushroom_forager"]
+    },
+    {
+      "id": "quest_tame_the_wilds",
+      "name": "Tame the Wilds",
+      "description": "Stablemaster Astrid needs leather and flax to maintain the stable. Gather the materials and she'll reward you with lassos for capturing wild horses.",
+      "giverNpcId": "stablemaster_astrid",
+      "turnInNpcId": "stablemaster_astrid",
+      "objectives": [
+        { "type": "collect", "target": "leather_scrap", "required": 5, "description": "Collect 5 Leather Scraps" },
+        { "type": "collect", "target": "flax", "required": 8, "description": "Collect 8 Flax" }
+      ],
+      "rewards": { "xp": 50, "items": [{ "itemId": "lasso", "count": 3 }, { "itemId": "gold", "count": 25 }] },
+      "prerequisiteQuests": []
+    },
+    {
+      "id": "quest_first_ride",
+      "name": "First Ride",
+      "description": "Astrid wants proof you're ready to handle a horse. Show her you have a lasso prepared.",
+      "giverNpcId": "stablemaster_astrid",
+      "turnInNpcId": "stablemaster_astrid",
+      "objectives": [
+        { "type": "collect", "target": "lasso", "required": 1, "description": "Have a Lasso ready" }
+      ],
+      "rewards": { "xp": 75, "items": [{ "itemId": "gold", "count": 40 }] },
+      "prerequisiteQuests": ["quest_tame_the_wilds"]
+    },
+    {
+      "id": "quest_horse_endurance",
+      "name": "Horse Endurance",
+      "description": "Astrid challenges you to prove your horsemanship. Hunt greylings to show your skill in mounted combat.",
+      "giverNpcId": "stablemaster_astrid",
+      "turnInNpcId": "stablemaster_astrid",
+      "objectives": [
+        { "type": "kill", "target": "greyling", "required": 10, "description": "Kill 10 Greylings" }
+      ],
+      "rewards": { "xp": 100, "items": [{ "itemId": "lasso", "count": 2 }, { "itemId": "gold", "count": 50 }] },
+      "prerequisiteQuests": ["quest_first_ride"]
+    },
+    {
+      "id": "quest_forge_alliance",
+      "name": "Forge the Alliance",
+      "description": "The village is growing. Thorvald asks you to contribute copper ingots and oak planks to strengthen the town's infrastructure.",
+      "giverNpcId": "elder_thorvald",
+      "turnInNpcId": "elder_thorvald",
+      "objectives": [
+        { "type": "collect", "target": "copper_ingot", "required": 10, "description": "Collect 10 Copper Ingots" },
+        { "type": "collect", "target": "oak_plank", "required": 10, "description": "Collect 10 Oak Planks" }
+      ],
+      "rewards": { "xp": 100, "items": [{ "itemId": "gold", "count": 75 }] },
+      "prerequisiteQuests": ["quest_slay_bramblethorn"]
+    },
+    {
+      "id": "quest_volcanic_recon",
+      "name": "Volcanic Recon",
+      "description": "Scout Renna needs intelligence about the volcanic wasteland. Bring back obsidian and flametal ore as proof of your expedition.",
+      "giverNpcId": "scout_renna",
+      "turnInNpcId": "scout_renna",
+      "objectives": [
+        { "type": "collect", "target": "obsidian", "required": 5, "description": "Collect 5 Obsidian" },
+        { "type": "collect", "target": "flametal_ore", "required": 3, "description": "Collect 3 Flametal Ore" }
+      ],
+      "rewards": { "xp": 500, "items": [{ "itemId": "gold", "count": 250 }] },
+      "prerequisiteQuests": ["quest_explore_darkforest"]
+    },
+    {
+      "id": "quest_legendary_catch",
+      "name": "The Legendary Catch",
+      "description": "Olaf has heard tales of a golden carp that swims in the deepest waters. Find one and bring it back.",
+      "giverNpcId": "fishmonger_olaf",
+      "turnInNpcId": "fishmonger_olaf",
+      "objectives": [
+        { "type": "collect", "target": "golden_carp", "required": 1, "description": "Catch 1 Golden Carp" }
+      ],
+      "rewards": { "xp": 200, "items": [{ "itemId": "gold", "count": 150 }] },
+      "prerequisiteQuests": ["quest_deep_water_fishing"]
     }
   ]
 }

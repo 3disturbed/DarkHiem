@@ -152,6 +152,57 @@
         }
       }
     },
+    "stablemaster_astrid_dialog": {
+      "startNode": "greeting",
+      "nodes": {
+        "greeting": {
+          "text": "Well met, traveler! I'm Astrid, stablemaster of Darkheim. If you've a mind for horses, you've come to the right place. The wild ones roam the meadow -- magnificent beasts, but they won't be tamed easily.",
+          "choices": [
+            { "text": "How do I get a horse?", "nextNode": "about_horses" },
+            { "text": "Do you have any work for me?", "action": "show_quests" },
+            { "text": "What do you have for sale?", "action": "open_shop" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        },
+        "about_horses": {
+          "text": "You'll need a lasso to capture a wild horse. Help me gather supplies for the stable and I'll give you one. Once you have a horse, press Q to mount and dismount. Mounted travel is much faster!",
+          "choices": [
+            { "text": "I'd like to help.", "action": "show_quests" },
+            { "text": "What do you sell?", "action": "open_shop" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        }
+      }
+    },
+    "surveyor_halfdan_dialog": {
+      "startNode": "greeting",
+      "nodes": {
+        "greeting": {
+          "text": "Hail, citizen! I'm Halfdan, the town surveyor. Darkheim is expanding, and we've opened four prime corner plots for development. Interested in buying land?",
+          "choices": [
+            { "text": "Tell me about the plots.", "nextNode": "about_plots" },
+            { "text": "I'd like to buy a plot.", "nextNode": "buy_menu" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        },
+        "about_plots": {
+          "text": "Each plot costs 500 gold and gives you a corner of the town to develop. Once purchased, you can place crafting stations, chests, and other structures within your land.",
+          "choices": [
+            { "text": "Show me what's available.", "nextNode": "buy_menu" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        },
+        "buy_menu": {
+          "text": "Which plot interests you? Each costs 500 gold.",
+          "choices": [
+            { "text": "Northeast Plot (Market side) - 500g", "action": "buy_plot", "plotId": "plot_ne" },
+            { "text": "Northwest Plot (Barracks side) - 500g", "action": "buy_plot", "plotId": "plot_nw" },
+            { "text": "Southeast Plot (Residential side) - 500g", "action": "buy_plot", "plotId": "plot_se" },
+            { "text": "Southwest Plot (Craft side) - 500g", "action": "buy_plot", "plotId": "plot_sw" }
+          ]
+        }
+      }
+    },
     "farmer_bjorn_dialog": {
       "startNode": "greeting",
       "nodes": {

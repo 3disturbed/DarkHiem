@@ -57,6 +57,8 @@ import SkillExecutor from './skills/SkillExecutor.js';
 import TownManager from './town/TownManager.js';
 import NPCComponent from './ecs/components/NPCComponent.js';
 import HorseComponent from './ecs/components/HorseComponent.js';
+import LandPlotHandler from './network/handlers/LandPlotHandler.js';
+import { LAND_PLOTS } from '../shared/LandPlotTypes.js';
 
 export default class GameServer {
   constructor(io) {
@@ -125,6 +127,9 @@ export default class GameServer {
 
     const horseHandler = new HorseHandler(this);
     horseHandler.register(this.messageRouter);
+
+    this.landPlotHandler = new LandPlotHandler(this);
+    this.landPlotHandler.register(this.messageRouter);
 
     // Respawn handler
     this.messageRouter.register(MSG.PLAYER_RESPAWN, (player) => {
@@ -242,6 +247,18 @@ export default class GameServer {
       return;
     }
 
+    // Validate: land plot ownership (if placing inside a plot, must own it)
+    for (const plotDef of Object.values(LAND_PLOTS)) {
+      if (placeX >= plotDef.x && placeX < plotDef.x + plotDef.width &&
+          placeY >= plotDef.y && placeY < plotDef.y + plotDef.height) {
+        if (!pc.ownedPlots.includes(plotDef.id)) {
+          playerConn.emit(MSG.CRAFT_RESULT, { success: false, message: 'You do not own this plot' });
+          return;
+        }
+        break;
+      }
+    }
+
     // Spawn the station (chest vs regular)
     const stationDef = STATION_DB[stationId];
     const stationEntity = (stationDef && stationDef.isChest)
@@ -306,6 +323,7 @@ export default class GameServer {
   async init() {
     await this.worldManager.init();
     await this.playerRepo.init();
+    await this.landPlotHandler.init();
 
     // Combat resolver
     this.combatResolver = new CombatResolver(this.io);
@@ -699,7 +717,13 @@ export default class GameServer {
       x: spawnX,
       y: spawnY,
       hasHorse: joinPc ? joinPc.hasHorse : false,
+      ownedPlots: joinPc ? (joinPc.ownedPlots || []) : [],
     });
+
+    // Send current land plot registry
+    if (this.landPlotHandler) {
+      playerConn.emit(MSG.LAND_PURCHASE, { registry: this.landPlotHandler.getRegistry() });
+    }
 
     // Send existing player list
     const existingPlayers = [];
@@ -816,6 +840,7 @@ export default class GameServer {
       skills: skills ? skills.serialize() : null,
       quests: quests ? quests.serialize() : null,
       hasHorse: pc ? pc.hasHorse : false,
+      ownedPlots: pc ? (pc.ownedPlots || []) : [],
     };
 
     await this.playerRepo.save(playerConn.id, data);
@@ -911,6 +936,12 @@ export default class GameServer {
     if (saveData.hasHorse) {
       const pc = entity.getComponent(PlayerComponent);
       if (pc) pc.hasHorse = true;
+    }
+
+    // Restore land plot ownership
+    if (saveData.ownedPlots && saveData.ownedPlots.length > 0) {
+      const pc = entity.getComponent(PlayerComponent);
+      if (pc) pc.ownedPlots = saveData.ownedPlots;
     }
   }
 

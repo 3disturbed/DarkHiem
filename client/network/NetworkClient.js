@@ -60,6 +60,9 @@ export default class NetworkClient {
 
     // Horse callbacks
     this.onHorseUpdate = null;
+
+    // Land plot callbacks
+    this.onLandPurchase = null;
   }
 
   connect() {
@@ -252,6 +255,11 @@ export default class NetworkClient {
     // Horse
     this.socket.on(MSG.HORSE_UPDATE, (data) => {
       if (this.onHorseUpdate) this.onHorseUpdate(data);
+    });
+
+    // Land plots
+    this.socket.on(MSG.LAND_PURCHASE, (data) => {
+      if (this.onLandPurchase) this.onLandPurchase(data);
     });
   }
 

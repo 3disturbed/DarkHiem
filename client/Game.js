@@ -35,6 +35,7 @@ import WorldMap from './ui/WorldMap.js';
 import ChestPanel from './ui/ChestPanel.js';
 import FishingRodPanel from './ui/FishingRodPanel.js';
 import ContextMenu from './ui/ContextMenu.js';
+import { LAND_PLOTS } from '../shared/LandPlotTypes.js';
 
 export default class Game {
   constructor(canvas) {
@@ -129,6 +130,10 @@ export default class Game {
     this.biomeCache = new Map();      // "cx,cy" -> biomeId (persists after chunk pruned)
     this.exploreSaveTimer = 0;
 
+    // Land plots
+    this.ownedPlots = [];            // plotIds owned by local player
+    this.allPlotOwners = {};         // plotId -> { ownerId, ownerName }
+
     this.setupNetworkCallbacks();
   }
 
@@ -157,6 +162,8 @@ export default class Game {
       this.hasHorse = data.hasHorse || false;
       this.mounted = false;
       this.followHorse.initialized = false;
+      // Restore land plot ownership
+      this.ownedPlots = data.ownedPlots || [];
       console.log(`[Game] Joined as ${data.name}`);
     };
 
@@ -438,6 +445,16 @@ export default class Game {
 
     this.network.onQuestProgress = (data) => {
       this.questLog.updateProgress(data);
+      // Update the NPC quest panel if it's open (e.g. after accepting a quest)
+      if (this.questPanelOpen && this.questPanel.mode === 'npc') {
+        const panelQuest = this.questPanel.quests.find(q => q.id === data.questId);
+        if (panelQuest) {
+          if (panelQuest.state === 'available') {
+            panelQuest.state = 'active';
+          }
+          panelQuest.progress = data.objectives;
+        }
+      }
       // Show floating progress text
       if (this.localPlayer) {
         const quest = this.questLog.quests.get(data.questId);
@@ -542,6 +559,35 @@ export default class Game {
       // Reset follow position when first capturing a horse
       if (this.hasHorse && !wasHorse) {
         this.followHorse.initialized = false;
+      }
+    };
+
+    // Land plot purchase (full registry on join OR individual purchase update)
+    this.network.onLandPurchase = (data) => {
+      if (data.registry) {
+        // Full registry sent on join
+        this.allPlotOwners = {};
+        for (const [plotId, info] of Object.entries(data.registry)) {
+          this.allPlotOwners[plotId] = info;
+        }
+      } else if (data.plotId) {
+        // Individual purchase update
+        this.allPlotOwners[data.plotId] = {
+          ownerId: data.ownerId,
+          ownerName: data.ownerName,
+        };
+        // Update local ownedPlots if it's us
+        if (data.ownerId === this.network.playerId) {
+          if (!this.ownedPlots.includes(data.plotId)) {
+            this.ownedPlots.push(data.plotId);
+          }
+          if (this.localPlayer) {
+            this.damageNumbers.add(
+              this.localPlayer.x, this.localPlayer.y - 40,
+              `Purchased ${LAND_PLOTS[data.plotId]?.name || data.plotId}!`, false
+            );
+          }
+        }
       }
     };
   }
@@ -1394,6 +1440,7 @@ export default class Game {
     // World-space rendering
     r.beginCamera(this.camera);
     this.renderWorld(r);
+    this.renderLandPlots(r);
     this.renderResources(r);
     this.renderStations(r);
     this.renderNPCs(r);
@@ -1572,6 +1619,45 @@ export default class Game {
           const half = (horse.size || 30) / 2;
           r.drawText('Press Q to capture', horse.x, horse.y + half + 12, '#aaa', 8, 'center');
         }
+      }
+    }
+  }
+
+  renderLandPlots(r) {
+    const ctx = r.ctx;
+    for (const [plotId, plot] of Object.entries(LAND_PLOTS)) {
+      const owner = this.allPlotOwners[plotId];
+      const isOwned = !!owner;
+      const isOwnedByMe = isOwned && owner.ownerId === this.network.playerId;
+
+      // Dashed border
+      ctx.save();
+      ctx.setLineDash([8, 6]);
+      ctx.lineWidth = 2;
+
+      if (isOwnedByMe) {
+        ctx.strokeStyle = '#2ecc71';
+        ctx.fillStyle = 'rgba(46, 204, 113, 0.06)';
+        ctx.fillRect(plot.x, plot.y, plot.width, plot.height);
+      } else if (isOwned) {
+        ctx.strokeStyle = '#e74c3c';
+      } else {
+        ctx.strokeStyle = '#f1c40f';
+      }
+
+      ctx.strokeRect(plot.x, plot.y, plot.width, plot.height);
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      // Label
+      const labelX = plot.x + plot.width / 2;
+      const labelY = plot.y - 6;
+      if (isOwnedByMe) {
+        r.drawText(`${plot.name} (Yours)`, labelX, labelY, '#2ecc71', 10, 'center');
+      } else if (isOwned) {
+        r.drawText(`${owner.ownerName}'s Plot`, labelX, labelY, '#e74c3c', 10, 'center');
+      } else {
+        r.drawText(`${plot.name} — ${plot.price}g`, labelX, labelY, '#f1c40f', 10, 'center');
       }
     }
   }

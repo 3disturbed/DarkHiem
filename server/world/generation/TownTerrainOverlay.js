@@ -35,12 +35,16 @@ export default class TownTerrainOverlay {
       { tx: 8,  ty: 15, tw: 4, th: 4, floor: TILE.FLOOR_WOOD, doorSide: 'w' },
       { tx: 15, ty: 15, tw: 4, th: 4, floor: TILE.FLOOR_WOOD, doorSide: 'w' },
       { tx: 8,  ty: 22, tw: 7, th: 6, floor: TILE.FLOOR_WOOD, doorSide: 'w' }, // Inn
+
+      // === Stable (SE, south of residential) ===
+      { tx: 22, ty: 22, tw: 7, th: 5, floor: TILE.FLOOR_WOOD, doorSide: 'w' },
     ];
 
     // Zone definitions (tile offsets from center)
     this.plazaRadius = 5; // tiles
     this.marketZone = { tx: 6, ty: -24, tw: 20, th: 18 };
     this.trainingYard = { tx: -24, ty: -11, tw: 10, th: 5 };
+    this.stableYard = { tx: 15, ty: 22, tw: 6, th: 5 };
 
     // Secondary road segments (tile-space, 1 tile wide)
     // Each is {axis: 'h'|'v', pos: fixed coord, from: start, to: end}
@@ -148,6 +152,15 @@ export default class TownTerrainOverlay {
         const ty2 = this.trainingYard;
         if (tileDX >= ty2.tx && tileDX < ty2.tx + ty2.tw &&
             tileDY >= ty2.ty && tileDY < ty2.ty + ty2.th) {
+          tiles[idx] = TILE.FLOOR_STONE;
+          solids[idx] = false;
+          continue;
+        }
+
+        // Stable yard
+        const sy = this.stableYard;
+        if (tileDX >= sy.tx && tileDX < sy.tx + sy.tw &&
+            tileDY >= sy.ty && tileDY < sy.ty + sy.th) {
           tiles[idx] = TILE.FLOOR_STONE;
           solids[idx] = false;
           continue;

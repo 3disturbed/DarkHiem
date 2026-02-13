@@ -1073,13 +1073,6 @@ export const RECIPE_DB = {
   // ============================================================
   //  MISC CRAFTING
   // ============================================================
-  lasso: {
-    id: 'lasso', name: 'Lasso',
-    station: 'workbench', stationLevel: 1,
-    ingredients: [{ itemId: 'leather_scrap', count: 3 }, { itemId: 'flax', count: 5 }],
-    results: [{ itemId: 'lasso', count: 1 }],
-  },
-
   // ============================================================
   //  STATION UPGRADE recipes
   // ============================================================

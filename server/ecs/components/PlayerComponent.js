@@ -12,5 +12,6 @@ export default class PlayerComponent extends Component {
     this.pendingPlacement = null; // { stationId, ingredients } when awaiting ghost placement
     this.hasHorse = false;  // player owns a captured horse
     this.mounted = false;   // currently riding the horse
+    this.ownedPlots = [];   // array of land plot IDs owned by this player
   }
 }
