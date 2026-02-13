@@ -4,10 +4,8 @@ import PlayerComponent from '../../ecs/components/PlayerComponent.js';
 import InventoryComponent from '../../ecs/components/InventoryComponent.js';
 import HealthComponent from '../../ecs/components/HealthComponent.js';
 import HorseComponent from '../../ecs/components/HorseComponent.js';
-import NameComponent from '../../ecs/components/NameComponent.js';
 
 const CAPTURE_RANGE = 80;
-const MOUNT_RANGE = 80;
 
 export default class HorseHandler {
   constructor(gameServer) {
@@ -26,6 +24,15 @@ export default class HorseHandler {
 
     const health = entity.getComponent(HealthComponent);
     if (health && !health.isAlive()) return;
+
+    const pc = entity.getComponent(PlayerComponent);
+    if (!pc) return;
+
+    // Already owns a horse
+    if (pc.hasHorse) {
+      playerConn.emit(MSG.CHAT_RECEIVE, { message: 'You already have a horse.', sender: 'System' });
+      return;
+    }
 
     const playerPos = entity.getComponent(PositionComponent);
     const inventory = entity.getComponent(InventoryComponent);
@@ -47,18 +54,15 @@ export default class HorseHandler {
     // Consume one lasso
     inventory.removeItem('lasso', 1);
 
-    // Tame the horse
-    const horseComp = horse.entity.getComponent(HorseComponent);
-    horseComp.tamed = true;
-    horseComp.ownerId = playerConn.id;
+    // Remove the horse entity from the world
+    this.gameServer.entityManager.remove(horse.entity.id);
 
-    // Rename from "Wild Horse" to "Horse"
-    const name = horse.entity.getComponent(NameComponent);
-    if (name) name.name = 'Horse';
+    // Mark player as owning a horse
+    pc.hasHorse = true;
 
     // Send updates
     playerConn.emit(MSG.INVENTORY_UPDATE, { slots: inventory.serialize().slots });
-    playerConn.emit(MSG.HORSE_UPDATE, { horseId: horse.entity.id, tamed: true, mounted: false });
+    playerConn.emit(MSG.HORSE_UPDATE, { hasHorse: true, mounted: false });
     playerConn.emit(MSG.CHAT_RECEIVE, { message: 'You captured a wild horse!', sender: 'System' });
   }
 
@@ -70,26 +74,10 @@ export default class HorseHandler {
     if (health && !health.isAlive()) return;
 
     const pc = entity.getComponent(PlayerComponent);
-    if (!pc) return;
+    if (!pc || !pc.hasHorse || pc.mounted) return;
 
-    // Already mounted
-    if (pc.mountedHorseId) return;
-
-    const playerPos = entity.getComponent(PositionComponent);
-    if (!playerPos) return;
-
-    // Find nearest tamed horse owned by this player
-    const horse = this._findNearestOwnedHorse(playerPos, playerConn.id);
-    if (!horse) return;
-
-    const horseComp = horse.entity.getComponent(HorseComponent);
-
-    // Mount
-    pc.mountedHorseId = horse.entity.id;
-    horseComp.mounted = true;
-    horseComp.riderId = playerConn.id;
-
-    playerConn.emit(MSG.HORSE_UPDATE, { horseId: horse.entity.id, tamed: true, mounted: true });
+    pc.mounted = true;
+    playerConn.emit(MSG.HORSE_UPDATE, { hasHorse: true, mounted: true });
   }
 
   handleDismount(playerConn) {
@@ -97,29 +85,10 @@ export default class HorseHandler {
     if (!entity) return;
 
     const pc = entity.getComponent(PlayerComponent);
-    if (!pc || !pc.mountedHorseId) return;
+    if (!pc || !pc.mounted) return;
 
-    const horseEntity = this.gameServer.entityManager.get(pc.mountedHorseId);
-    if (horseEntity) {
-      const horseComp = horseEntity.getComponent(HorseComponent);
-      if (horseComp) {
-        horseComp.mounted = false;
-        horseComp.riderId = null;
-      }
-
-      // Offset horse position slightly so they don't overlap
-      const playerPos = entity.getComponent(PositionComponent);
-      const horsePos = horseEntity.getComponent(PositionComponent);
-      if (playerPos && horsePos) {
-        horsePos.x = playerPos.x + 40;
-        horsePos.y = playerPos.y;
-      }
-    }
-
-    const horseId = pc.mountedHorseId;
-    pc.mountedHorseId = null;
-
-    playerConn.emit(MSG.HORSE_UPDATE, { horseId, tamed: true, mounted: false });
+    pc.mounted = false;
+    playerConn.emit(MSG.HORSE_UPDATE, { hasHorse: true, mounted: false });
   }
 
   _findNearestWildHorse(playerPos) {
@@ -130,31 +99,6 @@ export default class HorseHandler {
     for (const horse of horses) {
       const horseComp = horse.getComponent(HorseComponent);
       if (!horseComp || horseComp.tamed) continue;
-
-      const pos = horse.getComponent(PositionComponent);
-      if (!pos) continue;
-
-      const dx = pos.x - playerPos.x;
-      const dy = pos.y - playerPos.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      if (dist < nearestDist) {
-        nearestDist = dist;
-        nearest = { entity: horse, dist };
-      }
-    }
-    return nearest;
-  }
-
-  _findNearestOwnedHorse(playerPos, playerId) {
-    const horses = this.gameServer.entityManager.getByTag('horse');
-    let nearest = null;
-    let nearestDist = MOUNT_RANGE;
-
-    for (const horse of horses) {
-      const horseComp = horse.getComponent(HorseComponent);
-      if (!horseComp || !horseComp.tamed || horseComp.ownerId !== playerId) continue;
-      if (horseComp.mounted) continue; // already mounted by someone
 
       const pos = horse.getComponent(PositionComponent);
       if (!pos) continue;

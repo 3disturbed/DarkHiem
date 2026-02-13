@@ -48,18 +48,6 @@ export default class MovementHandler {
       if (typeof data.seq === 'number') {
         pc.lastInputSeq = data.seq;
       }
-
-      // Sync mounted horse position with rider
-      if (pc.mountedHorseId) {
-        const horseEntity = this.gameServer.entityManager.get(pc.mountedHorseId);
-        if (horseEntity) {
-          const horsePos = horseEntity.getComponent(PositionComponent);
-          if (horsePos && pos) {
-            horsePos.x = pos.x;
-            horsePos.y = pos.y;
-          }
-        }
-      }
     }
   }
 }

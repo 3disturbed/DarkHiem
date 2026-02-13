@@ -1,6 +1,4 @@
 import { AI_STATE } from '../ecs/components/AIComponent.js';
-import HorseComponent from '../ecs/components/HorseComponent.js';
-import PositionComponent from '../ecs/components/PositionComponent.js';
 import PatrolBehavior from './PatrolBehavior.js';
 import ChaseBehavior from './ChaseBehavior.js';
 import AttackBehavior from './AttackBehavior.js';
@@ -111,54 +109,7 @@ export default class AIController {
   }
 
   _updateHorse(entity, ai, pos, vel, entityManager, dt) {
-    const horse = entity.getComponent(HorseComponent);
-    if (!horse) return;
-
-    // Mounted: no AI movement (position synced by MovementHandler)
-    if (horse.mounted) {
-      vel.dx = 0;
-      vel.dy = 0;
-      return;
-    }
-
-    // Tamed: follow owner
-    if (horse.tamed && horse.ownerId) {
-      const owner = entityManager.get(horse.ownerId);
-      if (!owner) {
-        // Owner disconnected, just idle
-        vel.dx = 0;
-        vel.dy = 0;
-        return;
-      }
-
-      const ownerPos = owner.getComponent(PositionComponent);
-      if (!ownerPos) return;
-
-      const dx = ownerPos.x - pos.x;
-      const dy = ownerPos.y - pos.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      if (dist < 120) {
-        // Close enough, idle
-        vel.dx = 0;
-        vel.dy = 0;
-      } else if (dist > 600) {
-        // Too far, teleport near owner
-        pos.x = ownerPos.x + (Math.random() - 0.5) * 60;
-        pos.y = ownerPos.y + (Math.random() - 0.5) * 60;
-        vel.dx = 0;
-        vel.dy = 0;
-      } else {
-        // Follow owner
-        const nx = dx / dist;
-        const ny = dy / dist;
-        vel.dx = nx * vel.speed;
-        vel.dy = ny * vel.speed;
-      }
-      return;
-    }
-
-    // Wild: flee from nearby players, otherwise wander
+    // Wild horses only (tamed horses are removed from the world on capture)
     const nearestPlayer = this._findNearestPlayer(pos, entityManager);
     const distToPlayer = nearestPlayer ? nearestPlayer.dist : Infinity;
     const distToHome = Math.sqrt(

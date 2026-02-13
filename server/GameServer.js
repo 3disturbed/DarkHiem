@@ -168,6 +168,13 @@ export default class GameServer {
     const vel = entity.getComponent(VelocityComponent);
     if (vel) { vel.dx = 0; vel.dy = 0; }
 
+    // Dismount if riding
+    const pc = entity.getComponent(PlayerComponent);
+    if (pc && pc.mounted) {
+      pc.mounted = false;
+      playerConn.emit(MSG.HORSE_UPDATE, { hasHorse: pc.hasHorse, mounted: false });
+    }
+
     // Notify the player
     playerConn.emit(MSG.PLAYER_RESPAWN, {
       x: spawnX,
@@ -451,7 +458,7 @@ export default class GameServer {
         hp: health ? health.current : 0,
         maxHp: health ? health.max : 0,
         level: stats ? stats.level : 1,
-        mountedHorseId: pc.mountedHorseId || null,
+        mounted: pc.mounted || false,
       };
     }
 
@@ -684,12 +691,14 @@ export default class GameServer {
     await this.worldManager.getChunksAround(chunkX, chunkY);
 
     // Send join data
+    const joinPc = entity.getComponent(PlayerComponent);
     playerConn.emit(MSG.PLAYER_JOIN, {
       id: playerConn.id,
       name: playerConn.name,
       color: playerConn.color,
       x: spawnX,
       y: spawnY,
+      hasHorse: joinPc ? joinPc.hasHorse : false,
     });
 
     // Send existing player list
@@ -782,6 +791,8 @@ export default class GameServer {
     const skills = entity.getComponent(SkillComponent);
     const quests = entity.getComponent(QuestComponent);
 
+    const pc = entity.getComponent(PlayerComponent);
+
     const data = {
       version: 1,
       id: playerConn.id,
@@ -804,6 +815,7 @@ export default class GameServer {
       equipment: equip ? equip.serialize() : null,
       skills: skills ? skills.serialize() : null,
       quests: quests ? quests.serialize() : null,
+      hasHorse: pc ? pc.hasHorse : false,
     };
 
     await this.playerRepo.save(playerConn.id, data);
@@ -893,6 +905,12 @@ export default class GameServer {
       if (questComp) {
         questComp.deserialize(saveData.quests);
       }
+    }
+
+    // Restore horse ownership
+    if (saveData.hasHorse) {
+      const pc = entity.getComponent(PlayerComponent);
+      if (pc) pc.hasHorse = true;
     }
   }
 

@@ -56,11 +56,10 @@ export default class Game {
     this.resources = new Map(); // id -> resource entity state
     this.stations = new Map(); // id -> station entity state
     this.npcs = new Map();     // id -> npc entity state
-    this.horses = new Map();   // id -> horse entity state
-
-    // Mount state
+    this.wildHorses = new Map(); // id -> wild horse entity state
+    // Mount state (horse is stored as player flag, not a world entity)
+    this.hasHorse = false;
     this.mounted = false;
-    this.mountedHorseId = null;
 
     // Combat effects
     this.damageNumbers = new DamageNumber();
@@ -152,6 +151,8 @@ export default class Game {
       this.worldManager.requestChunksAround(data.x, data.y);
       // Load explored chunks from localStorage
       this.loadExploredChunks(data.id);
+      // Restore horse ownership
+      this.hasHorse = data.hasHorse || false;
       console.log(`[Game] Joined as ${data.name}`);
     };
 
@@ -226,7 +227,6 @@ export default class Game {
         if (this.mounted) {
           this.network.sendHorseDismount();
           this.mounted = false;
-          this.mountedHorseId = null;
         }
         if (this.fishingState) {
           this.network.sendFishCancel();
@@ -532,13 +532,8 @@ export default class Game {
     };
 
     this.network.onHorseUpdate = (data) => {
-      if (data.mounted) {
-        this.mounted = true;
-        this.mountedHorseId = data.horseId;
-      } else {
-        this.mounted = false;
-        this.mountedHorseId = null;
-      }
+      this.hasHorse = data.hasHorse || false;
+      this.mounted = data.mounted || false;
     };
   }
 
@@ -665,13 +660,10 @@ export default class Game {
     if (actions.horseAction && !this.placementMode && !this.isDead) {
       if (this.mounted) {
         this.network.sendHorseDismount();
+      } else if (this.hasHorse) {
+        this.network.sendHorseMount();
       } else {
-        const nearHorse = this._findNearestHorse();
-        if (nearHorse && nearHorse.tamed && nearHorse.ownerId === this.network.playerId) {
-          this.network.sendHorseMount();
-        } else {
-          this.network.sendHorseCapture();
-        }
+        this.network.sendHorseCapture();
       }
     }
 
@@ -1215,20 +1207,13 @@ export default class Game {
         }
       } else if (entity.type === 'horse') {
         this.interpolator.pushState(id, entity);
-        if (!this.horses.has(id)) {
-          this.horses.set(id, {
+        if (!this.wildHorses.has(id)) {
+          this.wildHorses.set(id, {
             x: entity.x, y: entity.y,
             name: entity.name, color: entity.color, size: entity.size,
-            tamed: entity.tamed, ownerId: entity.ownerId, mounted: entity.mounted,
           });
-        } else {
-          const h = this.horses.get(id);
-          h.name = entity.name ?? h.name;
-          h.tamed = entity.tamed ?? h.tamed;
-          h.ownerId = entity.ownerId ?? h.ownerId;
-          h.mounted = entity.mounted ?? h.mounted;
         }
-      } else {
+      } else if (entity.type === 'player') {
         // Remote player
         this.interpolator.pushState(id, entity);
 
@@ -1240,13 +1225,13 @@ export default class Game {
             y: entity.y,
             hp: entity.hp ?? 100,
             maxHp: entity.maxHp ?? 100,
-            mountedHorseId: entity.mountedHorseId || null,
+            mounted: entity.mounted || false,
           });
         } else {
           const rp = this.remotePlayers.get(id);
           rp.hp = entity.hp ?? rp.hp;
           rp.maxHp = entity.maxHp ?? rp.maxHp;
-          rp.mountedHorseId = entity.mountedHorseId || null;
+          rp.mounted = entity.mounted || false;
         }
       }
     }
@@ -1274,15 +1259,11 @@ export default class Game {
       }
     }
 
-    // Interpolate horses + clean up removed
-    for (const [id, horse] of this.horses) {
+    // Interpolate wild horses + clean up removed
+    for (const [id, horse] of this.wildHorses) {
       if (!this.network.entities.has(id)) {
-        this.horses.delete(id);
+        this.wildHorses.delete(id);
         this.interpolator.removeEntity(id);
-        if (this.mountedHorseId === id) {
-          this.mounted = false;
-          this.mountedHorseId = null;
-        }
         continue;
       }
       const interp = this.interpolator.getInterpolatedState(id);
@@ -1375,7 +1356,7 @@ export default class Game {
     this.renderResources(r);
     this.renderStations(r);
     this.renderNPCs(r);
-    this.renderHorses(r);
+    this.renderWildHorses(r);
     this.renderPlacementGhost(r);
     this.renderEnemies(r);
     this.renderPlayers(r);
@@ -1550,14 +1531,11 @@ export default class Game {
     // Render remote players
     for (const [id, player] of this.remotePlayers) {
       // Draw horse underneath if mounted
-      if (player.mountedHorseId) {
-        const horse = this.horses.get(player.mountedHorseId);
-        const horseSize = horse ? (horse.size || 30) : 30;
-        const horseColor = horse ? (horse.color || '#8B6C42') : '#8B6C42';
-        EntityRenderer.renderHorse(r, player.x, player.y + 6, horseColor, horseSize, '', true, null);
+      if (player.mounted) {
+        EntityRenderer.renderHorse(r, player.x, player.y + 6, '#8B6C42', 30, '', true, null);
       }
       EntityRenderer.renderPlayer(
-        r, player.x, player.y - (player.mountedHorseId ? 8 : 0),
+        r, player.x, player.y - (player.mounted ? 8 : 0),
         player.color, player.name,
         player.hp ?? 100, player.maxHp ?? 100,
         false, 0, 1
@@ -1568,11 +1546,8 @@ export default class Game {
     if (this.localPlayer) {
       const p = this.localPlayer;
       // Draw horse underneath if mounted
-      if (this.mounted && this.mountedHorseId) {
-        const horse = this.horses.get(this.mountedHorseId);
-        const horseSize = horse ? (horse.size || 30) : 30;
-        const horseColor = horse ? (horse.color || '#8B6C42') : '#8B6C42';
-        EntityRenderer.renderHorse(r, p.x, p.y + 6, horseColor, horseSize, '', true, null);
+      if (this.mounted) {
+        EntityRenderer.renderHorse(r, p.x, p.y + 6, '#8B6C42', 30, '', true, null);
       }
       const yOffset = this.mounted ? 8 : 0;
       EntityRenderer.renderPlayer(
@@ -1915,56 +1890,6 @@ export default class Game {
       }
     } else if (action === 'socket_gem') {
       this.network.sendGemSocket(data.targetSlot, data.gemSlot);
-    }
-  }
-
-  _findNearestHorse() {
-    if (!this.localPlayer) return null;
-    let nearest = null;
-    let nearestDist = 80; // interaction range
-    for (const [id, horse] of this.horses) {
-      const dx = horse.x - this.localPlayer.x;
-      const dy = horse.y - this.localPlayer.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < nearestDist) {
-        nearestDist = dist;
-        nearest = horse;
-        nearest._id = id;
-      }
-    }
-    return nearest;
-  }
-
-  renderHorses(r) {
-    const px = this.localPlayer ? this.localPlayer.x : 0;
-    const py = this.localPlayer ? this.localPlayer.y : 0;
-
-    for (const [id, horse] of this.horses) {
-      if (horse.mounted) continue; // Don't render mounted horses
-
-      EntityRenderer.renderHorse(
-        r, horse.x, horse.y,
-        horse.color || '#8B6C42',
-        horse.size || 30,
-        horse.name || 'Horse',
-        horse.tamed || false,
-        horse.ownerId
-      );
-
-      // Show interaction hint if close to player
-      if (this.localPlayer) {
-        const dx = horse.x - px;
-        const dy = horse.y - py;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 100) {
-          const half = (horse.size || 30) / 2;
-          if (horse.tamed && horse.ownerId === this.network.playerId) {
-            r.drawText('Press Q to mount', horse.x, horse.y + half + 12, '#aaa', 8, 'center');
-          } else if (!horse.tamed) {
-            r.drawText('Press Q to capture', horse.x, horse.y + half + 12, '#aaa', 8, 'center');
-          }
-        }
-      }
     }
   }
 
