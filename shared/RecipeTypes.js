@@ -161,6 +161,41 @@ export const RECIPE_DB = {
     ingredients: [{ itemId: 'coal', count: 3 }, { itemId: 'sulfite', count: 2 }],
     results: [{ itemId: 'blasting_powder', count: 2 }],
   },
+  // Charcoal alternatives for furnace recipes
+  iron_ingot_charcoal: {
+    id: 'iron_ingot_charcoal', name: 'Iron Ingot (Charcoal)',
+    station: 'furnace', stationLevel: 1,
+    ingredients: [{ itemId: 'iron_ore', count: 1 }, { itemId: 'charcoal', count: 1 }],
+    results: [{ itemId: 'iron_ingot', count: 1 }],
+  },
+  blasting_powder_charcoal: {
+    id: 'blasting_powder_charcoal', name: 'Blasting Powder (Charcoal)',
+    station: 'furnace', stationLevel: 1,
+    ingredients: [{ itemId: 'charcoal', count: 3 }, { itemId: 'sulfite', count: 2 }],
+    results: [{ itemId: 'blasting_powder', count: 2 }],
+  },
+
+  // ============================================================
+  //  KILN recipes (wood → charcoal)
+  // ============================================================
+  charcoal_from_wood: {
+    id: 'charcoal_from_wood', name: 'Charcoal (Wood)',
+    station: 'kiln', stationLevel: 1,
+    ingredients: [{ itemId: 'wood', count: 3 }],
+    results: [{ itemId: 'charcoal', count: 1 }],
+  },
+  charcoal_from_pine: {
+    id: 'charcoal_from_pine', name: 'Charcoal (Pine)',
+    station: 'kiln', stationLevel: 1,
+    ingredients: [{ itemId: 'pine_wood', count: 3 }],
+    results: [{ itemId: 'charcoal', count: 1 }],
+  },
+  charcoal_from_dark_oak: {
+    id: 'charcoal_from_dark_oak', name: 'Charcoal (Dark Oak)',
+    station: 'kiln', stationLevel: 1,
+    ingredients: [{ itemId: 'dark_oak_log', count: 2 }],
+    results: [{ itemId: 'charcoal', count: 1 }],
+  },
 
   // ============================================================
   //  FORGE recipes (alloying + gear crafting)
@@ -1005,6 +1040,13 @@ export const RECIPE_DB = {
     results: [],
     placesStation: 'furnace',
   },
+  build_kiln: {
+    id: 'build_kiln', name: 'Build Kiln',
+    station: 'workbench', stationLevel: 2,
+    ingredients: [{ itemId: 'stone', count: 10 }, { itemId: 'wood', count: 5 }],
+    results: [],
+    placesStation: 'kiln',
+  },
   build_forge: {
     id: 'build_forge', name: 'Build Forge',
     station: 'workbench', stationLevel: 1,
@@ -1026,6 +1068,16 @@ export const RECIPE_DB = {
     ],
     results: [],
     placesStation: 'arcane_table',
+  },
+
+  // ============================================================
+  //  MISC CRAFTING
+  // ============================================================
+  lasso: {
+    id: 'lasso', name: 'Lasso',
+    station: 'workbench', stationLevel: 1,
+    ingredients: [{ itemId: 'leather_scrap', count: 3 }, { itemId: 'flax', count: 5 }],
+    results: [{ itemId: 'lasso', count: 1 }],
   },
 
   // ============================================================

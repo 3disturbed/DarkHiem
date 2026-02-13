@@ -1,4 +1,6 @@
 import { AI_STATE } from '../ecs/components/AIComponent.js';
+import HorseComponent from '../ecs/components/HorseComponent.js';
+import PositionComponent from '../ecs/components/PositionComponent.js';
 import PatrolBehavior from './PatrolBehavior.js';
 import ChaseBehavior from './ChaseBehavior.js';
 import AttackBehavior from './AttackBehavior.js';
@@ -14,6 +16,12 @@ export default class AIController {
 
   update(entity, ai, pos, vel, combat, entityManager, dt) {
     ai.stateTimer += dt;
+
+    // Horses: flee from players when wild, follow owner when tamed
+    if (ai.behavior === 'horse') {
+      this._updateHorse(entity, ai, pos, vel, entityManager, dt);
+      return;
+    }
 
     // Guards target enemies instead of players
     if (ai.behavior === 'guard') {
@@ -91,6 +99,92 @@ export default class AIController {
           this._transitionTo(ai, AI_STATE.RETURN);
         } else {
           this.attack.update(entity, ai, pos, vel, combat, nearestEnemy, dt);
+        }
+        break;
+      case AI_STATE.RETURN:
+        this._handleReturn(ai, pos, vel, distToHome, dt);
+        break;
+      default:
+        this._transitionTo(ai, AI_STATE.IDLE);
+        break;
+    }
+  }
+
+  _updateHorse(entity, ai, pos, vel, entityManager, dt) {
+    const horse = entity.getComponent(HorseComponent);
+    if (!horse) return;
+
+    // Mounted: no AI movement (position synced by MovementHandler)
+    if (horse.mounted) {
+      vel.dx = 0;
+      vel.dy = 0;
+      return;
+    }
+
+    // Tamed: follow owner
+    if (horse.tamed && horse.ownerId) {
+      const owner = entityManager.get(horse.ownerId);
+      if (!owner) {
+        // Owner disconnected, just idle
+        vel.dx = 0;
+        vel.dy = 0;
+        return;
+      }
+
+      const ownerPos = owner.getComponent(PositionComponent);
+      if (!ownerPos) return;
+
+      const dx = ownerPos.x - pos.x;
+      const dy = ownerPos.y - pos.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < 120) {
+        // Close enough, idle
+        vel.dx = 0;
+        vel.dy = 0;
+      } else if (dist > 600) {
+        // Too far, teleport near owner
+        pos.x = ownerPos.x + (Math.random() - 0.5) * 60;
+        pos.y = ownerPos.y + (Math.random() - 0.5) * 60;
+        vel.dx = 0;
+        vel.dy = 0;
+      } else {
+        // Follow owner
+        const nx = dx / dist;
+        const ny = dy / dist;
+        vel.dx = nx * vel.speed;
+        vel.dy = ny * vel.speed;
+      }
+      return;
+    }
+
+    // Wild: flee from nearby players, otherwise wander
+    const nearestPlayer = this._findNearestPlayer(pos, entityManager);
+    const distToPlayer = nearestPlayer ? nearestPlayer.dist : Infinity;
+    const distToHome = Math.sqrt(
+      (pos.x - ai.homeX) ** 2 + (pos.y - ai.homeY) ** 2
+    );
+
+    switch (ai.state) {
+      case AI_STATE.IDLE:
+        vel.dx = 0;
+        vel.dy = 0;
+        if (distToPlayer <= ai.aggroRange) {
+          this._transitionTo(ai, AI_STATE.FLEE);
+        } else if (ai.stateTimer >= ai.idleDuration) {
+          this._transitionTo(ai, AI_STATE.PATROL);
+        }
+        break;
+      case AI_STATE.PATROL:
+        this.patrol.update(entity, ai, pos, vel, dt);
+        if (distToPlayer <= ai.aggroRange) {
+          this._transitionTo(ai, AI_STATE.FLEE);
+        }
+        break;
+      case AI_STATE.FLEE:
+        this.flee.update(entity, ai, pos, vel, nearestPlayer, dt);
+        if (distToPlayer > ai.deaggroRange) {
+          this._transitionTo(ai, AI_STATE.RETURN);
         }
         break;
       case AI_STATE.RETURN:

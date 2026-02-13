@@ -19,6 +19,7 @@ import SkillComponent from './components/SkillComponent.js';
 import NPCComponent from './components/NPCComponent.js';
 import QuestComponent from './components/QuestComponent.js';
 import ChestComponent from './components/ChestComponent.js';
+import HorseComponent from './components/HorseComponent.js';
 import { PLAYER_SPEED, PLAYER_SIZE } from '../../shared/Constants.js';
 import { STATION_DB } from '../../shared/StationTypes.js';
 
@@ -244,6 +245,45 @@ export default class EntityFactory {
 
     entity.npcData = npcDef;
     entity.addTag('npc');
+    return entity;
+  }
+
+  static createHorse(spawnData) {
+    const config = spawnData.config;
+    const entity = new Entity();
+
+    entity.addComponent(new PositionComponent(spawnData.x, spawnData.y));
+
+    const vel = new VelocityComponent();
+    vel.speed = config.speed || 130;
+    entity.addComponent(vel);
+
+    entity.addComponent(new HealthComponent(config.health || 80));
+
+    entity.addComponent(new ColliderComponent('aabb', {
+      width: config.size || 30,
+      height: config.size || 30,
+      solid: true,
+      layer: 'horse',
+    }));
+
+    entity.addComponent(new NameComponent(config.name || 'Wild Horse'));
+
+    entity.addComponent(new AIComponent({
+      behavior: 'horse',
+      aggroRange: config.aggroRange || 160,
+      deaggroRange: config.deaggroRange || 320,
+      attackRange: 0,
+      homeX: spawnData.x,
+      homeY: spawnData.y,
+      leashRange: 512,
+    }));
+
+    entity.addComponent(new HorseComponent());
+    entity.addComponent(new AnimationStateComponent());
+
+    entity.addTag('horse');
+    entity.horseConfig = config;
     return entity;
   }
 

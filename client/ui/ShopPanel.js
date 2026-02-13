@@ -1,5 +1,9 @@
 import { ITEM_DB } from '../../shared/ItemTypes.js';
 
+const ROW_H = 32;
+const LIST_TOP = 60;  // offset from panel top to item list start
+const LIST_PAD = 10;  // bottom padding
+
 export default class ShopPanel {
   constructor() {
     this.visible = false;
@@ -10,10 +14,12 @@ export default class ShopPanel {
     this.tab = 'buy';         // 'buy' | 'sell'
     this.hoveredIndex = -1;
     this.selectedIndex = 0;
+    this.scrollOffset = 0;
     this.x = 0;
     this.y = 0;
     this.width = 300;
     this.height = 380;
+    this._lastInventory = null;
   }
 
   open(data) {
@@ -25,11 +31,13 @@ export default class ShopPanel {
     this.tab = 'buy';
     this.hoveredIndex = -1;
     this.selectedIndex = 0;
+    this.scrollOffset = 0;
   }
 
   close() {
     this.visible = false;
     this.items = [];
+    this.scrollOffset = 0;
   }
 
   position(screenWidth, screenHeight) {
@@ -37,8 +45,22 @@ export default class ShopPanel {
     this.y = (screenHeight - this.height) / 2;
   }
 
+  _listHeight() {
+    return this.height - LIST_TOP - LIST_PAD;
+  }
+
+  handleScroll(delta) {
+    if (!this.visible) return;
+    const items = this.tab === 'buy' ? this.items : this._getSellableItems(this._lastInventory);
+    const listH = this._listHeight();
+    const contentH = items.length * ROW_H;
+    const maxScroll = Math.max(0, contentH - listH);
+    this.scrollOffset = Math.max(0, Math.min(maxScroll, this.scrollOffset + delta * ROW_H));
+  }
+
   handleClick(mx, my, inventory) {
     if (!this.visible) return null;
+    this._lastInventory = inventory;
 
     // Outside panel
     if (mx < this.x || mx > this.x + this.width || my < this.y || my > this.y + this.height) {
@@ -50,23 +72,25 @@ export default class ShopPanel {
     if (my >= tabY && my < tabY + 24) {
       if (mx >= this.x + 10 && mx < this.x + this.width / 2 - 5) {
         this.tab = 'buy';
+        this.scrollOffset = 0;
         return null;
       }
       if (mx >= this.x + this.width / 2 + 5 && mx < this.x + this.width - 10) {
         this.tab = 'sell';
+        this.scrollOffset = 0;
         return null;
       }
     }
 
-    // List items
-    const listY = this.y + 60;
+    // List items (with scroll offset)
+    const listY = this.y + LIST_TOP;
+    const listH = this._listHeight();
     const items = this.tab === 'buy' ? this.items : this._getSellableItems(inventory);
 
-    for (let i = 0; i < items.length; i++) {
-      const itemY = listY + i * 32;
-      if (itemY + 30 > this.y + this.height - 10) break;
-
-      if (my >= itemY && my < itemY + 30 && mx >= this.x + 8 && mx < this.x + this.width - 8) {
+    if (my >= listY && my < listY + listH && mx >= this.x + 8 && mx < this.x + this.width - 8) {
+      const relY = my - listY + this.scrollOffset;
+      const i = Math.floor(relY / ROW_H);
+      if (i >= 0 && i < items.length) {
         // Check if clicking buy/sell button area
         const btnX = this.x + this.width - 60;
         if (mx >= btnX) {
@@ -86,16 +110,17 @@ export default class ShopPanel {
 
   handleMouseMove(mx, my, inventory) {
     if (!this.visible) return;
+    this._lastInventory = inventory;
     this.hoveredIndex = -1;
-    const listY = this.y + 60;
-    const items = this.tab === 'buy' ? this.items : this._getSellableItems(inventory);
+    const listY = this.y + LIST_TOP;
+    const listH = this._listHeight();
 
-    for (let i = 0; i < items.length; i++) {
-      const itemY = listY + i * 32;
-      if (itemY + 30 > this.y + this.height - 10) break;
-      if (my >= itemY && my < itemY + 30 && mx >= this.x + 8 && mx < this.x + this.width - 8) {
+    if (my >= listY && my < listY + listH && mx >= this.x + 8 && mx < this.x + this.width - 8) {
+      const relY = my - listY + this.scrollOffset;
+      const i = Math.floor(relY / ROW_H);
+      const items = this.tab === 'buy' ? this.items : this._getSellableItems(inventory);
+      if (i >= 0 && i < items.length) {
         this.hoveredIndex = i;
-        break;
       }
     }
   }
@@ -142,6 +167,7 @@ export default class ShopPanel {
 
   render(ctx, inventory) {
     if (!this.visible) return;
+    this._lastInventory = inventory;
 
     // Background
     ctx.fillStyle = 'rgba(20, 20, 30, 0.94)';
@@ -188,7 +214,8 @@ export default class ShopPanel {
     ctx.fillText(`Gold: ${goldCount}`, this.x + this.width - 12, tabY + 15);
 
     // Items list
-    const listY = this.y + 60;
+    const listY = this.y + LIST_TOP;
+    const listH = this._listHeight();
     const items = this.tab === 'buy' ? this.items : this._getSellableItems(inventory);
 
     if (items.length === 0) {
@@ -199,9 +226,17 @@ export default class ShopPanel {
       return;
     }
 
+    // Clip to list area
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(this.x, listY, this.width, listH);
+    ctx.clip();
+
     for (let i = 0; i < items.length; i++) {
-      const itemY = listY + i * 32;
-      if (itemY + 30 > this.y + this.height - 10) break;
+      const itemY = listY + i * ROW_H - this.scrollOffset;
+
+      // Skip items outside visible area
+      if (itemY + ROW_H < listY || itemY > listY + listH) continue;
 
       const item = items[i];
       const isHovered = i === this.hoveredIndex;
@@ -225,11 +260,10 @@ export default class ShopPanel {
       }
 
       // Price
-      const price = this.tab === 'buy' ? item.price : item.price;
       ctx.fillStyle = '#f1c40f';
       ctx.font = '10px monospace';
       ctx.textAlign = 'right';
-      ctx.fillText(`${price}g`, this.x + this.width - 65, itemY + 18);
+      ctx.fillText(`${item.price}g`, this.x + this.width - 65, itemY + 18);
 
       // Buy/Sell button
       const btnX = this.x + this.width - 55;
@@ -244,6 +278,24 @@ export default class ShopPanel {
       ctx.font = 'bold 10px monospace';
       ctx.textAlign = 'center';
       ctx.fillText(btnLabel, btnX + 22, itemY + 19);
+    }
+
+    ctx.restore(); // end clip
+
+    // Scroll indicators
+    const contentH = items.length * ROW_H;
+    const maxScroll = Math.max(0, contentH - listH);
+    if (this.scrollOffset > 0) {
+      ctx.fillStyle = '#aaa';
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('^ more ^', this.x + this.width / 2, listY + 10);
+    }
+    if (this.scrollOffset < maxScroll) {
+      ctx.fillStyle = '#aaa';
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('v more v', this.x + this.width / 2, listY + listH - 2);
     }
   }
 

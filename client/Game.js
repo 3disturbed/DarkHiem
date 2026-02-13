@@ -1,4 +1,4 @@
-import { PLAYER_SPEED, PLAYER_SIZE, TILE_SIZE, CHUNK_PIXEL_SIZE } from '../shared/Constants.js';
+import { PLAYER_SPEED, PLAYER_SIZE, TILE_SIZE, CHUNK_PIXEL_SIZE, HORSE_SPEED_MULTIPLIER } from '../shared/Constants.js';
 import { ITEM_DB } from '../shared/ItemTypes.js';
 import GameLoop from './engine/GameLoop.js';
 import Renderer from './engine/Renderer.js';
@@ -34,6 +34,7 @@ import Minimap from './ui/Minimap.js';
 import WorldMap from './ui/WorldMap.js';
 import ChestPanel from './ui/ChestPanel.js';
 import FishingRodPanel from './ui/FishingRodPanel.js';
+import ContextMenu from './ui/ContextMenu.js';
 
 export default class Game {
   constructor(canvas) {
@@ -55,6 +56,11 @@ export default class Game {
     this.resources = new Map(); // id -> resource entity state
     this.stations = new Map(); // id -> station entity state
     this.npcs = new Map();     // id -> npc entity state
+    this.horses = new Map();   // id -> horse entity state
+
+    // Mount state
+    this.mounted = false;
+    this.mountedHorseId = null;
 
     // Combat effects
     this.damageNumbers = new DamageNumber();
@@ -90,6 +96,7 @@ export default class Game {
     this.chestOpen = false;
     this.fishingRodPanel = new FishingRodPanel();
     this.fishingRodOpen = false;
+    this.contextMenu = new ContextMenu();
 
     // Fishing state
     this.fishingState = null; // null | 'casting' | 'waiting' | 'bite' | 'reeling'
@@ -215,6 +222,12 @@ export default class Game {
         }
         this.fishingRodPanel.close();
         this.fishingRodOpen = false;
+        this.contextMenu.close();
+        if (this.mounted) {
+          this.network.sendHorseDismount();
+          this.mounted = false;
+          this.mountedHorseId = null;
+        }
         if (this.fishingState) {
           this.network.sendFishCancel();
           this.fishingState = null;
@@ -254,6 +267,16 @@ export default class Game {
 
     this.network.onEquipmentUpdate = (data) => {
       this.equipment.update(data);
+      // Sync fishing rod panel if open
+      if (this.fishingRodOpen) {
+        const tool = this.equipment.getEquipped('tool');
+        if (tool && ITEM_DB[tool.id]?.toolType === 'fishing_rod') {
+          this.fishingRodPanel.rodParts = tool.rodParts ? { ...tool.rodParts } : {};
+        } else {
+          this.fishingRodPanel.close();
+          this.fishingRodOpen = false;
+        }
+      }
     };
 
     this.network.onPlayerStats = (data) => {
@@ -507,6 +530,16 @@ export default class Game {
     this.network.onTileUpdate = (data) => {
       this.worldManager.updateTile(data.chunkX, data.chunkY, data.localX, data.localY, data.newTile);
     };
+
+    this.network.onHorseUpdate = (data) => {
+      if (data.mounted) {
+        this.mounted = true;
+        this.mountedHorseId = data.horseId;
+      } else {
+        this.mounted = false;
+        this.mountedHorseId = null;
+      }
+    };
   }
 
   start() {
@@ -559,7 +592,8 @@ export default class Game {
         const speedMult = this.clientCollision.getSpeedMultiplier(
           this.localPlayer.x, this.localPlayer.y
         );
-        const speed = PLAYER_SPEED * speedMult;
+        let speed = PLAYER_SPEED * speedMult;
+        if (this.mounted) speed *= HORSE_SPEED_MULTIPLIER;
         const velX = mx * speed;
         const velY = my * speed;
 
@@ -623,6 +657,20 @@ export default class Game {
           this.fishingRodPanel.position(this.renderer.width, this.renderer.height);
         } else {
           this.fishingRodPanel.close();
+        }
+      }
+    }
+
+    // Handle Q key (horse capture / mount / dismount)
+    if (actions.horseAction && !this.placementMode && !this.isDead) {
+      if (this.mounted) {
+        this.network.sendHorseDismount();
+      } else {
+        const nearHorse = this._findNearestHorse();
+        if (nearHorse && nearHorse.tamed && nearHorse.ownerId === this.network.playerId) {
+          this.network.sendHorseMount();
+        } else {
+          this.network.sendHorseCapture();
         }
       }
     }
@@ -732,6 +780,8 @@ export default class Game {
         this.craftingOpen = false;
       } else if (this.panelsOpen && this.inventoryPanel.swapSource >= 0) {
         this.inventoryPanel.cancelSwap();
+      } else if (this.contextMenu.visible) {
+        this.contextMenu.close();
       } else if (this.panelsOpen) {
         this.panelsOpen = false;
         this.inventoryPanel.visible = false;
@@ -798,7 +848,9 @@ export default class Game {
 
     // Scroll routing: panels get scroll when open, otherwise camera zoom
     if (actions.scrollDelta !== 0) {
-      if (this.worldMap.visible) {
+      if (this.shopOpen) {
+        this.shopPanel.handleScroll(actions.scrollDelta);
+      } else if (this.worldMap.visible) {
         this.worldMap.handleScroll(actions.scrollDelta);
       } else if (this.skillsOpen) {
         this.skillsPanel.handleScroll(actions.scrollDelta);
@@ -1005,12 +1057,13 @@ export default class Game {
             this.fishingRodPanel.close();
             this.fishingRodOpen = false;
           } else if (result.action === 'remove') {
-            // Remove part from rod - send to server as unequip rod part
             this._handleRodPartRemove(result.partSlot);
           } else if (result.action === 'attach') {
-            // Find a matching part in inventory and attach it
             this._handleRodPartAttach(result.partSlot);
           }
+          // Consume click so it doesn't fall through to other panels
+          actions.action = false;
+          actions.screenTap = false;
         }
       }
     }
@@ -1030,16 +1083,35 @@ export default class Game {
       this.statsPanel.handleMouseMove(actions.mouseScreenX, actions.mouseScreenY);
     }
 
-    // Secondary action (right-click / gamepad Y): drop item from inventory
+    // Context menu interaction (must come before other panel handlers)
+    if (this.contextMenu.visible) {
+      this.contextMenu.handleMouseMove(actions.mouseScreenX, actions.mouseScreenY);
+      if (actions.action || actions.screenTap) {
+        const result = this.contextMenu.handleClick(actions.mouseScreenX, actions.mouseScreenY);
+        if (result && result !== 'close') {
+          this._handleContextMenuAction(result);
+        }
+        actions.action = false;
+        actions.screenTap = false;
+      }
+    }
+
+    // Secondary action (right-click / gamepad Y): open context menu for inventory items
     if (this.panelsOpen && actions.secondaryAction) {
-      const onDrop = (slotIndex, count) => this.network.sendItemDrop(slotIndex, count);
       if (this.input.activeMethod === 'gamepad') {
+        const onDrop = (slotIndex, count) => this.network.sendItemDrop(slotIndex, count);
         this.inventoryPanel.dropSelected(this.inventory, onDrop);
       } else {
-        this.inventoryPanel.handleRightClick(
+        const menuDesc = this.inventoryPanel.handleRightClick(
           actions.mouseScreenX, actions.mouseScreenY,
-          this.inventory, onDrop
+          this.inventory
         );
+        if (menuDesc) {
+          this.contextMenu.open(
+            menuDesc.x, menuDesc.y, menuDesc.options, menuDesc.slotIndex,
+            this.renderer.width, this.renderer.height
+          );
+        }
       }
     }
 
@@ -1141,6 +1213,21 @@ export default class Game {
           if (entity.y !== undefined) n.y = entity.y;
           n.name = entity.name ?? n.name;
         }
+      } else if (entity.type === 'horse') {
+        this.interpolator.pushState(id, entity);
+        if (!this.horses.has(id)) {
+          this.horses.set(id, {
+            x: entity.x, y: entity.y,
+            name: entity.name, color: entity.color, size: entity.size,
+            tamed: entity.tamed, ownerId: entity.ownerId, mounted: entity.mounted,
+          });
+        } else {
+          const h = this.horses.get(id);
+          h.name = entity.name ?? h.name;
+          h.tamed = entity.tamed ?? h.tamed;
+          h.ownerId = entity.ownerId ?? h.ownerId;
+          h.mounted = entity.mounted ?? h.mounted;
+        }
       } else {
         // Remote player
         this.interpolator.pushState(id, entity);
@@ -1182,6 +1269,24 @@ export default class Game {
       if (interp) {
         enemy.x = interp.x;
         enemy.y = interp.y;
+      }
+    }
+
+    // Interpolate horses + clean up removed
+    for (const [id, horse] of this.horses) {
+      if (!this.network.entities.has(id)) {
+        this.horses.delete(id);
+        this.interpolator.removeEntity(id);
+        if (this.mountedHorseId === id) {
+          this.mounted = false;
+          this.mountedHorseId = null;
+        }
+        continue;
+      }
+      const interp = this.interpolator.getInterpolatedState(id);
+      if (interp) {
+        horse.x = interp.x;
+        horse.y = interp.y;
       }
     }
 
@@ -1268,6 +1373,7 @@ export default class Game {
     this.renderResources(r);
     this.renderStations(r);
     this.renderNPCs(r);
+    this.renderHorses(r);
     this.renderPlacementGhost(r);
     this.renderEnemies(r);
     this.renderPlayers(r);
@@ -1326,6 +1432,9 @@ export default class Game {
       this.fishingRodPanel.position(r.width, r.height);
       this.fishingRodPanel.render(ctx);
     }
+
+    // Context menu (renders on top of all panels)
+    this.contextMenu.render(ctx);
 
     // Fishing state HUD
     this.renderFishingHUD(ctx, r);
@@ -1455,6 +1564,10 @@ export default class Game {
         p.hp, p.maxHp,
         true, facing.x, facing.y
       );
+      // Mounted indicator
+      if (this.mounted) {
+        r.drawText('Mounted', p.x, p.y + PLAYER_SIZE / 2 + 14, '#90ee90', 8, 'center');
+      }
     }
   }
 
@@ -1749,6 +1862,96 @@ export default class Game {
       // Send to server — server will update equipment & inventory and send updates back
       this.network.sendRodPartAttach(partSlot, slot.itemId, i);
       return;
+    }
+  }
+
+  _handleContextMenuAction(result) {
+    const { action, data, sourceSlot } = result;
+    if (action === 'equip') {
+      this.network.sendEquip(sourceSlot);
+    } else if (action === 'use') {
+      this.network.sendItemUse(sourceSlot);
+    } else if (action === 'swap') {
+      this.inventoryPanel.swapSource = sourceSlot;
+    } else if (action === 'drop1') {
+      this.network.sendItemDrop(sourceSlot, 1);
+    } else if (action === 'dropAll') {
+      const slot = this.inventory.getSlot(sourceSlot);
+      if (slot) this.network.sendItemDrop(sourceSlot, slot.count);
+    } else if (action === 'gem_insert') {
+      // Open sub-menu with available gems from inventory
+      const gemOptions = [];
+      const slots = this.inventory.slots;
+      for (let i = 0; i < slots.length; i++) {
+        const slot = slots[i];
+        if (!slot) continue;
+        const def = ITEM_DB[slot.itemId];
+        if (!def || def.type !== 'gem') continue;
+        gemOptions.push({
+          label: `${def.name} x${slot.count}`,
+          action: 'socket_gem',
+          data: { targetSlot: sourceSlot, gemSlot: i },
+        });
+      }
+      if (gemOptions.length > 0) {
+        this.contextMenu.open(
+          this.contextMenu.x, this.contextMenu.y + 10,
+          gemOptions, sourceSlot,
+          this.renderer.width, this.renderer.height
+        );
+      }
+    } else if (action === 'socket_gem') {
+      this.network.sendGemSocket(data.targetSlot, data.gemSlot);
+    }
+  }
+
+  _findNearestHorse() {
+    if (!this.localPlayer) return null;
+    let nearest = null;
+    let nearestDist = 80; // interaction range
+    for (const [id, horse] of this.horses) {
+      const dx = horse.x - this.localPlayer.x;
+      const dy = horse.y - this.localPlayer.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearest = horse;
+        nearest._id = id;
+      }
+    }
+    return nearest;
+  }
+
+  renderHorses(r) {
+    const px = this.localPlayer ? this.localPlayer.x : 0;
+    const py = this.localPlayer ? this.localPlayer.y : 0;
+
+    for (const [id, horse] of this.horses) {
+      if (horse.mounted) continue; // Don't render mounted horses
+
+      EntityRenderer.renderHorse(
+        r, horse.x, horse.y,
+        horse.color || '#8B6C42',
+        horse.size || 30,
+        horse.name || 'Horse',
+        horse.tamed || false,
+        horse.ownerId
+      );
+
+      // Show interaction hint if close to player
+      if (this.localPlayer) {
+        const dx = horse.x - px;
+        const dy = horse.y - py;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 100) {
+          const half = (horse.size || 30) / 2;
+          if (horse.tamed && horse.ownerId === this.network.playerId) {
+            r.drawText('Press Q to mount', horse.x, horse.y + half + 12, '#aaa', 8, 'center');
+          } else if (!horse.tamed) {
+            r.drawText('Press Q to capture', horse.x, horse.y + half + 12, '#aaa', 8, 'center');
+          }
+        }
+      }
     }
   }
 

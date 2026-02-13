@@ -57,6 +57,9 @@ export default class NetworkClient {
 
     // Tile mining
     this.onTileUpdate = null;
+
+    // Horse callbacks
+    this.onHorseUpdate = null;
   }
 
   connect() {
@@ -244,6 +247,11 @@ export default class NetworkClient {
     // Tile mining
     this.socket.on(MSG.TILE_UPDATE, (data) => {
       if (this.onTileUpdate) this.onTileUpdate(data);
+    });
+
+    // Horse
+    this.socket.on(MSG.HORSE_UPDATE, (data) => {
+      if (this.onHorseUpdate) this.onHorseUpdate(data);
     });
   }
 
@@ -448,6 +456,22 @@ export default class NetworkClient {
   sendRodPartRemove(partSlot) {
     if (!this.connected) return;
     this.socket.emit(MSG.ROD_PART_REMOVE, { partSlot });
+  }
+
+  // Horse
+  sendHorseCapture() {
+    if (!this.connected) return;
+    this.socket.emit(MSG.HORSE_CAPTURE);
+  }
+
+  sendHorseMount() {
+    if (!this.connected) return;
+    this.socket.emit(MSG.HORSE_MOUNT);
+  }
+
+  sendHorseDismount() {
+    if (!this.connected) return;
+    this.socket.emit(MSG.HORSE_DISMOUNT);
   }
 
   getLocalPlayerState() {

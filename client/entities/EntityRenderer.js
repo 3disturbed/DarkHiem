@@ -1,16 +1,26 @@
 import { PLAYER_SIZE } from '../../shared/Constants.js';
 import stationSprites from './StationSprites.js';
+import enemySprites from './EnemySprites.js';
+import npcSprites from './NPCSprites.js';
+import playerSprites from './PlayerSprites.js';
 
 export default class EntityRenderer {
   // Render a player entity
   static renderPlayer(r, x, y, color, name, hp, maxHp, isLocal, facingX, facingY) {
     const half = PLAYER_SIZE / 2;
+    const ctx = r.ctx;
 
-    // Body
-    r.drawRect(x - half, y - half, PLAYER_SIZE, PLAYER_SIZE, color);
-    r.ctx.strokeStyle = '#000';
-    r.ctx.lineWidth = 2;
-    r.ctx.strokeRect(Math.round(x - half), Math.round(y - half), PLAYER_SIZE, PLAYER_SIZE);
+    // Try sprite first
+    const tinted = playerSprites.getTinted(color);
+    if (tinted) {
+      ctx.drawImage(tinted, Math.round(x - half), Math.round(y - half), PLAYER_SIZE, PLAYER_SIZE);
+    } else {
+      // Fallback: colored square
+      r.drawRect(x - half, y - half, PLAYER_SIZE, PLAYER_SIZE, color);
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(Math.round(x - half), Math.round(y - half), PLAYER_SIZE, PLAYER_SIZE);
+    }
 
     // Direction indicator for local player
     if (isLocal) {
@@ -31,7 +41,7 @@ export default class EntityRenderer {
   }
 
   // Render an enemy entity
-  static renderEnemy(r, x, y, color, size, name, hp, maxHp, aiState, isBoss = false) {
+  static renderEnemy(r, x, y, color, size, name, hp, maxHp, aiState, isBoss = false, enemyId = null) {
     const half = size / 2;
     const ctx = r.ctx;
 
@@ -47,18 +57,24 @@ export default class EntityRenderer {
       ctx.restore();
     }
 
-    // Body
-    r.drawRect(x - half, y - half, size, size, color);
-
-    // Outline - red if aggro, gold for boss
-    if (isBoss) {
-      ctx.strokeStyle = (aiState === 'chase' || aiState === 'attack') ? '#ff4444' : '#ffd700';
-      ctx.lineWidth = 3;
+    // Try sprite first
+    const sprite = enemyId ? enemySprites.get(enemyId) : null;
+    if (sprite) {
+      ctx.drawImage(sprite, Math.round(x - half), Math.round(y - half), size, size);
     } else {
-      ctx.strokeStyle = (aiState === 'chase' || aiState === 'attack') ? '#ff0000' : '#000';
-      ctx.lineWidth = (aiState === 'chase' || aiState === 'attack') ? 2 : 1;
+      // Fallback: colored rectangle
+      r.drawRect(x - half, y - half, size, size, color);
+
+      // Outline - red if aggro, gold for boss
+      if (isBoss) {
+        ctx.strokeStyle = (aiState === 'chase' || aiState === 'attack') ? '#ff4444' : '#ffd700';
+        ctx.lineWidth = 3;
+      } else {
+        ctx.strokeStyle = (aiState === 'chase' || aiState === 'attack') ? '#ff0000' : '#000';
+        ctx.lineWidth = (aiState === 'chase' || aiState === 'attack') ? 2 : 1;
+      }
+      ctx.strokeRect(Math.round(x - half), Math.round(y - half), size, size);
     }
-    ctx.strokeRect(Math.round(x - half), Math.round(y - half), size, size);
 
     // Name tag — gold for boss
     if (isBoss) {
@@ -215,23 +231,28 @@ export default class EntityRenderer {
     const half = size / 2;
     const ctx = r.ctx;
 
-    // Hexagonal body shape
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const angle = (Math.PI * 2 * i / 6) - Math.PI / 6;
-      const px = x + Math.cos(angle) * half;
-      const py = y + Math.sin(angle) * half;
-      if (i === 0) ctx.moveTo(Math.round(px), Math.round(py));
-      else ctx.lineTo(Math.round(px), Math.round(py));
-    }
-    ctx.closePath();
-    ctx.fill();
+    // Try sprite first
+    const sprite = npcType ? npcSprites.get(npcType) : null;
+    if (sprite) {
+      ctx.drawImage(sprite, Math.round(x - half), Math.round(y - half), size, size);
+    } else {
+      // Fallback: hexagonal body shape
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI * 2 * i / 6) - Math.PI / 6;
+        const px = x + Math.cos(angle) * half;
+        const py = y + Math.sin(angle) * half;
+        if (i === 0) ctx.moveTo(Math.round(px), Math.round(py));
+        else ctx.lineTo(Math.round(px), Math.round(py));
+      }
+      ctx.closePath();
+      ctx.fill();
 
-    // Outline
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 2;
-    ctx.stroke();
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
 
     // Name tag
     r.drawText(name, x, y - half - 14, '#fff', 10, 'center');
@@ -298,6 +319,58 @@ export default class EntityRenderer {
     r.drawText(name, x, y - half - 8, isValid ? '#2ecc71' : '#e74c3c', 9, 'center');
 
     ctx.restore();
+  }
+
+  static renderHorse(r, x, y, color, size, name, tamed, ownerId) {
+    const half = size / 2;
+    const ctx = r.ctx;
+
+    // Try sprite first (reuse enemy sprites loader)
+    const sprite = enemySprites.get('wild_horse');
+    if (sprite) {
+      ctx.drawImage(sprite, Math.round(x - half), Math.round(y - half), size, size);
+    } else {
+      // Fallback: rounded brown body
+      ctx.fillStyle = color || '#8B6C42';
+      ctx.beginPath();
+      const rx = Math.round(x - half);
+      const ry = Math.round(y - half * 0.7);
+      const w = size;
+      const h = size * 0.7;
+      const rad = 4;
+      ctx.moveTo(rx + rad, ry);
+      ctx.lineTo(rx + w - rad, ry);
+      ctx.quadraticCurveTo(rx + w, ry, rx + w, ry + rad);
+      ctx.lineTo(rx + w, ry + h - rad);
+      ctx.quadraticCurveTo(rx + w, ry + h, rx + w - rad, ry + h);
+      ctx.lineTo(rx + rad, ry + h);
+      ctx.quadraticCurveTo(rx, ry + h, rx, ry + h - rad);
+      ctx.lineTo(rx, ry + rad);
+      ctx.quadraticCurveTo(rx, ry, rx + rad, ry);
+      ctx.closePath();
+      ctx.fill();
+
+      // Legs
+      ctx.fillStyle = '#6B4C22';
+      ctx.fillRect(Math.round(x - half * 0.6), Math.round(y + half * 0.3), 3, half * 0.6);
+      ctx.fillRect(Math.round(x + half * 0.3), Math.round(y + half * 0.3), 3, half * 0.6);
+
+      // Outline
+      ctx.strokeStyle = tamed ? '#ffd700' : '#000';
+      ctx.lineWidth = tamed ? 2 : 1;
+      ctx.strokeRect(Math.round(x - half), Math.round(y - half), size, size);
+    }
+
+    // Tamed indicator: golden outline
+    if (tamed && sprite) {
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(Math.round(x - half - 1), Math.round(y - half - 1), size + 2, size + 2);
+    }
+
+    // Name tag
+    const nameColor = tamed ? '#90ee90' : '#ddd';
+    r.drawText(name, x, y - half - 10, nameColor, 9, 'center');
   }
 
   static renderHealthBar(r, cx, y, width, height, current, max, color) {

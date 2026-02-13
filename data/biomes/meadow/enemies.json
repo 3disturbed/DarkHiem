@@ -130,6 +130,25 @@
       "aggroRange": 160,
       "deaggroRange": 288,
       "caveOnly": true
+    },
+    {
+      "id": "wild_horse",
+      "name": "Wild Horse",
+      "health": 80,
+      "damage": 0,
+      "speed": 130,
+      "xpReward": 0,
+      "drops": [],
+      "minGradient": 0.0,
+      "maxGradient": 0.6,
+      "densityAtLeft": 0.008,
+      "densityAtRight": 0.015,
+      "color": "#8B6C42",
+      "size": 30,
+      "behavior": "horse",
+      "aggroRange": 160,
+      "deaggroRange": 320,
+      "isHorse": true
     }
   ]
 }

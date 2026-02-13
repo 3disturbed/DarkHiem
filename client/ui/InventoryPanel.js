@@ -161,15 +161,28 @@ export default class InventoryPanel {
     return true; // consumed click (inside panel)
   }
 
-  handleRightClick(mx, my, inventory, onDrop) {
-    if (!this.visible) return false;
+  handleRightClick(mx, my, inventory) {
+    if (!this.visible) return null;
     this._updateCache(inventory);
     const clickedIdx = this._getItemIndexAt(mx, my);
-    if (clickedIdx < 0) return false;
+    if (clickedIdx < 0) return null;
     const item = this._cachedItems[clickedIdx];
-    if (onDrop) onDrop(item.slotIndex, 1);
+    const def = item.def;
     this.selectedItemIndex = clickedIdx;
-    return true;
+
+    const options = [];
+    if (def.type === 'equipment') options.push({ label: 'Equip', action: 'equip' });
+    if (def.type === 'consumable') options.push({ label: 'Use', action: 'use' });
+    if (def.type === 'equipment' && def.gemSlots > 0) {
+      const gems = item.gems || [];
+      const filled = gems.filter(g => g).length;
+      if (filled < def.gemSlots) options.push({ label: 'Insert Gem...', action: 'gem_insert' });
+    }
+    options.push({ label: 'Move', action: 'swap' });
+    options.push({ label: 'Drop 1', action: 'drop1' });
+    if (item.count > 1) options.push({ label: 'Drop All', action: 'dropAll' });
+
+    return { slotIndex: item.slotIndex, item, options, x: mx, y: my };
   }
 
   dropSelected(inventory, onDrop) {

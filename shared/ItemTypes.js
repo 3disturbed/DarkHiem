@@ -840,6 +840,10 @@ export const ITEM_DB = {
     id: 'coal', name: 'Coal', type: 'material', stackable: true, maxStack: 50,
     description: 'Fuel for smelting.',
   },
+  charcoal: {
+    id: 'charcoal', name: 'Charcoal', type: 'material', stackable: true, maxStack: 50,
+    description: 'Fuel made by burning wood in a kiln.',
+  },
   dark_oak_log: {
     id: 'dark_oak_log', name: 'Dark Oak Log', type: 'material', stackable: true, maxStack: 50,
     description: 'Dense dark wood.',
@@ -1054,6 +1058,10 @@ export const ITEM_DB = {
   blasting_powder: {
     id: 'blasting_powder', name: 'Blasting Powder', type: 'material', stackable: true, maxStack: 50,
     description: 'Explosive powder for crafting bombs.',
+  },
+  lasso: {
+    id: 'lasso', name: 'Lasso', type: 'material', stackable: true, maxStack: 5,
+    description: 'A rope lasso for capturing wild horses.',
   },
 
   // ============================================================

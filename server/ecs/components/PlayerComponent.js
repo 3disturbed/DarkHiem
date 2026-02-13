@@ -10,5 +10,6 @@ export default class PlayerComponent extends Component {
     this.lastInputSeq = 0;
     this.connected = true;
     this.pendingPlacement = null; // { stationId, ingredients } when awaiting ghost placement
+    this.mountedHorseId = null; // entity ID of horse being ridden
   }
 }

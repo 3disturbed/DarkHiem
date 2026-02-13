@@ -28,3 +28,5 @@ export const CAMERA_ZOOM_SPEED = 0.1;
 
 export const INPUT_DEADZONE = 0.15;
 export const TOUCH_MIN_TARGET = 44; // minimum tap target px
+
+export const HORSE_SPEED_MULTIPLIER = 1.8; // 1.8x player speed when mounted

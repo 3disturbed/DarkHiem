@@ -133,6 +133,12 @@ export const MSG = {
   // Town recall
   TOWN_RECALL:        'player:recall',
 
+  // Horse
+  HORSE_CAPTURE:      'horse:capture',
+  HORSE_MOUNT:        'horse:mount',
+  HORSE_DISMOUNT:     'horse:dismount',
+  HORSE_UPDATE:       'horse:update',
+
   // World events
   BIOME_UNLOCK:       'world:biome_unlock',
   TIME_UPDATE:        'world:time',

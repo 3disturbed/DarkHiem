@@ -14,6 +14,7 @@ import QuestHandler from './network/handlers/QuestHandler.js';
 import ShopHandler from './network/handlers/ShopHandler.js';
 import ChestHandler from './network/handlers/ChestHandler.js';
 import FishingHandler from './network/handlers/FishingHandler.js';
+import HorseHandler from './network/handlers/HorseHandler.js';
 import QuestComponent from './ecs/components/QuestComponent.js';
 import EntityManager from './ecs/EntityManager.js';
 import SystemManager from './ecs/SystemManager.js';
@@ -55,6 +56,7 @@ import { getDefaultHotbar } from '../shared/SkillTypes.js';
 import SkillExecutor from './skills/SkillExecutor.js';
 import TownManager from './town/TownManager.js';
 import NPCComponent from './ecs/components/NPCComponent.js';
+import HorseComponent from './ecs/components/HorseComponent.js';
 
 export default class GameServer {
   constructor(io) {
@@ -120,6 +122,9 @@ export default class GameServer {
 
     this.fishingHandler = new FishingHandler(this);
     this.fishingHandler.register(this.messageRouter);
+
+    const horseHandler = new HorseHandler(this);
+    horseHandler.register(this.messageRouter);
 
     // Respawn handler
     this.messageRouter.register(MSG.PLAYER_RESPAWN, (player) => {
@@ -474,6 +479,31 @@ export default class GameServer {
         aiState: ai ? ai.state : 'idle',
         isBoss: entity.isBoss || false,
         enemyId: entity.enemyConfig ? entity.enemyConfig.id : null,
+      };
+    }
+
+    // Horse entities
+    const horseEntities = this.entityManager.getByTag('horse');
+    for (const entity of horseEntities) {
+      const pos = entity.getComponent(PositionComponent);
+      const name = entity.getComponent(NameComponent);
+      const vel = entity.getComponent(VelocityComponent);
+      const col = entity.getComponent(ColliderComponent);
+      const horse = entity.getComponent(HorseComponent);
+
+      allStates[entity.id] = {
+        id: entity.id,
+        type: 'horse',
+        name: name ? name.name : 'Horse',
+        color: entity.horseConfig ? entity.horseConfig.color : '#8B6C42',
+        size: col ? col.width : 30,
+        x: pos.x,
+        y: pos.y,
+        velocityX: vel ? vel.dx : 0,
+        velocityY: vel ? vel.dy : 0,
+        tamed: horse ? horse.tamed : false,
+        ownerId: horse ? horse.ownerId : null,
+        mounted: horse ? horse.mounted : false,
       };
     }
 

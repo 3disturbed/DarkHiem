@@ -574,6 +574,67 @@ def gen_obsidian_vault():
     return px
 
 
+# ─── KILN ───
+def gen_kiln():
+    px = new_canvas()
+    stone = hex_to_rgba('#8B7355')
+    stone_dark = darken(stone)
+    stone_light = lighten(stone, 1.2)
+    fire = hex_to_rgba('#FF6600')
+    fire_y = hex_to_rgba('#FFAA00')
+    smoke = hex_to_rgba('#666666', 100)
+
+    # Dome body (stone dome shape)
+    # Bottom base
+    fill_rect(px, 6, 22, 20, 6, stone)
+    # Middle section
+    fill_rect(px, 5, 16, 22, 6, stone)
+    # Upper section
+    fill_rect(px, 7, 11, 18, 5, stone)
+    # Top dome
+    fill_rect(px, 9, 8, 14, 3, stone)
+    fill_rect(px, 11, 6, 10, 2, stone)
+    fill_rect(px, 13, 5, 6, 1, stone_dark)
+
+    # Stone texture - darker patches
+    for y in range(8, 28, 4):
+        for x in range(6, 26, 5):
+            set_px(px, x, y, stone_dark)
+            set_px(px, x+1, y, stone_dark)
+
+    # Lighter highlights on dome
+    for x in range(10, 22, 3):
+        set_px(px, x, 9, stone_light)
+    for x in range(8, 24, 3):
+        set_px(px, x, 14, stone_light)
+
+    # Opening (front mouth)
+    fill_rect(px, 11, 20, 10, 8, hex_to_rgba('#1a1a1a'))
+    # Arch top
+    fill_rect(px, 12, 19, 8, 1, hex_to_rgba('#1a1a1a'))
+    fill_rect(px, 13, 18, 6, 1, hex_to_rgba('#1a1a1a'))
+
+    # Fire glow inside
+    fill_rect(px, 13, 24, 6, 3, fire)
+    fill_rect(px, 14, 22, 4, 2, fire_y)
+    set_px(px, 15, 21, hex_to_rgba('#FFDD44'))
+    set_px(px, 16, 21, hex_to_rgba('#FFDD44'))
+
+    # Chimney hole at top
+    fill_rect(px, 14, 4, 4, 2, hex_to_rgba('#333333'))
+    # Smoke wisps
+    set_px(px, 15, 2, smoke)
+    set_px(px, 16, 1, smoke)
+    set_px(px, 15, 0, hex_to_rgba('#555555', 60))
+
+    # Orange glow around opening
+    set_px(px, 10, 21, hex_to_rgba('#FF8800', 100))
+    set_px(px, 10, 22, hex_to_rgba('#FF6600', 80))
+    set_px(px, 21, 21, hex_to_rgba('#FF8800', 100))
+    set_px(px, 21, 22, hex_to_rgba('#FF6600', 80))
+
+    return px
+
 GENERATORS = {
     'workbench': gen_workbench,
     'furnace': gen_furnace,
@@ -586,6 +647,7 @@ GENERATORS = {
     'reinforced_chest': gen_reinforced_chest,
     'iron_chest': gen_iron_chest,
     'obsidian_vault': gen_obsidian_vault,
+    'kiln': gen_kiln,
 }
 
 def main():

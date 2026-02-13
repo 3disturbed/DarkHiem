@@ -6,6 +6,7 @@ export const STATION_TYPE = {
   COOKING_FIRE: 'cooking_fire',
   GEM_TABLE: 'gem_table',
   ARCANE_TABLE: 'arcane_table',
+  KILN: 'kiln',
 };
 
 export const STATION_DB = {
@@ -68,6 +69,16 @@ export const STATION_DB = {
     size: 38,
     interactRange: 80,
     sprite: 'arcane_table',
+  },
+  kiln: {
+    id: 'kiln',
+    name: 'Kiln',
+    type: STATION_TYPE.KILN,
+    maxLevel: 1,
+    color: '#8B4513',
+    size: 36,
+    interactRange: 80,
+    sprite: 'kiln',
   },
   boss_altar: {
     id: 'boss_altar',
