@@ -11,6 +11,15 @@ export default class SkillComponent extends Component {
     this.precisionStrikeActive = false;
     this.venomStrikeActive = false;
     this.shadowStepActive = false;
+    this.dashCooldown = 0;
+  }
+
+  canDash() {
+    return this.dashCooldown <= 0;
+  }
+
+  startDashCooldown(cd) {
+    this.dashCooldown = cd;
   }
 
   learnSkill(skillId) {
@@ -54,6 +63,10 @@ export default class SkillComponent extends Component {
           this.cooldowns[skillId] = 0;
         }
       }
+    }
+    if (this.dashCooldown > 0) {
+      this.dashCooldown -= dt;
+      if (this.dashCooldown < 0) this.dashCooldown = 0;
     }
   }
 

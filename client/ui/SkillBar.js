@@ -1,4 +1,4 @@
-import { SKILL_DB } from '../../shared/SkillTypes.js';
+import { SKILL_DB, DASH_CONFIG } from '../../shared/SkillTypes.js';
 
 export default class SkillBar {
   constructor() {
@@ -6,6 +6,7 @@ export default class SkillBar {
     this.y = 0;
     this.slotSize = 40;
     this.slotGap = 4;
+    this.dashSize = 28;
     this.flashTimers = {}; // skillId -> timer
   }
 
@@ -112,5 +113,55 @@ export default class SkillBar {
       ctx.textBaseline = 'top';
       ctx.fillText(keyLabels[i], sx + 2, sy + 2);
     }
+  }
+
+  renderDashIndicator(ctx, skills, inputMethod) {
+    const ds = this.dashSize;
+    const dx = this.x - ds - 8; // to the left of skill bar
+    const dy = this.y + (this.slotSize - ds) / 2; // vertically centered
+
+    const cdPercent = skills.getDashCooldownPercent();
+    const remaining = skills.getDashCooldownRemaining();
+
+    // Background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(dx, dy, ds, ds);
+
+    // Fill color
+    ctx.fillStyle = cdPercent > 0 ? '#333' : (DASH_CONFIG.color || '#3498db');
+    ctx.globalAlpha = cdPercent > 0 ? 0.4 : 0.8;
+    ctx.fillRect(dx + 2, dy + 2, ds - 4, ds - 4);
+
+    // Cooldown overlay
+    if (cdPercent > 0) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      const coverHeight = (ds - 4) * cdPercent;
+      ctx.fillRect(dx + 2, dy + 2, ds - 4, coverHeight);
+
+      ctx.globalAlpha = 1.0;
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 10px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(
+        remaining >= 1 ? Math.ceil(remaining).toString() : remaining.toFixed(1),
+        dx + ds / 2, dy + ds / 2
+      );
+    }
+
+    ctx.globalAlpha = 1.0;
+
+    // Border
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(dx, dy, ds, ds);
+
+    // Key label
+    const label = inputMethod === 'gamepad' ? 'L3' : (inputMethod === 'touch' ? 'D' : 'Sh');
+    ctx.fillStyle = '#aaa';
+    ctx.font = '8px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(label, dx + ds / 2, dy + ds + 2);
   }
 }

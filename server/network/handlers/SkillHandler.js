@@ -1,5 +1,5 @@
 import { MSG } from '../../../shared/MessageTypes.js';
-import { SKILL_DB } from '../../../shared/SkillTypes.js';
+import { SKILL_DB, DASH_CONFIG } from '../../../shared/SkillTypes.js';
 import HealthComponent from '../../ecs/components/HealthComponent.js';
 import SkillComponent from '../../ecs/components/SkillComponent.js';
 
@@ -11,6 +11,7 @@ export default class SkillHandler {
   register(router) {
     router.register(MSG.SKILL_USE, (player, data) => this.handleSkillUse(player, data));
     router.register(MSG.SKILL_HOTBAR_SET, (player, data) => this.handleHotbarSet(player, data));
+    router.register(MSG.DASH_USE, (player) => this.handleDashUse(player));
   }
 
   handleSkillUse(player, data) {
@@ -43,6 +44,24 @@ export default class SkillHandler {
         skillId,
         remaining: def ? def.cooldown : 0,
         total: def ? def.cooldown : 0,
+      });
+    }
+  }
+
+  handleDashUse(player) {
+    const entity = this.gameServer.getPlayerEntity(player.id);
+    if (!entity) return;
+
+    const health = entity.getComponent(HealthComponent);
+    if (health && !health.isAlive()) return;
+
+    const result = this.gameServer.skillExecutor.executeDashStandalone(entity);
+    player.emit(MSG.SKILL_RESULT, result);
+
+    if (result.success) {
+      player.emit(MSG.DASH_COOLDOWN, {
+        remaining: DASH_CONFIG.cooldown,
+        total: DASH_CONFIG.cooldown,
       });
     }
   }

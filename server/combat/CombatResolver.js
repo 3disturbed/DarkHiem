@@ -193,6 +193,30 @@ export default class CombatResolver {
       }
     }
 
+    // --- Thorns Reflection (target side, reflect damage to attacker) ---
+    if (targetSE && actualDamage > 0) {
+      const thorns = targetSE.getThornsReflect();
+      if (thorns > 0) {
+        const reflectedDamage = Math.round(actualDamage * thorns);
+        if (reflectedDamage > 0) {
+          const attackerHealth = attacker.getComponent(HealthComponent);
+          if (attackerHealth && attackerHealth.isAlive()) {
+            attackerHealth.damage(reflectedDamage);
+            this.damageEvents.push({
+              targetId: attacker.id,
+              attackerId: target.id,
+              damage: reflectedDamage,
+              isCrit: false,
+              x: attackerPos.x,
+              y: attackerPos.y,
+              killed: !attackerHealth.isAlive(),
+              isThorns: true,
+            });
+          }
+        }
+      }
+    }
+
     // Apply knockback
     const combat = attacker.getComponent(CombatComponent);
     if (combat && combat.knockback > 0 && targetPos && attackerPos) {

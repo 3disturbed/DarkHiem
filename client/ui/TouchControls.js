@@ -11,6 +11,7 @@ export default class TouchControls {
       { id: 'interact',  label: 'E', color: '#3498db' },
       { id: 'cancel',    label: 'B', color: '#95a5a6' },
       { id: 'inventory', label: 'I', color: '#f39c12' },
+      { id: 'dash',      label: 'D', color: '#3498db' },
     ];
   }
 
@@ -28,10 +29,11 @@ export default class TouchControls {
     const baseY = h - r - pad - 100;
 
     const zones = [
-      { id: 'action',    x: baseX + 60, y: baseY,      radius: r + 4 },  // right
+      { id: 'action',    x: baseX + 60, y: baseY,       radius: r + 4 },  // right
       { id: 'interact',  x: baseX,      y: baseY - 50,  radius: r },      // top
       { id: 'cancel',    x: baseX,      y: baseY + 50,  radius: r },      // bottom
-      { id: 'inventory', x: baseX - 60, y: baseY,      radius: r },      // left
+      { id: 'inventory', x: baseX - 60, y: baseY,       radius: r },      // left
+      { id: 'dash',      x: baseX + 60, y: baseY + 60,  radius: r },      // below action
     ];
 
     this.buttonZones = zones;

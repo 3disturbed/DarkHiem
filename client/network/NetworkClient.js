@@ -33,6 +33,7 @@ export default class NetworkClient {
     this.onSkillUpdate = null;
     this.onSkillResult = null;
     this.onSkillCooldown = null;
+    this.onDashCooldown = null;
 
     // Dialog, quest, shop callbacks
     this.onDialogStart = null;
@@ -190,6 +191,10 @@ export default class NetworkClient {
 
     this.socket.on(MSG.SKILL_COOLDOWN, (data) => {
       if (this.onSkillCooldown) this.onSkillCooldown(data);
+    });
+
+    this.socket.on(MSG.DASH_COOLDOWN, (data) => {
+      if (this.onDashCooldown) this.onDashCooldown(data);
     });
 
     // Dialog
@@ -384,6 +389,11 @@ export default class NetworkClient {
   sendSkillUse(slot) {
     if (!this.connected) return;
     this.socket.emit(MSG.SKILL_USE, { slot });
+  }
+
+  sendDashUse() {
+    if (!this.connected) return;
+    this.socket.emit(MSG.DASH_USE, {});
   }
 
   sendSkillHotbarSet(slot, skillId) {

@@ -59,6 +59,7 @@ export default class InputManager {
     this.actions.mergeButton('horseAction', this.keyboard.wasAnyJustPressed(['KeyQ']));
     this.actions.mergeButton('chat', this.keyboard.wasAnyJustPressed(['Enter']));
     this.actions.mergeButton('action', this.keyboard.wasAnyJustPressed(['Space', 'KeyF']));
+    this.actions.mergeButton('dash', this.keyboard.wasAnyJustPressed(['ShiftLeft', 'ShiftRight']));
 
     // Right-click → secondary action (drop item, etc.)
     this.actions.mergeButton('secondaryAction', this.mouse.wasJustClicked(2));
@@ -89,6 +90,7 @@ export default class InputManager {
       this.actions.mergeButton('skill4', this.gamepad.wasButtonJustPressed(7));       // RT
       this.actions.mergeButton('inventory', this.gamepad.wasButtonJustPressed(8));    // Select
       this.actions.mergeButton('craft', this.gamepad.wasButtonJustPressed(9));        // Start
+      this.actions.mergeButton('dash', this.gamepad.wasButtonJustPressed(10));    // L3
       this.actions.mergeButton('dpadUp', this.gamepad.wasButtonJustPressed(12));
       this.actions.mergeButton('dpadDown', this.gamepad.wasButtonJustPressed(13));
       this.actions.mergeButton('dpadLeft', this.gamepad.wasButtonJustPressed(14));
@@ -107,6 +109,7 @@ export default class InputManager {
       this.actions.mergeButton('interact', this.touch.wasButtonJustPressed('interact'));
       this.actions.mergeButton('cancel', this.touch.wasButtonJustPressed('cancel'));
       this.actions.mergeButton('inventory', this.touch.wasButtonJustPressed('inventory'));
+      this.actions.mergeButton('dash', this.touch.wasButtonJustPressed('dash'));
 
       // Screen tap: any quick tap provides coordinates for UI panel clicks
       if (this.touch.hasTap) {

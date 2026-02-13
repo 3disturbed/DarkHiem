@@ -204,8 +204,13 @@ export default class Game {
         } else if (evt.shielded) {
           this.damageNumbers.add(evt.x, evt.y, 0, false, '#34495e', 'Blocked');
         } else if (evt.blocked) {
-          // Show blocked message (e.g. "Needs pickaxe")
           this.damageNumbers.add(evt.x, evt.y - 10, evt.blocked, false);
+        } else if (evt.isHeal) {
+          this.damageNumbers.add(evt.x, evt.y, 0, false, '#2ecc71', `+${evt.damage}`);
+        } else if (evt.isBloodSacrifice) {
+          this.damageNumbers.add(evt.x, evt.y, 0, false, '#c0392b', `-${evt.damage}`);
+        } else if (evt.isThorns) {
+          this.damageNumbers.add(evt.x, evt.y, evt.damage, false, '#9b59b6');
         } else {
           this.damageNumbers.add(evt.x, evt.y, evt.damage, evt.isCrit);
         }
@@ -389,18 +394,35 @@ export default class Game {
         this.skillBar.flashSkill(def.id);
       }
       if (data.type === 'heal' && data.amount > 0 && this.localPlayer) {
-        this.damageNumbers.add(this.localPlayer.x, this.localPlayer.y - 30, `+${data.amount} HP`, false);
+        this.damageNumbers.add(this.localPlayer.x, this.localPlayer.y - 30, 0, false, '#2ecc71', `+${data.amount} HP`);
       } else if (data.type === 'buff' && data.name && this.localPlayer) {
-        this.damageNumbers.add(this.localPlayer.x, this.localPlayer.y - 30, data.name, false);
+        this.damageNumbers.add(this.localPlayer.x, this.localPlayer.y - 30, 0, false, '#f39c12', data.name);
       } else if (data.type === 'dash' && this.localPlayer) {
-        // Snap local position to dash destination
         this.localPlayer.x = data.x;
         this.localPlayer.y = data.y;
+      } else if (data.type === 'aoe_heal' && this.localPlayer) {
+        this.damageNumbers.add(this.localPlayer.x, this.localPlayer.y - 30, 0, false, '#2ecc71', def ? def.name : 'Heal');
+      } else if (data.type === 'aoe_hot' && this.localPlayer) {
+        this.damageNumbers.add(this.localPlayer.x, this.localPlayer.y - 30, 0, false, '#27ae60', def ? def.name : 'HoT');
+      } else if (data.type === 'aoe_buff' && this.localPlayer) {
+        this.damageNumbers.add(this.localPlayer.x, this.localPlayer.y - 30, 0, false, '#f39c12', def ? def.name : 'Buff');
+      } else if (data.type === 'aoe_shield' && this.localPlayer) {
+        this.damageNumbers.add(this.localPlayer.x, this.localPlayer.y - 30, 0, false, '#34495e', def ? def.name : 'Shield');
+      } else if (data.type === 'blood_heal' && this.localPlayer) {
+        this.damageNumbers.add(this.localPlayer.x, this.localPlayer.y - 30, 0, false, '#c0392b', def ? def.name : 'Blood Pact');
+      } else if (data.type === 'blood_drain' && this.localPlayer) {
+        this.damageNumbers.add(this.localPlayer.x, this.localPlayer.y - 30, 0, false, '#e74c3c', def ? def.name : 'Drain');
+      } else if (data.type === 'blood_ritual' && this.localPlayer) {
+        this.damageNumbers.add(this.localPlayer.x, this.localPlayer.y - 30, 0, false, '#922B21', def ? def.name : 'Ritual');
       }
     };
 
     this.network.onSkillCooldown = (data) => {
       this.skills.updateCooldown(data);
+    };
+
+    this.network.onDashCooldown = (data) => {
+      this.skills.updateDashCooldown(data);
     };
 
     this.network.onItemPickup = (data) => {
@@ -832,6 +854,10 @@ export default class Game {
         if (actions[`skill${i + 1}`]) {
           this.network.sendSkillUse(i);
         }
+      }
+      // Dash (Shift / L3 / touch D)
+      if (actions.dash) {
+        this.network.sendDashUse();
       }
     }
 
@@ -1465,6 +1491,7 @@ export default class Game {
     // Skill bar (always visible, above health bar)
     this.skillBar.position(r.logicalWidth, r.logicalHeight);
     this.skillBar.render(ctx, this.skills, this.input.getActiveMethod());
+    this.skillBar.renderDashIndicator(ctx, this.skills, this.input.getActiveMethod());
 
     // Panels (screen space)
     this.inventoryPanel.render(ctx, this.inventory);

@@ -5,6 +5,7 @@ export default class Skills {
     this.learnedSkills = new Set();
     this.cooldowns = {};  // skillId -> { remaining, total }
     this.hotbar = [null, null, null, null, null];
+    this.dashCooldown = { remaining: 0, total: 0 };
   }
 
   update(data) {
@@ -37,12 +38,32 @@ export default class Skills {
     }
   }
 
+  updateDashCooldown(data) {
+    this.dashCooldown = {
+      remaining: data.remaining || 0,
+      total: data.total || data.remaining || 0,
+    };
+  }
+
+  getDashCooldownPercent() {
+    if (this.dashCooldown.total <= 0) return 0;
+    return Math.max(0, this.dashCooldown.remaining / this.dashCooldown.total);
+  }
+
+  getDashCooldownRemaining() {
+    return Math.max(0, this.dashCooldown.remaining);
+  }
+
   tickLocal(dt) {
     for (const id of Object.keys(this.cooldowns)) {
       this.cooldowns[id].remaining -= dt;
       if (this.cooldowns[id].remaining <= 0) {
         delete this.cooldowns[id];
       }
+    }
+    if (this.dashCooldown.remaining > 0) {
+      this.dashCooldown.remaining -= dt;
+      if (this.dashCooldown.remaining < 0) this.dashCooldown.remaining = 0;
     }
   }
 

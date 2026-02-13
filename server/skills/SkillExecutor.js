@@ -1,4 +1,4 @@
-import { SKILL, SKILL_DB } from '../../shared/SkillTypes.js';
+import { SKILL, SKILL_DB, DASH_CONFIG } from '../../shared/SkillTypes.js';
 import { TILE_SIZE, CHUNK_SIZE, CHUNK_PIXEL_SIZE } from '../../shared/Constants.js';
 import { MSG } from '../../shared/MessageTypes.js';
 import { MINEABLE_TILES } from '../network/handlers/CombatHandler.js';
@@ -38,9 +38,6 @@ export default class SkillExecutor {
       case SKILL.HEAL:
         result = this.executeHeal(entity, def);
         break;
-      case SKILL.DASH:
-        result = this.executeDash(entity, def);
-        break;
       case SKILL.CLEAVE:
         result = this.executeCleave(entity, def, entityManager);
         break;
@@ -79,6 +76,45 @@ export default class SkillExecutor {
         break;
       case SKILL.SHADOW_STEP:
         result = this.executeShadowStep(entity, def, entityManager);
+        break;
+      // Priest (Holy)
+      case SKILL.HOLY_LIGHT:
+        result = this.executeAoEHeal(entity, def, entityManager);
+        break;
+      case SKILL.BLESSING_OF_MIGHT:
+        result = this.executeAoEBuff(entity, def, entityManager, 'skill_blessing_of_might');
+        break;
+      case SKILL.DIVINE_SHIELD:
+        result = this.executeAoEShield(entity, def, entityManager);
+        break;
+      case SKILL.DIVINE_HYMN:
+        result = this.executeAoEHeal(entity, def, entityManager);
+        break;
+      // Druid (Nature)
+      case SKILL.REJUVENATION:
+        result = this.executeAoEHoT(entity, def, entityManager);
+        break;
+      case SKILL.THORNS:
+        result = this.executeAoEBuff(entity, def, entityManager, 'skill_thorns');
+        break;
+      case SKILL.BARKSKIN:
+        result = this.executeAoEBuff(entity, def, entityManager, 'skill_barkskin');
+        break;
+      case SKILL.TRANQUILITY:
+        result = this.executeAoEHoT(entity, def, entityManager);
+        break;
+      // Blood Magic (Dark)
+      case SKILL.BLOOD_PACT:
+        result = this.executeBloodPact(entity, def, entityManager);
+        break;
+      case SKILL.SANGUINE_FURY:
+        result = this.executeBloodSelfBuff(entity, def);
+        break;
+      case SKILL.CRIMSON_DRAIN:
+        result = this.executeCrimsonDrain(entity, def, entityManager);
+        break;
+      case SKILL.BLOOD_RITUAL:
+        result = this.executeBloodRitual(entity, def, entityManager);
         break;
       default:
         return { success: false, message: 'Unknown skill' };
@@ -484,5 +520,348 @@ export default class SkillExecutor {
       success: true, skillId: def.id, type: 'dash',
       x: pos.x, y: pos.y,
     };
+  }
+
+  // --- Standalone Dash (Shift key, not a hotbar skill) ---
+
+  executeDashStandalone(entity) {
+    const skills = entity.getComponent(SkillComponent);
+    if (!skills || !skills.canDash()) {
+      return { success: false, message: 'Not ready' };
+    }
+
+    const result = this.executeDash(entity, DASH_CONFIG);
+    if (result.success) {
+      skills.startDashCooldown(DASH_CONFIG.cooldown);
+    }
+    return result;
+  }
+
+  // --- AoE Ally Helpers ---
+
+  _getAlliesInRange(entity, range, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    if (!pos) return [];
+    return HitDetector.queryArea(
+      entityManager, pos.x, pos.y, range, null, 'player'
+    );
+  }
+
+  executeAoEHeal(entity, def, entityManager) {
+    const allies = this._getAlliesInRange(entity, def.range || 120, entityManager);
+    if (allies.length === 0) {
+      return { success: true, skillId: def.id, type: 'aoe_heal', healed: 0 };
+    }
+
+    let totalHealed = 0;
+    for (const ally of allies) {
+      const health = ally.getComponent(HealthComponent);
+      if (health && health.isAlive()) {
+        const amount = Math.round(health.max * (def.healPercent || 0.2));
+        const actual = health.heal(amount);
+        totalHealed += actual;
+        // Push heal event for damage number display
+        const allyPos = ally.getComponent(PositionComponent);
+        if (allyPos) {
+          this.combatResolver.damageEvents.push({
+            targetId: ally.id,
+            attackerId: entity.id,
+            damage: actual,
+            isCrit: false,
+            x: allyPos.x,
+            y: allyPos.y,
+            killed: false,
+            isHeal: true,
+          });
+        }
+      }
+    }
+
+    return { success: true, skillId: def.id, type: 'aoe_heal', healed: totalHealed };
+  }
+
+  executeAoEHoT(entity, def, entityManager) {
+    const allies = this._getAlliesInRange(entity, def.range || 120, entityManager);
+    if (allies.length === 0) {
+      return { success: true, skillId: def.id, type: 'aoe_hot', buffed: 0 };
+    }
+
+    let buffed = 0;
+    for (const ally of allies) {
+      const se = ally.getComponent(StatusEffectComponent);
+      const health = ally.getComponent(HealthComponent);
+      if (se && health && health.isAlive()) {
+        const healPerSec = health.max * (def.hotPercent || 0.03);
+        se.addEffect({
+          type: `skill_${def.id}`,
+          duration: def.duration,
+          tickDamage: -healPerSec,
+        });
+        buffed++;
+      }
+    }
+
+    return { success: true, skillId: def.id, type: 'aoe_hot', buffed };
+  }
+
+  executeAoEBuff(entity, def, entityManager, effectType) {
+    const allies = this._getAlliesInRange(entity, def.range || 120, entityManager);
+    if (allies.length === 0) {
+      return { success: true, skillId: def.id, type: 'aoe_buff', buffed: 0 };
+    }
+
+    let buffed = 0;
+    for (const ally of allies) {
+      const se = ally.getComponent(StatusEffectComponent);
+      if (se) {
+        const effect = {
+          type: effectType,
+          duration: def.duration,
+        };
+        if (def.effects) {
+          if (def.effects.damageMod != null) effect.damageMod = def.effects.damageMod;
+          if (def.effects.armorFlat != null) effect.armorFlat = def.effects.armorFlat;
+          if (def.effects.thornsReflect != null) effect.thornsReflect = def.effects.thornsReflect;
+        }
+        se.addEffect(effect);
+        buffed++;
+      }
+    }
+
+    return { success: true, skillId: def.id, type: 'aoe_buff', buffed };
+  }
+
+  executeAoEShield(entity, def, entityManager) {
+    const allies = this._getAlliesInRange(entity, def.range || 120, entityManager);
+    if (allies.length === 0) {
+      return { success: true, skillId: def.id, type: 'aoe_shield', shielded: 0 };
+    }
+
+    let shielded = 0;
+    for (const ally of allies) {
+      const se = ally.getComponent(StatusEffectComponent);
+      const health = ally.getComponent(HealthComponent);
+      if (se && health && health.isAlive()) {
+        const shieldAmount = Math.round(health.max * (def.shieldPercent || 0.15));
+        se.addEffect({
+          type: `skill_${def.id}`,
+          duration: def.duration,
+          shield: shieldAmount,
+        });
+        shielded++;
+      }
+    }
+
+    return { success: true, skillId: def.id, type: 'aoe_shield', shielded };
+  }
+
+  // --- Blood Magic ---
+
+  executeBloodPact(entity, def, entityManager) {
+    const health = entity.getComponent(HealthComponent);
+    if (!health || !health.isAlive()) return { success: false, message: 'Cannot cast' };
+
+    const sacrificeAmount = Math.round(health.max * (def.sacrificePercent || 0.15));
+    if (health.current <= sacrificeAmount) {
+      return { success: false, message: 'Not enough HP' };
+    }
+
+    // Sacrifice caster HP
+    health.damage(sacrificeAmount);
+    const casterPos = entity.getComponent(PositionComponent);
+    if (casterPos) {
+      this.combatResolver.damageEvents.push({
+        targetId: entity.id,
+        attackerId: entity.id,
+        damage: sacrificeAmount,
+        isCrit: false,
+        x: casterPos.x,
+        y: casterPos.y,
+        killed: false,
+        isBloodSacrifice: true,
+      });
+    }
+
+    // Heal allies
+    const allies = this._getAlliesInRange(entity, def.range || 120, entityManager);
+    let totalHealed = 0;
+    for (const ally of allies) {
+      if (ally.id === entity.id) continue; // Don't heal self
+      const allyHealth = ally.getComponent(HealthComponent);
+      if (allyHealth && allyHealth.isAlive()) {
+        const healAmount = Math.round(health.max * (def.healPercent || 0.25));
+        const actual = allyHealth.heal(healAmount);
+        totalHealed += actual;
+        const allyPos = ally.getComponent(PositionComponent);
+        if (allyPos) {
+          this.combatResolver.damageEvents.push({
+            targetId: ally.id,
+            attackerId: entity.id,
+            damage: actual,
+            isCrit: false,
+            x: allyPos.x,
+            y: allyPos.y,
+            killed: false,
+            isHeal: true,
+          });
+        }
+      }
+    }
+
+    return { success: true, skillId: def.id, type: 'blood_heal', healed: totalHealed };
+  }
+
+  executeBloodSelfBuff(entity, def) {
+    const health = entity.getComponent(HealthComponent);
+    const se = entity.getComponent(StatusEffectComponent);
+    if (!health || !se || !health.isAlive()) return { success: false, message: 'Cannot cast' };
+
+    const sacrificeAmount = Math.round(health.max * (def.sacrificePercent || 0.10));
+    if (health.current <= sacrificeAmount) {
+      return { success: false, message: 'Not enough HP' };
+    }
+
+    health.damage(sacrificeAmount);
+    const casterPos = entity.getComponent(PositionComponent);
+    if (casterPos) {
+      this.combatResolver.damageEvents.push({
+        targetId: entity.id,
+        attackerId: entity.id,
+        damage: sacrificeAmount,
+        isCrit: false,
+        x: casterPos.x,
+        y: casterPos.y,
+        killed: false,
+        isBloodSacrifice: true,
+      });
+    }
+
+    const effect = {
+      type: `skill_${def.id}`,
+      duration: def.duration,
+    };
+    if (def.effects) {
+      if (def.effects.damageMod != null) effect.damageMod = def.effects.damageMod;
+    }
+    se.addEffect(effect);
+
+    return { success: true, skillId: def.id, type: 'buff', name: def.name };
+  }
+
+  executeCrimsonDrain(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    const health = entity.getComponent(HealthComponent);
+    if (!pos || !health || !health.isAlive()) return { success: false, message: 'Cannot cast' };
+
+    const enemies = HitDetector.queryArea(
+      entityManager, pos.x, pos.y, def.range || 120, entity.id, 'enemy'
+    );
+
+    let totalDamage = 0;
+    for (const enemy of enemies) {
+      const enemyHealth = enemy.getComponent(HealthComponent);
+      if (enemyHealth && enemyHealth.isAlive()) {
+        const dmg = Math.round(enemyHealth.max * (def.damagePercent || 0.15));
+        const actual = enemyHealth.damage(dmg);
+        totalDamage += actual;
+        const enemyPos = enemy.getComponent(PositionComponent);
+        if (enemyPos) {
+          this.combatResolver.damageEvents.push({
+            targetId: enemy.id,
+            attackerId: entity.id,
+            damage: actual,
+            isCrit: false,
+            x: enemyPos.x,
+            y: enemyPos.y,
+            killed: !enemyHealth.isAlive(),
+          });
+        }
+      }
+    }
+
+    // Heal self for total damage dealt
+    if (totalDamage > 0) {
+      const actual = health.heal(totalDamage);
+      if (actual > 0 && pos) {
+        this.combatResolver.damageEvents.push({
+          targetId: entity.id,
+          attackerId: entity.id,
+          damage: actual,
+          isCrit: false,
+          x: pos.x,
+          y: pos.y,
+          killed: false,
+          isHeal: true,
+        });
+      }
+    }
+
+    return { success: true, skillId: def.id, type: 'blood_drain', drained: totalDamage };
+  }
+
+  executeBloodRitual(entity, def, entityManager) {
+    const health = entity.getComponent(HealthComponent);
+    if (!health || !health.isAlive()) return { success: false, message: 'Cannot cast' };
+
+    const sacrificeAmount = Math.round(health.max * (def.sacrificePercent || 0.25));
+    if (health.current <= sacrificeAmount) {
+      return { success: false, message: 'Not enough HP' };
+    }
+
+    // Sacrifice caster HP
+    health.damage(sacrificeAmount);
+    const casterPos = entity.getComponent(PositionComponent);
+    if (casterPos) {
+      this.combatResolver.damageEvents.push({
+        targetId: entity.id,
+        attackerId: entity.id,
+        damage: sacrificeAmount,
+        isCrit: false,
+        x: casterPos.x,
+        y: casterPos.y,
+        killed: false,
+        isBloodSacrifice: true,
+      });
+    }
+
+    // Heal allies + damage buff
+    const allies = this._getAlliesInRange(entity, def.range || 120, entityManager);
+    let totalHealed = 0;
+    for (const ally of allies) {
+      if (ally.id === entity.id) continue;
+      const allyHealth = ally.getComponent(HealthComponent);
+      if (allyHealth && allyHealth.isAlive()) {
+        const healAmount = Math.round(health.max * (def.healPercent || 0.50));
+        const actual = allyHealth.heal(healAmount);
+        totalHealed += actual;
+        const allyPos = ally.getComponent(PositionComponent);
+        if (allyPos) {
+          this.combatResolver.damageEvents.push({
+            targetId: ally.id,
+            attackerId: entity.id,
+            damage: actual,
+            isCrit: false,
+            x: allyPos.x,
+            y: allyPos.y,
+            killed: false,
+            isHeal: true,
+          });
+        }
+      }
+      // Apply damage buff
+      const allySE = ally.getComponent(StatusEffectComponent);
+      if (allySE) {
+        const effect = {
+          type: 'skill_blood_ritual',
+          duration: def.duration,
+        };
+        if (def.effects && def.effects.damageMod != null) {
+          effect.damageMod = def.effects.damageMod;
+        }
+        allySE.addEffect(effect);
+      }
+    }
+
+    return { success: true, skillId: def.id, type: 'blood_ritual', healed: totalHealed };
   }
 }

@@ -117,6 +117,8 @@ export const MSG = {
   SKILL_RESULT:       'skill:result',
   SKILL_COOLDOWN:     'skill:cooldown',
   SKILL_HOTBAR_SET:   'skill:hotbar:set',
+  DASH_USE:           'dash:use',
+  DASH_COOLDOWN:      'dash:cooldown',
   STAT_ALLOCATE:      'stat:allocate',
   LEVEL_UP:           'level:up',
 
