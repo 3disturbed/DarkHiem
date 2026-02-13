@@ -29,6 +29,8 @@ export default class InputActions {
     this.chat = false;
     this.questLog = false;
     this.secondaryAction = false; // right-click / gamepad Y (drop, etc.)
+    this.fishingRod = false;
+    this.horseAction = false;
 
     // D-pad (for UI navigation)
     this.dpadUp = false;
