@@ -1509,6 +1509,32 @@ export default class Game {
     }
   }
 
+  renderWildHorses(r) {
+    const px = this.localPlayer ? this.localPlayer.x : 0;
+    const py = this.localPlayer ? this.localPlayer.y : 0;
+
+    for (const [id, horse] of this.wildHorses) {
+      EntityRenderer.renderHorse(
+        r, horse.x, horse.y,
+        horse.color || '#8B6C42',
+        horse.size || 30,
+        horse.name || 'Wild Horse',
+        false, null
+      );
+
+      // Show capture hint if close to player
+      if (this.localPlayer && !this.hasHorse) {
+        const dx = horse.x - px;
+        const dy = horse.y - py;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 100) {
+          const half = (horse.size || 30) / 2;
+          r.drawText('Press Q to capture', horse.x, horse.y + half + 12, '#aaa', 8, 'center');
+        }
+      }
+    }
+  }
+
   renderEnemies(r) {
     for (const [id, enemy] of this.enemies) {
       EntityRenderer.renderEnemy(
