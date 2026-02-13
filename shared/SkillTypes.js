@@ -10,6 +10,12 @@ export const SKILL = {
   EXECUTE:        'execute',
   REGENERATION:   'regeneration',
   BERSERKER_RAGE: 'berserker_rage',
+  EVASION:         'evasion',
+  PRECISION_STRIKE:'precision_strike',
+  FORTIFY:         'fortify',
+  VENOM_STRIKE:    'venom_strike',
+  LIFE_STEAL:      'life_steal',
+  SHADOW_STEP:     'shadow_step',
 };
 
 export const SKILL_DB = {
