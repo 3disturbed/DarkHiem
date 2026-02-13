@@ -1088,6 +1088,7 @@ export default class Game {
             name: entity.name, color: entity.color, size: entity.size,
             hp: entity.hp, maxHp: entity.maxHp, aiState: entity.aiState,
             isBoss: entity.isBoss || false,
+            enemyId: entity.enemyId || null,
           });
         } else {
           const e = this.enemies.get(id);
@@ -1098,6 +1099,7 @@ export default class Game {
           e.maxHp = entity.maxHp ?? e.maxHp;
           e.aiState = entity.aiState ?? e.aiState;
           if (entity.isBoss !== undefined) e.isBoss = entity.isBoss;
+          if (entity.enemyId !== undefined) e.enemyId = entity.enemyId;
         }
       } else if (entity.type === 'resource') {
         if (!this.resources.has(id)) {
@@ -1425,7 +1427,8 @@ export default class Game {
         enemy.hp ?? 0,
         enemy.maxHp ?? 0,
         enemy.aiState || 'idle',
-        enemy.isBoss || false
+        enemy.isBoss || false,
+        enemy.enemyId
       );
     }
   }

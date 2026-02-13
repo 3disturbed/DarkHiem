@@ -856,6 +856,18 @@ export const ITEM_DB = {
     id: 'mushroom', name: 'Mushroom', type: 'material', stackable: true, maxStack: 50,
     description: 'Forest mushroom.',
   },
+  pine_wood: {
+    id: 'pine_wood', name: 'Pine Wood', type: 'material', stackable: true, maxStack: 50,
+    description: 'Light, resinous timber.',
+  },
+  fine_wood: {
+    id: 'fine_wood', name: 'Fine Wood', type: 'material', stackable: true, maxStack: 50,
+    description: 'High-quality processed wood.',
+  },
+  resin: {
+    id: 'resin', name: 'Resin', type: 'material', stackable: true, maxStack: 50,
+    description: 'Sticky tree sap.',
+  },
 
   // --- Swamp raw ---
   silver_ore: {
@@ -876,6 +888,10 @@ export const ITEM_DB = {
   },
 
   // --- Mountain raw ---
+  frost_wood: {
+    id: 'frost_wood', name: 'Frost Wood', type: 'material', stackable: true, maxStack: 50,
+    description: 'Cold-hardened pine timber.',
+  },
   obsidian_shard: {
     id: 'obsidian_shard', name: 'Obsidian Shard', type: 'material', stackable: true, maxStack: 50,
     description: 'Sharp volcanic glass.',

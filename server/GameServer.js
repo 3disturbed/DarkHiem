@@ -473,6 +473,7 @@ export default class GameServer {
         maxHp: health ? health.max : 0,
         aiState: ai ? ai.state : 'idle',
         isBoss: entity.isBoss || false,
+        enemyId: entity.enemyConfig ? entity.enemyConfig.id : null,
       };
     }
 
