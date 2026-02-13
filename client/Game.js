@@ -60,6 +60,8 @@ export default class Game {
     // Mount state (horse is stored as player flag, not a world entity)
     this.hasHorse = false;
     this.mounted = false;
+    // Follow horse position (client-side cosmetic, trails behind player)
+    this.followHorse = { x: 0, y: 0, initialized: false };
 
     // Combat effects
     this.damageNumbers = new DamageNumber();
@@ -153,6 +155,8 @@ export default class Game {
       this.loadExploredChunks(data.id);
       // Restore horse ownership
       this.hasHorse = data.hasHorse || false;
+      this.mounted = false;
+      this.followHorse.initialized = false;
       console.log(`[Game] Joined as ${data.name}`);
     };
 
@@ -532,8 +536,13 @@ export default class Game {
     };
 
     this.network.onHorseUpdate = (data) => {
+      const wasHorse = this.hasHorse;
       this.hasHorse = data.hasHorse || false;
       this.mounted = data.mounted || false;
+      // Reset follow position when first capturing a horse
+      if (this.hasHorse && !wasHorse) {
+        this.followHorse.initialized = false;
+      }
     };
   }
 
@@ -615,6 +624,38 @@ export default class Game {
         this.localPlayer.x, this.localPlayer.y,
         this.localPlayer.facing
       );
+
+      // Update follow horse position (smooth trailing behind player)
+      if (this.hasHorse && !this.mounted) {
+        const fh = this.followHorse;
+        if (!fh.initialized) {
+          fh.x = this.localPlayer.x;
+          fh.y = this.localPlayer.y + 40;
+          fh.initialized = true;
+        }
+        const dx = this.localPlayer.x - fh.x;
+        const dy = this.localPlayer.y - fh.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const followDist = 48; // desired trailing distance
+        if (dist > followDist) {
+          // Smoothly move toward player, maintaining follow distance
+          const speed = Math.min(PLAYER_SPEED * 1.2, (dist - followDist) * 4 + 60);
+          const moveAmt = speed * dt;
+          if (moveAmt < dist - followDist * 0.5) {
+            fh.x += (dx / dist) * moveAmt;
+            fh.y += (dy / dist) * moveAmt;
+          } else {
+            // Snap to follow distance behind player
+            fh.x = this.localPlayer.x - (dx / dist) * followDist;
+            fh.y = this.localPlayer.y - (dy / dist) * followDist;
+          }
+        }
+        // Teleport if too far (e.g. after respawn)
+        if (dist > 400) {
+          fh.x = this.localPlayer.x;
+          fh.y = this.localPlayer.y + 40;
+        }
+      }
     }
 
     // Toggle inventory/equipment/stats panels with I key
@@ -1568,6 +1609,13 @@ export default class Game {
       );
     }
 
+    // Render follow horse (when owned but not mounted)
+    if (this.hasHorse && !this.mounted && this.followHorse.initialized && this.localPlayer) {
+      const fh = this.followHorse;
+      EntityRenderer.renderHorse(r, fh.x, fh.y, '#8B6C42', 30, 'Horse', true, null);
+      r.drawText('Press Q to ride', fh.x, fh.y + 26, '#90ee90', 8, 'center');
+    }
+
     // Render local player
     if (this.localPlayer) {
       const p = this.localPlayer;
@@ -1582,6 +1630,10 @@ export default class Game {
         p.hp, p.maxHp,
         true, facing.x, facing.y
       );
+      // Mounted hint
+      if (this.mounted) {
+        r.drawText('Press Q to dismount', p.x, p.y + 28, '#aaa', 8, 'center');
+      }
     }
   }
 
