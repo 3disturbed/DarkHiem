@@ -53,6 +53,7 @@ export default class InputManager {
     this.actions.mergeButton('skill2', this.keyboard.wasAnyJustPressed(['Digit2']));
     this.actions.mergeButton('skill3', this.keyboard.wasAnyJustPressed(['Digit3']));
     this.actions.mergeButton('skill4', this.keyboard.wasAnyJustPressed(['Digit4']));
+    this.actions.mergeButton('skill5', this.keyboard.wasAnyJustPressed(['Digit5']));
     this.actions.mergeButton('map', this.keyboard.wasAnyJustPressed(['KeyM']));
     this.actions.mergeButton('fishingRod', this.keyboard.wasAnyJustPressed(['KeyR']));
     this.actions.mergeButton('horseAction', this.keyboard.wasAnyJustPressed(['KeyQ']));

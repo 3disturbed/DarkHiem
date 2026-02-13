@@ -25,6 +25,7 @@ export default class InputActions {
     this.skill2 = false;
     this.skill3 = false;
     this.skill4 = false;
+    this.skill5 = false;
     this.map = false;
     this.chat = false;
     this.questLog = false;

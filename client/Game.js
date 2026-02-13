@@ -822,9 +822,9 @@ export default class Game {
       }
     }
 
-    // Skill casting (1-4 keys or gamepad LB/RB/LT/RT)
+    // Skill casting (1-5 keys or gamepad LB/RB/LT/RT)
     if (this.localPlayer && !this.panelsOpen && !this.craftingOpen && !this.upgradeOpen && !this.skillsOpen && !this.placementMode) {
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 5; i++) {
         if (actions[`skill${i + 1}`]) {
           this.network.sendSkillUse(i);
         }

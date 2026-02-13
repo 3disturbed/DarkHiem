@@ -24,7 +24,7 @@ export default class SkillHandler {
     if (!skills) return;
 
     const slot = data?.slot;
-    if (typeof slot !== 'number' || slot < 0 || slot > 3) return;
+    if (typeof slot !== 'number' || slot < 0 || slot > 4) return;
 
     const skillId = skills.hotbar[slot];
     if (!skillId) return;
@@ -55,7 +55,7 @@ export default class SkillHandler {
     if (!skills) return;
 
     const { slot, skillId } = data || {};
-    if (typeof slot !== 'number' || slot < 0 || slot > 3) return;
+    if (typeof slot !== 'number' || slot < 0 || slot > 4) return;
 
     // skillId can be null (to clear a slot) or a valid learned skill
     if (skillId != null && !skills.hasSkill(skillId)) return;

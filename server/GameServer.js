@@ -761,7 +761,7 @@ export default class GameServer {
         skillComp.learnSkillsForLevel(level);
         // Set default hotbar for first time
         const defaultHotbar = getDefaultHotbar(level);
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < 5; i++) {
           skillComp.hotbar[i] = defaultHotbar[i];
         }
       }
@@ -917,7 +917,7 @@ export default class GameServer {
           }
         }
         if (saveData.skills.hotbar) {
-          for (let i = 0; i < 4; i++) {
+          for (let i = 0; i < 5; i++) {
             skills.hotbar[i] = saveData.skills.hotbar[i] || null;
           }
         }

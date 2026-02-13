@@ -69,11 +69,11 @@ export default class SkillsPanel {
 
     this.selectedIndex = rowIndex;
 
-    // Check if clicked one of the 4 hotbar bind buttons
-    const bindY = contentY + (rowIndex - this.scrollOffset) * this.rowHeight + 30;
+    // Check if clicked one of the 5 hotbar bind buttons
+    const bindY = contentY + (rowIndex - this.scrollOffset) * this.rowHeight + 6;
     if (my >= bindY && my <= bindY + 16) {
-      const bindStartX = this.x + this.width - 90;
-      for (let i = 0; i < 4; i++) {
+      const bindStartX = this.x + this.width - 112;
+      for (let i = 0; i < 5; i++) {
         const bx = bindStartX + i * 22;
         if (mx >= bx && mx <= bx + 18) {
           if (onHotbarSet) onHotbarSet(i, def.id);
@@ -157,9 +157,9 @@ export default class SkillsPanel {
 
       // Hotbar bind buttons (only for learned skills)
       if (learned) {
-        const bindStartX = this.x + this.width - 90;
+        const bindStartX = this.x + this.width - 112;
         const bindY = rowY + 6;
-        for (let slot = 0; slot < 4; slot++) {
+        for (let slot = 0; slot < 5; slot++) {
           const bx = bindStartX + slot * 22;
           const isBound = skills.hotbar[slot] === def.id;
           ctx.fillStyle = isBound ? (def.color || '#f39c12') : 'rgba(255,255,255,0.1)';

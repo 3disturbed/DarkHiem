@@ -148,8 +148,8 @@ export function getSkillsForLevel(level) {
 
 export function getDefaultHotbar(level) {
   const available = getSkillsForLevel(level);
-  const hotbar = [null, null, null, null];
-  for (let i = 0; i < Math.min(4, available.length); i++) {
+  const hotbar = [null, null, null, null, null];
+  for (let i = 0; i < Math.min(5, available.length); i++) {
     hotbar[i] = available[i].id;
   }
   return hotbar;

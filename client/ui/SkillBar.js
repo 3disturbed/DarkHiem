@@ -10,7 +10,7 @@ export default class SkillBar {
   }
 
   position(canvasWidth, canvasHeight) {
-    const totalWidth = this.slotSize * 4 + this.slotGap * 3;
+    const totalWidth = this.slotSize * 5 + this.slotGap * 4;
     this.x = Math.floor((canvasWidth - totalWidth) / 2);
     this.y = canvasHeight - 90; // above health bar area
   }
@@ -29,7 +29,7 @@ export default class SkillBar {
   }
 
   handleClick(mx, my) {
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 5; i++) {
       const sx = this.x + i * (this.slotSize + this.slotGap);
       const sy = this.y;
       if (mx >= sx && mx <= sx + this.slotSize &&
@@ -42,10 +42,10 @@ export default class SkillBar {
 
   render(ctx, skills, inputMethod) {
     const keyLabels = inputMethod === 'gamepad'
-      ? ['LB', 'RB', 'LT', 'RT']
-      : ['1', '2', '3', '4'];
+      ? ['LB', 'RB', 'LT', 'RT', '5']
+      : ['1', '2', '3', '4', '5'];
 
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 5; i++) {
       const sx = this.x + i * (this.slotSize + this.slotGap);
       const sy = this.y;
       const def = skills.getHotbarSkill(i);

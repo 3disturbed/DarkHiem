@@ -4,7 +4,7 @@ export default class Skills {
   constructor() {
     this.learnedSkills = new Set();
     this.cooldowns = {};  // skillId -> { remaining, total }
-    this.hotbar = [null, null, null, null];
+    this.hotbar = [null, null, null, null, null];
   }
 
   update(data) {
@@ -12,7 +12,7 @@ export default class Skills {
       this.learnedSkills = new Set(data.learnedSkills);
     }
     if (data.hotbar) {
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 5; i++) {
         this.hotbar[i] = data.hotbar[i] || null;
       }
     }

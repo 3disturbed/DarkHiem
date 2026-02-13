@@ -6,7 +6,7 @@ export default class SkillComponent extends Component {
     super();
     this.learnedSkills = new Set();
     this.cooldowns = {};
-    this.hotbar = [null, null, null, null];
+    this.hotbar = [null, null, null, null, null];
     this.powerStrikeActive = false;
   }
 
@@ -55,10 +55,10 @@ export default class SkillComponent extends Component {
   }
 
   setHotbar(slotIndex, skillId) {
-    if (slotIndex < 0 || slotIndex > 3) return false;
+    if (slotIndex < 0 || slotIndex > 4) return false;
     if (skillId !== null && !this.learnedSkills.has(skillId)) return false;
     // Remove from other slot if already assigned
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 5; i++) {
       if (this.hotbar[i] === skillId && i !== slotIndex) {
         this.hotbar[i] = null;
       }
