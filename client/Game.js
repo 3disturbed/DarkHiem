@@ -199,7 +199,11 @@ export default class Game {
     // Combat events
     this.network.onDamage = (data) => {
       for (const evt of data.events) {
-        if (evt.blocked) {
+        if (evt.dodged) {
+          this.damageNumbers.add(evt.x, evt.y, 0, false, '#1abc9c', 'Dodge');
+        } else if (evt.shielded) {
+          this.damageNumbers.add(evt.x, evt.y, 0, false, '#34495e', 'Blocked');
+        } else if (evt.blocked) {
           // Show blocked message (e.g. "Needs pickaxe")
           this.damageNumbers.add(evt.x, evt.y - 10, evt.blocked, false);
         } else {
@@ -906,8 +910,8 @@ export default class Game {
 
     // D-pad navigation for open panels
     if (this.skillsOpen) {
-      if (actions.dpadUp) this.skillsPanel.selectPrev();
-      if (actions.dpadDown) this.skillsPanel.selectNext();
+      if (actions.dpadUp) this.skillsPanel.selectPrev(this.skills);
+      if (actions.dpadDown) this.skillsPanel.selectNext(this.skills);
     } else if (this.upgradeOpen) {
       if (actions.dpadUp) this.upgradePanel.selectPrev();
       if (actions.dpadDown) this.upgradePanel.selectNext(this.inventory);
@@ -936,7 +940,7 @@ export default class Game {
       } else if (this.worldMap.visible) {
         this.worldMap.handleScroll(actions.scrollDelta);
       } else if (this.skillsOpen) {
-        this.skillsPanel.handleScroll(actions.scrollDelta);
+        this.skillsPanel.handleScroll(actions.scrollDelta, this.skills);
       } else if (this.upgradeOpen) {
         this.upgradePanel.handleScroll(actions.scrollDelta, this.inventory);
       } else if (this.craftingOpen) {

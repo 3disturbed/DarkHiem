@@ -59,9 +59,33 @@ export default class CombatResolver {
     const health = target.getComponent(HealthComponent);
     if (!health || !health.isAlive()) return;
 
-    // Consume Power Strike buff (one-shot multiplier)
+    const targetPos = target.getComponent(PositionComponent);
+    const attackerPos = attacker.getComponent(PositionComponent);
+
+    // --- Dodge check (target side) ---
+    const targetSE = target.getComponent(StatusEffectComponent);
+    if (targetSE) {
+      const dodgeChance = targetSE.getDodgeChance();
+      if (dodgeChance > 0 && Math.random() < dodgeChance) {
+        this.damageEvents.push({
+          targetId: target.id,
+          attackerId: attacker.id,
+          damage: 0,
+          isCrit: false,
+          dodged: true,
+          x: targetPos.x,
+          y: targetPos.y,
+          killed: false,
+        });
+        return;
+      }
+    }
+
+    // --- Consume one-shot attack buffs (attacker side) ---
     const se = attacker.getComponent(StatusEffectComponent);
     const skills = attacker.getComponent(SkillComponent);
+
+    // Power Strike
     if (se && skills && skills.powerStrikeActive && se.hasEffect('skill_power_strike')) {
       const psEffect = se.effects.find(e => e.type === 'skill_power_strike');
       if (psEffect && psEffect.damageMod) {
@@ -71,19 +95,63 @@ export default class CombatResolver {
       skills.powerStrikeActive = false;
     }
 
+    // Shadow Step (next-hit buff, same pattern as power strike)
+    if (se && skills && skills.shadowStepActive && se.hasEffect('skill_shadow_step')) {
+      const ssEffect = se.effects.find(e => e.type === 'skill_shadow_step');
+      if (ssEffect && ssEffect.damageMod) {
+        baseDamage = Math.round(baseDamage * ssEffect.damageMod);
+      }
+      se.removeEffect('skill_shadow_step');
+      skills.shadowStepActive = false;
+    }
+
+    // --- Crit calculation ---
     const attackerCombat = attacker.getComponent(CombatComponent);
-    const critMod = DamageCalculator.rollCrit(
-      attackerCombat ? attackerCombat.critChance : 0.05,
-      attackerCombat ? attackerCombat.critMultiplier : 1.5
-    );
+    let critChance = attackerCombat ? attackerCombat.critChance : 0.05;
+    let critMultiplier = attackerCombat ? attackerCombat.critMultiplier : 1.5;
+
+    // Precision Strike: guaranteed crit + bonus
+    let forceCrit = false;
+    if (se && skills && skills.precisionStrikeActive && se.hasEffect('skill_precision_strike')) {
+      forceCrit = true;
+      const psEffect = se.effects.find(e => e.type === 'skill_precision_strike');
+      if (psEffect && psEffect.critBonus) {
+        critMultiplier += psEffect.critBonus;
+      }
+      se.removeEffect('skill_precision_strike');
+      skills.precisionStrikeActive = false;
+    }
+
+    const critMod = forceCrit ? critMultiplier : DamageCalculator.rollCrit(critChance, critMultiplier);
     const targetCombat = target.getComponent(CombatComponent);
     const targetArmor = targetCombat ? targetCombat.armor : 0;
     const result = DamageCalculator.calculate(baseDamage, targetArmor, critMod);
 
-    const actualDamage = health.damage(result.damage);
+    let finalDamage = result.damage;
 
-    const targetPos = target.getComponent(PositionComponent);
-    const attackerPos = attacker.getComponent(PositionComponent);
+    // --- Shield/Fortify (target side) ---
+    if (targetSE) {
+      const absorbed = targetSE.consumeShield(finalDamage);
+      if (absorbed > 0) {
+        finalDamage -= absorbed;
+        if (finalDamage <= 0) {
+          // Fully absorbed by shield
+          this.damageEvents.push({
+            targetId: target.id,
+            attackerId: attacker.id,
+            damage: 0,
+            isCrit: result.isCrit,
+            shielded: true,
+            x: targetPos.x,
+            y: targetPos.y,
+            killed: false,
+          });
+          return;
+        }
+      }
+    }
+
+    const actualDamage = health.damage(finalDamage);
 
     this.damageEvents.push({
       targetId: target.id,
@@ -94,6 +162,36 @@ export default class CombatResolver {
       y: targetPos.y,
       killed: !health.isAlive(),
     });
+
+    // --- Venom Strike (attacker side, apply poison to target) ---
+    if (se && skills && skills.venomStrikeActive && se.hasEffect('skill_venom_strike')) {
+      const vsEffect = se.effects.find(e => e.type === 'skill_venom_strike');
+      if (vsEffect && vsEffect.poisonOnHit && targetSE) {
+        const targetHealth = target.getComponent(HealthComponent);
+        const poisonDmg = targetHealth ? targetHealth.max * vsEffect.poisonOnHit.percent : 0;
+        if (poisonDmg > 0) {
+          targetSE.addEffect({
+            type: 'poison',
+            duration: vsEffect.poisonOnHit.duration,
+            tickDamage: poisonDmg,
+          });
+        }
+      }
+      se.removeEffect('skill_venom_strike');
+      skills.venomStrikeActive = false;
+    }
+
+    // --- Life Steal (attacker side, heal based on damage dealt) ---
+    if (se) {
+      const lifeSteal = se.getLifeSteal();
+      if (lifeSteal > 0 && actualDamage > 0) {
+        const attackerHealth = attacker.getComponent(HealthComponent);
+        if (attackerHealth && attackerHealth.isAlive()) {
+          const healAmount = Math.round(actualDamage * lifeSteal);
+          if (healAmount > 0) attackerHealth.heal(healAmount);
+        }
+      }
+    }
 
     // Apply knockback
     const combat = attacker.getComponent(CombatComponent);

@@ -6,13 +6,14 @@ export default class DamageNumber {
     this.numbers = [];
   }
 
-  add(x, y, damage, isCrit = false, color = null) {
+  add(x, y, damage, isCrit = false, color = null, text = null) {
     this.numbers.push({
       x,
       y,
       damage,
       isCrit,
       color,
+      text,
       age: 0,
       offsetX: (Math.random() - 0.5) * 16,
     });
@@ -37,8 +38,9 @@ export default class DamageNumber {
       ctx.fillStyle = n.color || (n.isCrit ? '#ff4444' : '#ffcc00');
       ctx.font = `bold ${size}px monospace`;
       ctx.textAlign = 'center';
+      const label = n.text || (n.isCrit ? `${n.damage}!` : String(n.damage));
       ctx.fillText(
-        n.isCrit ? `${n.damage}!` : String(n.damage),
+        label,
         Math.round(n.x + n.offsetX),
         Math.round(n.y)
       );

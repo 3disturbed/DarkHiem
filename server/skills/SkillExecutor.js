@@ -62,6 +62,24 @@ export default class SkillExecutor {
       case SKILL.BERSERKER_RAGE:
         result = this.executeBuff(entity, def, 'skill_berserker_rage');
         break;
+      case SKILL.EVASION:
+        result = this.executeEvasion(entity, def);
+        break;
+      case SKILL.PRECISION_STRIKE:
+        result = this.executePrecisionStrike(entity, def);
+        break;
+      case SKILL.FORTIFY:
+        result = this.executeFortify(entity, def);
+        break;
+      case SKILL.VENOM_STRIKE:
+        result = this.executeVenomStrike(entity, def);
+        break;
+      case SKILL.LIFE_STEAL:
+        result = this.executeLifeSteal(entity, def);
+        break;
+      case SKILL.SHADOW_STEP:
+        result = this.executeShadowStep(entity, def, entityManager);
+        break;
       default:
         return { success: false, message: 'Unknown skill' };
     }
@@ -347,5 +365,124 @@ export default class SkillExecutor {
     });
 
     return { success: true, skillId: def.id, type: 'buff', name: 'Regeneration' };
+  }
+
+  executeEvasion(entity, def) {
+    const se = entity.getComponent(StatusEffectComponent);
+    if (!se) return { success: false, message: 'No status effects' };
+
+    const mult = this.getScaleMult(entity, def);
+    se.addEffect({
+      type: 'skill_evasion',
+      duration: def.duration,
+      dodgeChance: mult,
+    });
+
+    return { success: true, skillId: def.id, type: 'buff', name: 'Evasion' };
+  }
+
+  executePrecisionStrike(entity, def) {
+    const se = entity.getComponent(StatusEffectComponent);
+    const skills = entity.getComponent(SkillComponent);
+    if (!se) return { success: false, message: 'No status effects' };
+
+    const mult = this.getScaleMult(entity, def);
+    se.addEffect({
+      type: 'skill_precision_strike',
+      duration: def.duration,
+      guaranteedCrit: true,
+      critBonus: mult,
+    });
+    skills.precisionStrikeActive = true;
+
+    return { success: true, skillId: def.id, type: 'buff', name: 'Precision Strike' };
+  }
+
+  executeFortify(entity, def) {
+    const se = entity.getComponent(StatusEffectComponent);
+    const health = entity.getComponent(HealthComponent);
+    if (!se || !health) return { success: false, message: 'Cannot fortify' };
+
+    const mult = this.getScaleMult(entity, def);
+    const shieldAmount = Math.round(health.max * mult);
+    se.addEffect({
+      type: 'skill_fortify',
+      duration: def.duration,
+      shield: shieldAmount,
+    });
+
+    return { success: true, skillId: def.id, type: 'buff', name: 'Fortify' };
+  }
+
+  executeVenomStrike(entity, def) {
+    const se = entity.getComponent(StatusEffectComponent);
+    const skills = entity.getComponent(SkillComponent);
+    if (!se) return { success: false, message: 'No status effects' };
+
+    const mult = this.getScaleMult(entity, def);
+    se.addEffect({
+      type: 'skill_venom_strike',
+      duration: def.duration,
+      poisonOnHit: { percent: mult, duration: def.poisonDuration || 5 },
+    });
+    skills.venomStrikeActive = true;
+
+    return { success: true, skillId: def.id, type: 'buff', name: 'Venom Strike' };
+  }
+
+  executeLifeSteal(entity, def) {
+    const se = entity.getComponent(StatusEffectComponent);
+    if (!se) return { success: false, message: 'No status effects' };
+
+    const mult = this.getScaleMult(entity, def);
+    se.addEffect({
+      type: 'skill_life_steal',
+      duration: def.duration,
+      lifeSteal: mult,
+    });
+
+    return { success: true, skillId: def.id, type: 'buff', name: 'Life Steal' };
+  }
+
+  executeShadowStep(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    const se = entity.getComponent(StatusEffectComponent);
+    const skills = entity.getComponent(SkillComponent);
+    if (!pos || !se) return { success: false, message: 'Cannot shadow step' };
+
+    // Find nearest enemy
+    const target = HitDetector.findNearest(
+      entityManager, pos.x, pos.y, def.distance || 80, entity.id, 'enemy'
+    );
+
+    if (!target) {
+      return { success: false, message: 'No target nearby' };
+    }
+
+    const targetPos = target.getComponent(PositionComponent);
+    if (!targetPos) return { success: false, message: 'No target position' };
+
+    // Teleport behind the enemy (offset away from player's original position)
+    const dx = targetPos.x - pos.x;
+    const dy = targetPos.y - pos.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > 0) {
+      pos.x = targetPos.x + (dx / dist) * 20;
+      pos.y = targetPos.y + (dy / dist) * 20;
+    }
+
+    // Buff next attack
+    const mult = this.getScaleMult(entity, def);
+    se.addEffect({
+      type: 'skill_shadow_step',
+      duration: def.duration,
+      damageMod: mult,
+    });
+    skills.shadowStepActive = true;
+
+    return {
+      success: true, skillId: def.id, type: 'dash',
+      x: pos.x, y: pos.y,
+    };
   }
 }

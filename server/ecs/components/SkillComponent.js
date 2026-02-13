@@ -8,6 +8,9 @@ export default class SkillComponent extends Component {
     this.cooldowns = {};
     this.hotbar = [null, null, null, null, null];
     this.powerStrikeActive = false;
+    this.precisionStrikeActive = false;
+    this.venomStrikeActive = false;
+    this.shadowStepActive = false;
   }
 
   learnSkill(skillId) {

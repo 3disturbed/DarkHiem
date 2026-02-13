@@ -28,13 +28,19 @@ export default class SkillsPanel {
     this.maxRows = Math.floor((canvasHeight - 140 - this.headerHeight) / this.rowHeight);
   }
 
-  selectPrev() {
+  _getLearnedList(skills) {
+    if (!skills || !skills.learnedSkills) return [];
+    return SKILL_UNLOCK_ORDER.filter(s => skills.learnedSkills.has(s.id));
+  }
+
+  selectPrev(skills) {
     if (this.selectedIndex > 0) this.selectedIndex--;
     this.ensureVisible();
   }
 
-  selectNext() {
-    if (this.selectedIndex < SKILL_UNLOCK_ORDER.length - 1) this.selectedIndex++;
+  selectNext(skills) {
+    const count = this._getLearnedList(skills).length;
+    if (this.selectedIndex < count - 1) this.selectedIndex++;
     this.ensureVisible();
   }
 
@@ -47,8 +53,9 @@ export default class SkillsPanel {
     }
   }
 
-  handleScroll(delta) {
-    const maxScroll = Math.max(0, SKILL_UNLOCK_ORDER.length - (this.maxRows || 8));
+  handleScroll(delta, skills) {
+    const list = this._getLearnedList(skills);
+    const maxScroll = Math.max(0, list.length - (this.maxRows || 8));
     // delta > 0 means scroll up (show earlier items)
     this.scrollOffset = Math.max(0, Math.min(maxScroll, this.scrollOffset - delta));
   }
@@ -57,16 +64,15 @@ export default class SkillsPanel {
     if (!this.visible) return false;
     if (mx < this.x || mx > this.x + this.width || my < this.y) return false;
 
+    const list = this._getLearnedList(skills);
     const contentY = this.y + this.headerHeight;
     const ry = my - contentY;
     if (ry < 0) return false;
 
     const rowIndex = Math.floor(ry / this.rowHeight) + this.scrollOffset;
-    if (rowIndex < 0 || rowIndex >= SKILL_UNLOCK_ORDER.length) return false;
+    if (rowIndex < 0 || rowIndex >= list.length) return false;
 
-    const def = SKILL_UNLOCK_ORDER[rowIndex];
-    if (!skills.learnedSkills.has(def.id)) return true; // clicked locked skill, consume
-
+    const def = list[rowIndex];
     this.selectedIndex = rowIndex;
 
     // Check if clicked one of the 5 hotbar bind buttons
@@ -87,8 +93,9 @@ export default class SkillsPanel {
 
   confirmSelected(skills, onHotbarSet) {
     if (!this.visible) return;
-    const def = SKILL_UNLOCK_ORDER[this.selectedIndex];
-    if (!def || !skills.learnedSkills.has(def.id)) return;
+    const list = this._getLearnedList(skills);
+    const def = list[this.selectedIndex];
+    if (!def) return;
 
     // Cycle through hotbar slots: find first empty or slot 0
     const emptySlot = skills.hotbar.indexOf(null);
@@ -99,7 +106,9 @@ export default class SkillsPanel {
   render(ctx, skills, playerStats) {
     if (!this.visible) return;
 
-    const panelHeight = this.headerHeight + Math.min(SKILL_UNLOCK_ORDER.length, this.maxRows || 8) * this.rowHeight + 8;
+    const list = this._getLearnedList(skills);
+    const rowCount = Math.min(list.length, this.maxRows || 8);
+    const panelHeight = this.headerHeight + rowCount * this.rowHeight + 8;
 
     // Background
     ctx.fillStyle = 'rgba(20, 20, 30, 0.92)';
@@ -115,14 +124,21 @@ export default class SkillsPanel {
     ctx.textBaseline = 'middle';
     ctx.fillText('SKILLS (K)', this.x + this.width / 2, this.y + this.headerHeight / 2);
 
+    if (list.length === 0) {
+      ctx.fillStyle = '#666';
+      ctx.font = '11px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('No skills yet', this.x + this.width / 2, this.y + this.headerHeight + 20);
+      return;
+    }
+
     const contentY = this.y + this.headerHeight;
-    const playerLevel = playerStats ? playerStats.level : 1;
-    const visibleCount = Math.min(SKILL_UNLOCK_ORDER.length - this.scrollOffset, this.maxRows || 8);
+    const visibleCount = Math.min(list.length - this.scrollOffset, this.maxRows || 8);
 
     for (let i = 0; i < visibleCount; i++) {
       const idx = i + this.scrollOffset;
-      const def = SKILL_UNLOCK_ORDER[idx];
-      const learned = skills.learnedSkills.has(def.id);
+      const def = list[idx];
       const rowY = contentY + i * this.rowHeight;
       const isSelected = idx === this.selectedIndex;
 
@@ -133,46 +149,43 @@ export default class SkillsPanel {
       }
 
       // Color pip
-      ctx.fillStyle = learned ? (def.color || '#fff') : '#333';
+      ctx.fillStyle = def.color || '#fff';
       ctx.fillRect(this.x + 8, rowY + 8, 8, 8);
 
       // Skill name
-      ctx.fillStyle = learned ? '#fff' : '#555';
-      ctx.font = learned ? 'bold 12px monospace' : '12px monospace';
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 12px monospace';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       ctx.fillText(def.name, this.x + 22, rowY + 6);
 
-      // Cooldown + unlock level
-      ctx.fillStyle = learned ? '#aaa' : '#444';
+      // Cooldown
+      ctx.fillStyle = '#aaa';
       ctx.font = '10px monospace';
-      const infoText = learned ? `CD: ${def.cooldown}s` : `Lv ${def.unlockLevel}`;
-      ctx.fillText(infoText, this.x + 22, rowY + 22);
+      ctx.fillText(`CD: ${def.cooldown}s`, this.x + 22, rowY + 22);
 
       // Description
-      ctx.fillStyle = learned ? '#888' : '#333';
+      ctx.fillStyle = '#888';
       ctx.font = '9px monospace';
       const desc = def.description.length > 38 ? def.description.slice(0, 36) + '..' : def.description;
       ctx.fillText(desc, this.x + 22, rowY + 36);
 
-      // Hotbar bind buttons (only for learned skills)
-      if (learned) {
-        const bindStartX = this.x + this.width - 112;
-        const bindY = rowY + 6;
-        for (let slot = 0; slot < 5; slot++) {
-          const bx = bindStartX + slot * 22;
-          const isBound = skills.hotbar[slot] === def.id;
-          ctx.fillStyle = isBound ? (def.color || '#f39c12') : 'rgba(255,255,255,0.1)';
-          ctx.fillRect(bx, bindY, 18, 16);
-          ctx.strokeStyle = isBound ? '#fff' : '#555';
-          ctx.lineWidth = 1;
-          ctx.strokeRect(bx, bindY, 18, 16);
-          ctx.fillStyle = isBound ? '#000' : '#888';
-          ctx.font = '10px monospace';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(`${slot + 1}`, bx + 9, bindY + 8);
-        }
+      // Hotbar bind buttons
+      const bindStartX = this.x + this.width - 112;
+      const bindY = rowY + 6;
+      for (let slot = 0; slot < 5; slot++) {
+        const bx = bindStartX + slot * 22;
+        const isBound = skills.hotbar[slot] === def.id;
+        ctx.fillStyle = isBound ? (def.color || '#f39c12') : 'rgba(255,255,255,0.1)';
+        ctx.fillRect(bx, bindY, 18, 16);
+        ctx.strokeStyle = isBound ? '#fff' : '#555';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(bx, bindY, 18, 16);
+        ctx.fillStyle = isBound ? '#000' : '#888';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${slot + 1}`, bx + 9, bindY + 8);
       }
     }
 
@@ -183,7 +196,7 @@ export default class SkillsPanel {
       ctx.textAlign = 'center';
       ctx.fillText('^ more ^', this.x + this.width / 2, contentY - 2);
     }
-    if (this.scrollOffset + visibleCount < SKILL_UNLOCK_ORDER.length) {
+    if (this.scrollOffset + visibleCount < list.length) {
       ctx.fillStyle = '#aaa';
       ctx.font = '10px monospace';
       ctx.textAlign = 'center';
