@@ -222,6 +222,18 @@
           ]
         }
       }
+    },
+    "wise_old_man_dialog": {
+      "startNode": "greeting",
+      "nodes": {
+        "greeting": {
+          "text": "I sense turmoil in your spirit, adventurer. Your attributes may not reflect your true path.",
+          "choices": [
+            { "text": "I need to realign my stats.", "action": "show_quests" },
+            { "text": "Farewell, elder.", "action": "close" }
+          ]
+        }
+      }
     }
   }
 }

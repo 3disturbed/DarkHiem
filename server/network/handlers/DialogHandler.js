@@ -108,7 +108,8 @@ export default class DialogHandler {
       let state = 'locked';
       if (questComp) {
         if (questComp.completedQuests.has(questId)) {
-          state = 'completed';
+          const qDef = townManager.getQuest(questId);
+          state = qDef?.repeatable ? 'available' : 'completed';
         } else if (questComp.activeQuests.has(questId)) {
           const active = questComp.activeQuests.get(questId);
           const allDone = active.objectives.every(o => o.current >= o.required);

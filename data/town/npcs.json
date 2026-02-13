@@ -263,6 +263,18 @@
       "aggroRange": 256,
       "patrolRadius": 200,
       "interactRange": 64
+    },
+    {
+      "id": "wise_old_man",
+      "name": "Wise Old Man",
+      "type": "quest_giver",
+      "x": 450,
+      "y": 280,
+      "color": "#9b59b6",
+      "size": 26,
+      "dialogId": "wise_old_man_dialog",
+      "questIds": ["quest_stat_reset"],
+      "interactRange": 64
     }
   ]
 }

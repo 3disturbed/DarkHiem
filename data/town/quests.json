@@ -297,6 +297,19 @@
       ],
       "rewards": { "xp": 200, "items": [{ "itemId": "gold", "count": 150 }] },
       "prerequisiteQuests": ["quest_deep_water_fishing"]
+    },
+    {
+      "id": "quest_stat_reset",
+      "name": "Realignment of Spirit",
+      "description": "The Wise Old Man will reset your stat allocations, returning all spent points.",
+      "giverNpcId": "wise_old_man",
+      "turnInNpcId": "wise_old_man",
+      "repeatable": true,
+      "objectives": [
+        { "type": "talk_to", "target": "wise_old_man", "required": 1, "description": "Speak with the Wise Old Man" }
+      ],
+      "rewards": { "xp": 0, "resetStats": true },
+      "prerequisiteQuests": []
     }
   ]
 }

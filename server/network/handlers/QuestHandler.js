@@ -1,4 +1,5 @@
 import { MSG } from '../../../shared/MessageTypes.js';
+import { BASE_STATS } from '../../../shared/StatTypes.js';
 import HealthComponent from '../../ecs/components/HealthComponent.js';
 import QuestComponent from '../../ecs/components/QuestComponent.js';
 import InventoryComponent from '../../ecs/components/InventoryComponent.js';
@@ -86,7 +87,11 @@ export default class QuestHandler {
     }
 
     // Complete quest
-    questComp.completeQuest(questId);
+    if (questDef.repeatable) {
+      questComp.activeQuests.delete(questId);
+    } else {
+      questComp.completeQuest(questId);
+    }
 
     // Grant rewards
     if (questDef.rewards) {
@@ -107,6 +112,23 @@ export default class QuestHandler {
           inv.addItem(reward.itemId, reward.count);
         }
         player.emit(MSG.INVENTORY_UPDATE, inv.serialize());
+      }
+
+      // Stat reset
+      if (questDef.rewards.resetStats) {
+        const stats = entity.getComponent(StatsComponent);
+        if (stats) {
+          const spent = (stats.str - BASE_STATS.str) + (stats.dex - BASE_STATS.dex) +
+                        (stats.vit - BASE_STATS.vit) + (stats.end - BASE_STATS.end) +
+                        (stats.lck - BASE_STATS.lck);
+          stats.str = BASE_STATS.str;
+          stats.dex = BASE_STATS.dex;
+          stats.vit = BASE_STATS.vit;
+          stats.end = BASE_STATS.end;
+          stats.lck = BASE_STATS.lck;
+          stats.statPoints += spent;
+          player.emit(MSG.PLAYER_STATS, stats.serialize());
+        }
       }
     }
 
