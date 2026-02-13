@@ -451,6 +451,7 @@ export default class GameServer {
         hp: health ? health.current : 0,
         maxHp: health ? health.max : 0,
         level: stats ? stats.level : 1,
+        mountedHorseId: pc.mountedHorseId || null,
       };
     }
 

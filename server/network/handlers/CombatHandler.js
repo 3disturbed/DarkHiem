@@ -26,6 +26,10 @@ export const MINEABLE_TILES = {
   },
 };
 
+function isAxeWeapon(itemDef) {
+  return itemDef && itemDef.slot === 'weapon' && /axe/i.test(itemDef.id);
+}
+
 export function findBestTool(entity, requiredToolType, requiredTier) {
   const equip = entity.getComponent(EquipmentComponent);
   const tool = equip ? equip.getEquipped('tool') : null;
@@ -33,6 +37,14 @@ export function findBestTool(entity, requiredToolType, requiredTier) {
   // Check equipped tool first
   if (tool && tool.toolType === requiredToolType && (tool.toolTier || 0) >= requiredTier) {
     return { tool, isEquipped: true };
+  }
+
+  // Axe weapons (axes, battleaxes) can also chop trees
+  if (requiredToolType === 'axe' && equip) {
+    const weapon = equip.getEquipped('weapon');
+    if (weapon && isAxeWeapon(weapon) && (weapon.tier || 0) >= requiredTier) {
+      return { tool: weapon, isEquipped: true };
+    }
   }
 
   // Scan inventory for matching tool
@@ -43,11 +55,23 @@ export function findBestTool(entity, requiredToolType, requiredTier) {
   for (const slot of inv.slots) {
     if (!slot || !slot.itemId) continue;
     const def = ITEM_DB[slot.itemId];
-    if (!def || def.type !== 'equipment' || def.slot !== 'tool') continue;
-    if (def.toolType !== requiredToolType) continue;
-    if ((def.toolTier || 0) < requiredTier) continue;
-    if (!bestTool || (def.toolTier || 0) > (bestTool.toolTier || 0)) {
-      bestTool = def;
+    if (!def || def.type !== 'equipment') continue;
+
+    // Match dedicated tools (hatchets)
+    if (def.slot === 'tool' && def.toolType === requiredToolType) {
+      if ((def.toolTier || 0) < requiredTier) continue;
+      if (!bestTool || (def.toolTier || 0) > (bestTool.toolTier || bestTool.tier || 0)) {
+        bestTool = def;
+      }
+      continue;
+    }
+
+    // Axe weapons in inventory can also chop trees
+    if (requiredToolType === 'axe' && isAxeWeapon(def)) {
+      if ((def.tier || 0) < requiredTier) continue;
+      if (!bestTool || (def.tier || 0) > (bestTool.toolTier || bestTool.tier || 0)) {
+        bestTool = def;
+      }
     }
   }
 

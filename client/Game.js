@@ -1240,11 +1240,13 @@ export default class Game {
             y: entity.y,
             hp: entity.hp ?? 100,
             maxHp: entity.maxHp ?? 100,
+            mountedHorseId: entity.mountedHorseId || null,
           });
         } else {
           const rp = this.remotePlayers.get(id);
           rp.hp = entity.hp ?? rp.hp;
           rp.maxHp = entity.maxHp ?? rp.maxHp;
+          rp.mountedHorseId = entity.mountedHorseId || null;
         }
       }
     }
@@ -1547,8 +1549,15 @@ export default class Game {
 
     // Render remote players
     for (const [id, player] of this.remotePlayers) {
+      // Draw horse underneath if mounted
+      if (player.mountedHorseId) {
+        const horse = this.horses.get(player.mountedHorseId);
+        const horseSize = horse ? (horse.size || 30) : 30;
+        const horseColor = horse ? (horse.color || '#8B6C42') : '#8B6C42';
+        EntityRenderer.renderHorse(r, player.x, player.y + 6, horseColor, horseSize, '', true, null);
+      }
       EntityRenderer.renderPlayer(
-        r, player.x, player.y,
+        r, player.x, player.y - (player.mountedHorseId ? 8 : 0),
         player.color, player.name,
         player.hp ?? 100, player.maxHp ?? 100,
         false, 0, 1
@@ -1558,16 +1567,20 @@ export default class Game {
     // Render local player
     if (this.localPlayer) {
       const p = this.localPlayer;
+      // Draw horse underneath if mounted
+      if (this.mounted && this.mountedHorseId) {
+        const horse = this.horses.get(this.mountedHorseId);
+        const horseSize = horse ? (horse.size || 30) : 30;
+        const horseColor = horse ? (horse.color || '#8B6C42') : '#8B6C42';
+        EntityRenderer.renderHorse(r, p.x, p.y + 6, horseColor, horseSize, '', true, null);
+      }
+      const yOffset = this.mounted ? 8 : 0;
       EntityRenderer.renderPlayer(
-        r, p.x, p.y,
+        r, p.x, p.y - yOffset,
         p.color, p.name,
         p.hp, p.maxHp,
         true, facing.x, facing.y
       );
-      // Mounted indicator
-      if (this.mounted) {
-        r.drawText('Mounted', p.x, p.y + PLAYER_SIZE / 2 + 14, '#90ee90', 8, 'center');
-      }
     }
   }
 
