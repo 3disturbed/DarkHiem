@@ -3,18 +3,18 @@
   "id": "9cec94d6-97f6-4e3e-88da-8566b626dabc",
   "name": "Dad",
   "color": "#e74c3c",
-  "savedAt": 1770827530298,
+  "savedAt": 1770828281558,
   "position": {
-    "x": 540.8589998996422,
-    "y": 510.15254764636524
+    "x": 15201.215063956584,
+    "y": 3706.057280102097
   },
   "health": {
-    "current": 104,
+    "current": 0,
     "max": 104
   },
   "stats": {
     "level": 11,
-    "xp": 1735,
+    "xp": 1997,
     "statPoints": 0,
     "str": 35,
     "dex": 5,
@@ -26,11 +26,11 @@
     "slots": [
       {
         "itemId": "stone",
-        "count": 45
+        "count": 50
       },
       {
         "itemId": "bone_fragment",
-        "count": 4
+        "count": 8
       },
       {
         "itemId": "berries",
@@ -38,7 +38,7 @@
       },
       {
         "itemId": "stick",
-        "count": 2
+        "count": 4
       },
       {
         "itemId": "raw_meat",
@@ -60,12 +60,18 @@
         "itemId": "stone_hatchet",
         "count": 1
       },
-      null,
+      {
+        "itemId": "copper_ore",
+        "count": 9
+      },
       {
         "itemId": "wood",
         "count": 42
       },
-      null,
+      {
+        "itemId": "leather_scrap",
+        "count": 6
+      },
       {
         "itemId": "wood",
         "count": 23
@@ -76,16 +82,19 @@
       },
       {
         "itemId": "stone",
-        "count": 10
+        "count": 11
       },
-      null,
+      {
+        "itemId": "mushroom",
+        "count": 3
+      },
       {
         "itemId": "raw_meat",
         "count": 50
       },
       {
         "itemId": "greyling_hide",
-        "count": 5
+        "count": 10
       },
       {
         "itemId": "raw_meat",
@@ -93,7 +102,7 @@
       },
       {
         "itemId": "raw_meat",
-        "count": 15
+        "count": 28
       }
     ]
   },
@@ -144,7 +153,10 @@
       "whirlwind"
     ],
     "cooldowns": {
-      "cleave": 3.5440000000000014
+      "power_strike": 0,
+      "cleave": 0,
+      "dash": 0,
+      "heal": 0
     },
     "hotbar": [
       "power_strike",
