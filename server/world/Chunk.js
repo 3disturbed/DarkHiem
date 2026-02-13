@@ -14,6 +14,7 @@ export default class Chunk {
     // World objects in this chunk
     this.resources = [];  // resource nodes
     this.spawnPoints = []; // enemy spawn configs
+    this.structures = []; // player-placed structures
 
     // Metadata
     this.biomeId = null;
@@ -27,6 +28,7 @@ export default class Chunk {
     this.solids = genData.solids;
     this.resources = genData.resources || [];
     this.spawnPoints = genData.spawnPoints || [];
+    this.structures = genData.structures || [];
     this.biomeId = genData.biomeId;
     this.generated = true;
   }
@@ -82,6 +84,7 @@ export default class Chunk {
       solids: this.solids,
       resources: this.resources,
       spawnPoints: this.spawnPoints,
+      structures: this.structures,
     };
   }
 

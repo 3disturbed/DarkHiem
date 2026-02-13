@@ -3,215 +3,74 @@
   "id": "5ec46831-e560-46f4-9fd3-0202df017717",
   "name": "Mousy",
   "color": "#e84393",
-  "savedAt": 1770947557606,
+  "savedAt": 1770993578553,
   "position": {
-    "x": -28851.989999999958,
-    "y": -7308.01
+    "x": 517.9711199220167,
+    "y": 538.1510994950618
   },
   "health": {
-    "current": 132,
-    "max": 132
+    "current": 100,
+    "max": 100
   },
   "stats": {
-    "level": 14,
-    "xp": 4761,
+    "level": 1,
+    "xp": 0,
     "statPoints": 0,
-    "str": 14,
-    "dex": 13,
-    "vit": 13,
-    "end": 11,
-    "lck": 11
+    "str": 5,
+    "dex": 5,
+    "vit": 5,
+    "end": 5,
+    "lck": 3
   },
   "inventory": {
     "slots": [
-      {
-        "itemId": "stone_hatchet",
-        "count": 1
-      },
-      {
-        "itemId": "flax",
-        "count": 26
-      },
-      {
-        "itemId": "stone_hatchet",
-        "count": 1
-      },
-      {
-        "itemId": "bone_pickaxe",
-        "count": 1
-      },
-      {
-        "itemId": "copper_ore",
-        "count": 18
-      },
-      {
-        "itemId": "tin_ore",
-        "count": 12
-      },
-      {
-        "itemId": "wooden_club",
-        "count": 1
-      },
-      {
-        "itemId": "stick",
-        "count": 50
-      },
-      {
-        "itemId": "hemp_line",
-        "count": 1
-      },
-      {
-        "itemId": "greyling_hide",
-        "count": 13
-      },
-      {
-        "itemId": "greyling_tear",
-        "count": 2
-      },
-      {
-        "itemId": "wood",
-        "count": 50
-      },
-      {
-        "itemId": "meadow_ring",
-        "count": 1
-      },
-      {
-        "itemId": "bone_hook",
-        "count": 1
-      },
-      {
-        "itemId": "stone",
-        "count": 50
-      },
-      {
-        "itemId": "raw_gem_rough",
-        "count": 20
-      },
-      {
-        "itemId": "berries",
-        "count": 43
-      },
-      {
-        "itemId": "wooden_reel",
-        "count": 1
-      },
-      {
-        "itemId": "gold",
-        "count": 90
-      },
-      {
-        "itemId": "stone_axe",
-        "count": 1
-      },
-      {
-        "itemId": "berries",
-        "count": 50
-      },
-      {
-        "itemId": "oak_plank",
-        "count": 5
-      },
-      {
-        "itemId": "bronze_nails",
-        "count": 3
-      },
-      {
-        "itemId": "wood",
-        "count": 50
-      },
-      {
-        "itemId": "meadow_ring",
-        "count": 1
-      },
-      {
-        "itemId": "raw_meat",
-        "count": 27
-      },
-      {
-        "itemId": "leather_scrap",
-        "count": 15
-      },
-      {
-        "itemId": "copper_ore",
-        "count": 50
-      },
-      {
-        "itemId": "copper_ore",
-        "count": 50
-      },
-      {
-        "itemId": "bone_fragment",
-        "count": 30
-      },
-      {
-        "itemId": "stone",
-        "count": 50
-      },
-      {
-        "itemId": "copper_ore",
-        "count": 50
-      },
-      {
-        "itemId": "meadow_ring",
-        "count": 1
-      },
-      {
-        "itemId": "stone",
-        "count": 50
-      },
-      {
-        "itemId": "wood",
-        "count": 50
-      },
-      {
-        "itemId": "raw_gem_rough",
-        "count": 20
-      },
-      {
-        "itemId": "stick",
-        "count": 24
-      },
-      {
-        "itemId": "copper_ingot",
-        "count": 50
-      },
-      {
-        "itemId": "tin_ingot",
-        "count": 4
-      },
-      {
-        "itemId": "stone",
-        "count": 50
-      },
-      {
-        "itemId": "raw_gem_rough",
-        "count": 14
-      },
-      {
-        "itemId": "wood",
-        "count": 12
-      },
-      {
-        "itemId": "stone",
-        "count": 50
-      },
-      {
-        "itemId": "stone",
-        "count": 50
-      },
-      {
-        "itemId": "stone",
-        "count": 50
-      },
-      {
-        "itemId": "stone",
-        "count": 50
-      },
-      {
-        "itemId": "stone",
-        "count": 22
-      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
       null,
       null,
       null,
@@ -268,95 +127,31 @@
     ]
   },
   "equipment": {
-    "weapon": {
-      "id": "bone_sword",
-      "gems": [],
-      "upgradeLevel": 0,
-      "upgradeXp": 0
-    },
+    "weapon": null,
     "head": null,
     "body": null,
     "legs": null,
     "feet": null,
     "shield": null,
-    "ring1": {
-      "id": "meadow_ring",
-      "gems": [],
-      "upgradeLevel": 0,
-      "upgradeXp": 0
-    },
-    "ring2": {
-      "id": "meadow_ring",
-      "gems": [],
-      "upgradeLevel": 0,
-      "upgradeXp": 0
-    },
-    "tool": {
-      "id": "bronze_pickaxe",
-      "gems": [],
-      "upgradeLevel": 0,
-      "upgradeXp": 0
-    }
+    "ring1": null,
+    "ring2": null,
+    "tool": null
   },
   "skills": {
     "learnedSkills": [
       "power_strike",
-      "heal",
-      "dash",
-      "cleave",
-      "war_cry",
-      "iron_skin",
-      "whirlwind",
-      "execute"
+      "heal"
     ],
-    "cooldowns": {
-      "dash": 0
-    },
+    "cooldowns": {},
     "hotbar": [
       "power_strike",
       "heal",
-      "dash",
-      "cleave"
+      null,
+      null
     ]
   },
   "quests": {
-    "activeQuests": {
-      "quest_first_catch": {
-        "objectives": [
-          {
-            "type": "collect",
-            "target": "river_trout",
-            "current": 0,
-            "required": 3
-          }
-        ]
-      },
-      "quest_guard_duty": {
-        "objectives": [
-          {
-            "type": "kill",
-            "target": "greyling",
-            "current": 10,
-            "required": 10
-          }
-        ]
-      },
-      "quest_slay_bramblethorn": {
-        "objectives": [
-          {
-            "type": "kill",
-            "target": "bramblethorn",
-            "current": 1,
-            "required": 1
-          }
-        ]
-      }
-    },
-    "completedQuests": [
-      "quest_welcome",
-      "quest_gather_wood",
-      "quest_craft_weapon",
-      "quest_kill_greylings"
-    ]
+    "activeQuests": {},
+    "completedQuests": []
   }
 }

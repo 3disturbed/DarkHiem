@@ -17,6 +17,7 @@ export const STATION_DB = {
     color: '#8B6914',
     size: 40,
     interactRange: 80,
+    sprite: 'workbench',
   },
   furnace: {
     id: 'furnace',
@@ -26,6 +27,7 @@ export const STATION_DB = {
     color: '#B22222',
     size: 36,
     interactRange: 80,
+    sprite: 'furnace',
   },
   forge: {
     id: 'forge',
@@ -35,6 +37,7 @@ export const STATION_DB = {
     color: '#4A4A4A',
     size: 44,
     interactRange: 80,
+    sprite: 'forge',
   },
   cooking_fire: {
     id: 'cooking_fire',
@@ -44,6 +47,7 @@ export const STATION_DB = {
     color: '#FF6600',
     size: 32,
     interactRange: 80,
+    sprite: 'cooking_fire',
   },
   gem_table: {
     id: 'gem_table',
@@ -53,6 +57,7 @@ export const STATION_DB = {
     color: '#9B59B6',
     size: 36,
     interactRange: 80,
+    sprite: 'gem_table',
   },
   arcane_table: {
     id: 'arcane_table',
@@ -62,6 +67,7 @@ export const STATION_DB = {
     color: '#6a0dad',
     size: 38,
     interactRange: 80,
+    sprite: 'arcane_table',
   },
   boss_altar: {
     id: 'boss_altar',
@@ -70,6 +76,7 @@ export const STATION_DB = {
     size: 48,
     interactRange: 100,
     maxLevel: 1,
+    sprite: 'boss_altar',
   },
 
   // Chests (placeable storage)
@@ -82,6 +89,7 @@ export const STATION_DB = {
     maxLevel: 1,
     isChest: true,
     chestSlots: 20,
+    sprite: 'wooden_chest',
   },
   reinforced_chest: {
     id: 'reinforced_chest',
@@ -92,6 +100,7 @@ export const STATION_DB = {
     maxLevel: 1,
     isChest: true,
     chestSlots: 40,
+    sprite: 'reinforced_chest',
   },
   iron_chest: {
     id: 'iron_chest',
@@ -102,6 +111,7 @@ export const STATION_DB = {
     maxLevel: 1,
     isChest: true,
     chestSlots: 80,
+    sprite: 'iron_chest',
   },
   obsidian_vault: {
     id: 'obsidian_vault',
@@ -112,6 +122,7 @@ export const STATION_DB = {
     maxLevel: 1,
     isChest: true,
     chestSlots: 120,
+    sprite: 'obsidian_vault',
   },
 };
 

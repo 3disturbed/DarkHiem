@@ -10,6 +10,7 @@
     { "condition": "elevation < 0.70", "tile": 42, "solid": false },
     { "condition": "elevation < 0.85 AND moisture > 0.4", "tile": 40, "solid": false },
     { "condition": "elevation < 0.85", "tile": 41, "solid": false },
-    { "condition": "elevation >= 0.85", "tile": 43, "solid": true }
+    { "condition": "elevation >= 0.85 AND zone > 0.5", "tile": 43, "solid": true },
+    { "condition": "elevation >= 0.85", "tile": 41, "solid": false }
   ]
 }

@@ -1,4 +1,5 @@
 import { TILE } from '../../shared/TileTypes.js';
+import { TILE_SIZE } from '../../shared/Constants.js';
 
 // Map tile ID → sprite filename (without extension)
 const TILE_SPRITE_NAMES = {
@@ -68,6 +69,12 @@ class TileSprites {
 
   get(tileId) {
     return this.sprites[tileId] || null;
+  }
+
+  getSubTile(tileId, col, row) {
+    const img = this.sprites[tileId];
+    if (!img) return null;
+    return { img, sx: col * TILE_SIZE, sy: row * TILE_SIZE };
   }
 }
 

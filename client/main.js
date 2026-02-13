@@ -1,5 +1,6 @@
 import Game from './Game.js';
 import tileSprites from './world/TileSprites.js';
+import stationSprites from './entities/StationSprites.js';
 
 // Check for valid session before loading game
 const token = localStorage.getItem('darkheim_token');
@@ -38,7 +39,7 @@ function redirectToLanding() {
 function startGame() {
   const canvas = document.getElementById('game');
 
-  tileSprites.load().then(() => {
+  Promise.all([tileSprites.load(), stationSprites.load()]).then(() => {
     const game = new Game(canvas);
     game.start();
   });

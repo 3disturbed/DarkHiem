@@ -60,6 +60,36 @@ export default class ClientChunk {
     this.tiles[idx] = newTileId;
     this.solids[idx] = SOLID_TILES.has(newTileId);
     this.dirty = true; // triggers re-render next frame
+
+    // Mark neighbor chunks dirty when tile is on a chunk edge so autotile borders update
+    if (localY === 0 && this.neighbors.n) this.neighbors.n.dirty = true;
+    if (localY === CHUNK_SIZE - 1 && this.neighbors.s) this.neighbors.s.dirty = true;
+    if (localX === 0 && this.neighbors.w) this.neighbors.w.dirty = true;
+    if (localX === CHUNK_SIZE - 1 && this.neighbors.e) this.neighbors.e.dirty = true;
+  }
+
+  getAutotileIndex(tx, ty, tileId) {
+    const nTile = this.getTileLocal(tx, ty - 1);
+    const sTile = this.getTileLocal(tx, ty + 1);
+    const wTile = this.getTileLocal(tx - 1, ty);
+    const eTile = this.getTileLocal(tx + 1, ty);
+
+    const wOpen = wTile !== tileId;
+    const eOpen = eTile !== tileId;
+    const nOpen = nTile !== tileId;
+    const sOpen = sTile !== tileId;
+
+    let col;
+    if (wOpen && !eOpen) col = 0;
+    else if (eOpen && !wOpen) col = 2;
+    else col = 1;
+
+    let row;
+    if (nOpen && !sOpen) row = 0;
+    else if (sOpen && !nOpen) row = 2;
+    else row = 1;
+
+    return { col, row };
   }
 
   // Pre-render tiles to offscreen canvas
@@ -78,7 +108,10 @@ export default class ClientChunk {
 
         const sprite = tileSprites.get(tileId);
         if (sprite) {
-          ctx.drawImage(sprite, px, py, TILE_SIZE, TILE_SIZE);
+          const { col, row } = this.getAutotileIndex(tx, ty, tileId);
+          const sx = col * TILE_SIZE;
+          const sy = row * TILE_SIZE;
+          ctx.drawImage(sprite, sx, sy, TILE_SIZE, TILE_SIZE, px, py, TILE_SIZE, TILE_SIZE);
         } else {
           ctx.fillStyle = TILE_COLORS[tileId] || '#ff00ff';
           ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);

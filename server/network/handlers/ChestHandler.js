@@ -66,6 +66,7 @@ export default class ChestHandler {
 
     if (moved > 0) {
       inv.removeFromSlot(playerSlot, moved);
+      this._markChestDirty(chestEntity);
       this._broadcastChestData(chestEntity, chest);
       this._sendInventoryUpdate(player, playerEntity);
     }
@@ -104,6 +105,7 @@ export default class ChestHandler {
 
     if (moved > 0) {
       chest.removeFromSlot(chestSlot, moved);
+      this._markChestDirty(chestEntity);
       this._broadcastChestData(chestEntity, chest);
       this._sendInventoryUpdate(player, playerEntity);
     }
@@ -149,6 +151,16 @@ export default class ChestHandler {
           maxSlots: chest.maxSlots,
           slots: chest.slots,
         });
+      }
+    }
+  }
+
+  _markChestDirty(chestEntity) {
+    if (chestEntity.structureChunkKey != null) {
+      const [cx, cy] = chestEntity.structureChunkKey.split(',').map(Number);
+      const chunk = this.gameServer.worldManager.chunkManager.getChunk(cx, cy);
+      if (chunk) {
+        chunk.modified = true;
       }
     }
   }

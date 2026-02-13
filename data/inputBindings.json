@@ -5,7 +5,7 @@
     "moveLeft": ["KeyA", "ArrowLeft"],
     "moveRight": ["KeyD", "ArrowRight"],
     "action": ["Space", "KeyF"],
-    "interact": ["KeyE"],
+    "interact": ["KeyF"],
     "cancel": ["Escape"],
     "inventory": ["KeyI"],
     "craft": ["KeyC"],

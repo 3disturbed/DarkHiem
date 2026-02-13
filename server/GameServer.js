@@ -29,6 +29,7 @@ import SpawnSystem from './ecs/systems/SpawnSystem.js';
 import DespawnSystem from './ecs/systems/DespawnSystem.js';
 import StatSystem from './ecs/systems/StatSystem.js';
 import ResourceSpawnSystem from './ecs/systems/ResourceSpawnSystem.js';
+import StructureSpawnSystem from './ecs/systems/StructureSpawnSystem.js';
 import SkillSystem from './ecs/systems/SkillSystem.js';
 import QuestTrackingSystem from './ecs/systems/QuestTrackingSystem.js';
 import CombatResolver from './combat/CombatResolver.js';
@@ -236,6 +237,31 @@ export default class GameServer {
       : EntityFactory.createCraftingStation(stationId, placeX, placeY, 1);
     if (stationEntity) {
       this.entityManager.add(stationEntity);
+
+      // Persist to chunk
+      const chunkX = Math.floor(placeX / CHUNK_PIXEL_SIZE);
+      const chunkY = Math.floor(placeY / CHUNK_PIXEL_SIZE);
+      const chunkKey = `${chunkX},${chunkY}`;
+      const chunk = this.worldManager.chunkManager.getChunk(chunkX, chunkY);
+      if (chunk) {
+        const structEntry = {
+          stationId,
+          x: placeX,
+          y: placeY,
+          level: 1,
+          isChest: !!(stationDef && stationDef.isChest),
+          chest: null,
+          placedBy: playerConn.id,
+          isTownStation: false,
+        };
+        chunk.structures.push(structEntry);
+        const idx = chunk.structures.length - 1;
+        chunk.modified = true;
+
+        stationEntity.structureChunkKey = chunkKey;
+        stationEntity.structureIndex = idx;
+        this.structureSpawnSystem.trackSpawned(chunkKey, idx, stationEntity.id);
+      }
     }
 
     pc.pendingPlacement = null;
@@ -289,6 +315,7 @@ export default class GameServer {
     const healthSystem = new HealthSystem(this.io);
     const lootSystem = new LootSystem(this.io);
     this.resourceSpawnSystem = new ResourceSpawnSystem();
+    this.structureSpawnSystem = new StructureSpawnSystem();
     this.questTrackingSystem = new QuestTrackingSystem(this);
 
     // Wire death event: health system -> loot system + resource depletion
@@ -329,20 +356,14 @@ export default class GameServer {
 
     this.systemManager.add(healthSystem);                 // 25: detect deaths
     this.systemManager.add(lootSystem);                   // 26: drop loot
+    this.systemManager.add(this.structureSpawnSystem);     // 47: spawn structures
     this.systemManager.add(this.resourceSpawnSystem);     // 48: spawn resources
     this.systemManager.add(new SpawnSystem());            // 50: spawn enemies
     this.systemManager.add(new DespawnSystem());          // 51: despawn far enemies
     this.systemManager.add(this.questTrackingSystem);    // 90: quest tracking
 
-    // Spawn town crafting stations
-    for (const stationDef of TOWN_STATIONS) {
-      const station = EntityFactory.createCraftingStation(
-        stationDef.stationId, stationDef.x, stationDef.y, stationDef.level
-      );
-      if (station) {
-        this.entityManager.add(station);
-      }
-    }
+    // Migrate town stations into chunk persistence
+    await this._migrateTownStations();
 
     // Initialize town NPCs
     await this.townManager.init();
@@ -355,8 +376,13 @@ export default class GameServer {
     console.log(`[GameServer] Starting at ${TICK_RATE} TPS (${TICK_MS}ms per tick)`);
     this.tickInterval = setInterval(() => this.tick(), TICK_MS);
 
-    // Auto-save all players every 30 seconds
-    this.autoSaveInterval = setInterval(() => this.saveAllPlayers(), 30000);
+    // Auto-save every 30 seconds (structures + players)
+    this.autoSaveInterval = setInterval(() => {
+      if (this.structureSpawnSystem) {
+        this.structureSpawnSystem.syncAllChestContents(this.worldManager);
+      }
+      this.saveAllPlayers();
+    }, 30000);
   }
 
   async stop() {
@@ -367,6 +393,10 @@ export default class GameServer {
     if (this.autoSaveInterval) {
       clearInterval(this.autoSaveInterval);
       this.autoSaveInterval = null;
+    }
+    // Flush structure/chest data to chunks before world save
+    if (this.structureSpawnSystem) {
+      this.structureSpawnSystem.syncAllChestContents(this.worldManager);
     }
     // Final save for all connected players
     await this.saveAllPlayers();
@@ -842,6 +872,34 @@ export default class GameServer {
     if (promises.length > 0) {
       await Promise.all(promises);
       console.log(`[GameServer] Auto-saved ${promises.length} player(s)`);
+    }
+  }
+
+  async _migrateTownStations() {
+    for (const stationDef of TOWN_STATIONS) {
+      const cx = Math.floor(stationDef.x / CHUNK_PIXEL_SIZE);
+      const cy = Math.floor(stationDef.y / CHUNK_PIXEL_SIZE);
+      const chunk = await this.worldManager.getChunk(cx, cy);
+      if (!chunk) continue;
+
+      // Check if already migrated (dedup by stationId + position)
+      const alreadyExists = chunk.structures.some(
+        s => s.stationId === stationDef.stationId &&
+             s.x === stationDef.x && s.y === stationDef.y
+      );
+      if (alreadyExists) continue;
+
+      chunk.structures.push({
+        stationId: stationDef.stationId,
+        x: stationDef.x,
+        y: stationDef.y,
+        level: stationDef.level || 1,
+        isChest: false,
+        chest: null,
+        placedBy: null,
+        isTownStation: true,
+      });
+      chunk.modified = true;
     }
   }
 

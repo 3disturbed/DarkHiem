@@ -16,6 +16,21 @@
       "size": 36
     },
     {
+      "id": "wood_dark_oak",
+      "name": "Dark Oak Tree",
+      "tool": "axe",
+      "toolTier": 2,
+      "drops": [{ "item": "dark_oak_log", "min": 2, "max": 4 }],
+      "health": 80,
+      "respawnTime": 500,
+      "minGradient": 0.0,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.12,
+      "densityAtRight": 0.06,
+      "color": "#1a1a0e",
+      "size": 38
+    },
+    {
       "id": "tin_node",
       "name": "Tin Deposit",
       "tool": "pickaxe",

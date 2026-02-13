@@ -30,11 +30,20 @@ export default class CaveGenerator {
     // First pass: determine which tiles are cave interior
     const isCave = new Array(CHUNK_SIZE * CHUNK_SIZE).fill(false);
 
+    // Zone config: only carve caves inside mountain zone clusters
+    const zoneConfig = biomeData.biome.terrain && biomeData.biome.terrain.zones;
+
     for (let ty = 0; ty < CHUNK_SIZE; ty++) {
       for (let tx = 0; tx < CHUNK_SIZE; tx++) {
         const worldX = baseWorldX + tx * TILE_SIZE;
         const worldY = baseWorldY + ty * TILE_SIZE;
         const idx = ty * CHUNK_SIZE + tx;
+
+        // Skip tiles outside mountain zones
+        if (zoneConfig && zoneConfig.enabled) {
+          const zoneNoise = this.noise.detail(worldX, worldY, zoneConfig.scale);
+          if (zoneNoise <= zoneConfig.threshold) continue;
+        }
 
         // Only carve caves in appropriate elevation range
         const elevation = this.noise.elevation(worldX, worldY, elevScale);

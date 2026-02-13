@@ -12,7 +12,12 @@
     "moistureScale": 0.03,
     "treeChance": 0.08,
     "rockChance": 0.03,
-    "waterLevel": 0.3
+    "waterLevel": 0.3,
+    "zones": {
+      "enabled": true,
+      "scale": 0.008,
+      "threshold": 0.65
+    }
   },
   "cave": {
     "caveThreshold": 0.32,

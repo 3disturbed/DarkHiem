@@ -185,6 +185,16 @@ export default class CraftingHandler {
       nameComp.name = def.name;
     }
 
+    // Persist upgrade to chunk data
+    if (closest.structureChunkKey != null && closest.structureIndex != null) {
+      const [cx, cy] = closest.structureChunkKey.split(',').map(Number);
+      const chunk = this.gameServer.worldManager.chunkManager.getChunk(cx, cy);
+      if (chunk && chunk.structures[closest.structureIndex]) {
+        chunk.structures[closest.structureIndex].level = toLevel;
+        chunk.modified = true;
+      }
+    }
+
     return true;
   }
 

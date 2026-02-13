@@ -1366,7 +1366,8 @@ export default class Game {
       this.placementMode.color,
       this.placementMode.size,
       this.placementMode.name,
-      this.ghostValid
+      this.ghostValid,
+      this.placementMode.stationId
     );
   }
 
@@ -1378,14 +1379,16 @@ export default class Game {
           station.color || '#B87333',
           station.size || 48,
           station.name || 'Summoning Shrine',
-          station.altarActive || false
+          station.altarActive || false,
+          station.stationId
         );
       } else if (station.isChest) {
         EntityRenderer.renderChest(
           r, station.x, station.y,
           station.color || '#8B6914',
           station.size || 32,
-          station.name || 'Chest'
+          station.name || 'Chest',
+          station.stationId
         );
       } else {
         EntityRenderer.renderStation(
@@ -1393,7 +1396,8 @@ export default class Game {
           station.color || '#8B6914',
           station.size || 40,
           station.name || 'Station',
-          station.stationLevel || 1
+          station.stationLevel || 1,
+          station.stationId
         );
       }
     }

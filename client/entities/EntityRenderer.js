@@ -1,4 +1,5 @@
 import { PLAYER_SIZE } from '../../shared/Constants.js';
+import stationSprites from './StationSprites.js';
 
 export default class EntityRenderer {
   // Render a player entity
@@ -100,24 +101,29 @@ export default class EntityRenderer {
   }
 
   // Render a crafting station entity
-  static renderStation(r, x, y, color, size, name, level) {
+  static renderStation(r, x, y, color, size, name, level, stationId) {
     const half = size / 2;
-
-    // Body (diamond shape to distinguish)
     const ctx = r.ctx;
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.moveTo(Math.round(x), Math.round(y - half));
-    ctx.lineTo(Math.round(x + half), Math.round(y));
-    ctx.lineTo(Math.round(x), Math.round(y + half));
-    ctx.lineTo(Math.round(x - half), Math.round(y));
-    ctx.closePath();
-    ctx.fill();
 
-    // Outline
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    // Try sprite first
+    const sprite = stationId ? stationSprites.get(stationId) : null;
+    if (sprite) {
+      ctx.drawImage(sprite, Math.round(x - half), Math.round(y - half), size, size);
+    } else {
+      // Fallback: diamond shape
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(Math.round(x), Math.round(y - half));
+      ctx.lineTo(Math.round(x + half), Math.round(y));
+      ctx.lineTo(Math.round(x), Math.round(y + half));
+      ctx.lineTo(Math.round(x - half), Math.round(y));
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
 
     // Name tag (show level if > 1)
     const label = level > 1 ? `${name} Lv${level}` : name;
@@ -125,39 +131,43 @@ export default class EntityRenderer {
   }
 
   // Render a chest entity
-  static renderChest(r, x, y, color, size, name) {
+  static renderChest(r, x, y, color, size, name, stationId) {
     const ctx = r.ctx;
     const half = size / 2;
-    const w = size;
-    const h = size * 0.7;
 
-    // Body (box)
-    ctx.fillStyle = color;
-    ctx.fillRect(Math.round(x - w / 2), Math.round(y - h / 2), w, h);
+    // Try sprite first
+    const sprite = stationId ? stationSprites.get(stationId) : null;
+    if (sprite) {
+      ctx.drawImage(sprite, Math.round(x - half), Math.round(y - half), size, size);
+    } else {
+      // Fallback: box shape
+      const w = size;
+      const h = size * 0.7;
 
-    // Lid (darker top portion)
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
-    ctx.fillRect(Math.round(x - w / 2), Math.round(y - h / 2), w, h * 0.35);
+      ctx.fillStyle = color;
+      ctx.fillRect(Math.round(x - w / 2), Math.round(y - h / 2), w, h);
 
-    // Outline
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(Math.round(x - w / 2), Math.round(y - h / 2), w, h);
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.fillRect(Math.round(x - w / 2), Math.round(y - h / 2), w, h * 0.35);
 
-    // Gold clasp
-    ctx.fillStyle = '#f1c40f';
-    ctx.fillRect(Math.round(x - 3), Math.round(y - h / 2 + h * 0.3), 6, 6);
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(Math.round(x - w / 2), Math.round(y - h / 2), w, h);
+
+      ctx.fillStyle = '#f1c40f';
+      ctx.fillRect(Math.round(x - 3), Math.round(y - h / 2 + h * 0.3), 6, 6);
+    }
 
     // Name tag
-    r.drawText(name, x, y - h / 2 - 8, '#ffd700', 9, 'center');
+    r.drawText(name, x, y - half - 8, '#ffd700', 9, 'center');
   }
 
   // Render a summoning shrine/altar
-  static renderAltar(r, x, y, color, size, name, isActive) {
+  static renderAltar(r, x, y, color, size, name, isActive, stationId) {
     const half = size / 2;
     const ctx = r.ctx;
 
-    // Pulsing glow
+    // Pulsing glow (always shown, even with sprite)
     const pulse = isActive
       ? 0.2 + Math.sin(Date.now() / 600) * 0.1
       : 0.4 + Math.sin(Date.now() / 300) * 0.2;
@@ -169,23 +179,28 @@ export default class EntityRenderer {
     ctx.fill();
     ctx.restore();
 
-    // Octagon body
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    for (let i = 0; i < 8; i++) {
-      const angle = (Math.PI * 2 * i / 8) - Math.PI / 8;
-      const px = x + Math.cos(angle) * half;
-      const py = y + Math.sin(angle) * half;
-      if (i === 0) ctx.moveTo(Math.round(px), Math.round(py));
-      else ctx.lineTo(Math.round(px), Math.round(py));
-    }
-    ctx.closePath();
-    ctx.fill();
+    // Try sprite first
+    const sprite = stationId ? stationSprites.get(stationId) : null;
+    if (sprite) {
+      ctx.drawImage(sprite, Math.round(x - half), Math.round(y - half), size, size);
+    } else {
+      // Fallback: octagon body
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const angle = (Math.PI * 2 * i / 8) - Math.PI / 8;
+        const px = x + Math.cos(angle) * half;
+        const py = y + Math.sin(angle) * half;
+        if (i === 0) ctx.moveTo(Math.round(px), Math.round(py));
+        else ctx.lineTo(Math.round(px), Math.round(py));
+      }
+      ctx.closePath();
+      ctx.fill();
 
-    // Border
-    ctx.strokeStyle = isActive ? '#e74c3c' : '#ffd700';
-    ctx.lineWidth = 3;
-    ctx.stroke();
+      ctx.strokeStyle = isActive ? '#e74c3c' : '#ffd700';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
 
     // Name tag
     r.drawText(name, x, y - half - 12, '#ffd700', 11, 'center');
@@ -247,27 +262,35 @@ export default class EntityRenderer {
   }
 
   // Render a ghost station for placement preview
-  static renderStationGhost(r, x, y, color, size, name, isValid) {
+  static renderStationGhost(r, x, y, color, size, name, isValid, stationId) {
     const half = size / 2;
     const ctx = r.ctx;
 
     ctx.save();
     ctx.globalAlpha = 0.5;
 
-    // Body (diamond shape, same as renderStation)
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.moveTo(Math.round(x), Math.round(y - half));
-    ctx.lineTo(Math.round(x + half), Math.round(y));
-    ctx.lineTo(Math.round(x), Math.round(y + half));
-    ctx.lineTo(Math.round(x - half), Math.round(y));
-    ctx.closePath();
-    ctx.fill();
+    // Try sprite first
+    const sprite = stationId ? stationSprites.get(stationId) : null;
+    if (sprite) {
+      ctx.drawImage(sprite, Math.round(x - half), Math.round(y - half), size, size);
+    } else {
+      // Fallback: diamond shape
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(Math.round(x), Math.round(y - half));
+      ctx.lineTo(Math.round(x + half), Math.round(y));
+      ctx.lineTo(Math.round(x), Math.round(y + half));
+      ctx.lineTo(Math.round(x - half), Math.round(y));
+      ctx.closePath();
+      ctx.fill();
+    }
 
     // Outline: green if valid, red if invalid
     ctx.globalAlpha = 0.8;
     ctx.strokeStyle = isValid ? '#2ecc71' : '#e74c3c';
     ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.rect(Math.round(x - half), Math.round(y - half), size, size);
     ctx.stroke();
 
     // Name tag

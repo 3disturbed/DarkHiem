@@ -1,4 +1,5 @@
 export const TILE_SIZE = 32;
+export const TEXTURE_SIZE = 96; // 3x3 autotile texture (3 * TILE_SIZE)
 export const CHUNK_SIZE = 16;
 export const CHUNK_PIXEL_SIZE = TILE_SIZE * CHUNK_SIZE; // 512
 export const TICK_RATE = 20;

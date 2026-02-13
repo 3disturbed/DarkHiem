@@ -3,20 +3,20 @@
   "id": "9cec94d6-97f6-4e3e-88da-8566b626dabc",
   "name": "Dad",
   "color": "#e74c3c",
-  "savedAt": 1770949298585,
+  "savedAt": 1770997767953,
   "position": {
-    "x": 271.3778550596931,
-    "y": -1718.7075505761632
+    "x": 295.833673184628,
+    "y": -903.0360321827814
   },
   "health": {
-    "current": 104,
-    "max": 104
+    "current": 100,
+    "max": 100
   },
   "stats": {
-    "level": 15,
-    "xp": 5605,
-    "statPoints": 0,
-    "str": 47,
+    "level": 10,
+    "xp": 1454,
+    "statPoints": 27,
+    "str": 5,
     "dex": 5,
     "vit": 5,
     "end": 5,
@@ -25,150 +25,84 @@
   "inventory": {
     "slots": [
       {
-        "itemId": "bronze_axe",
-        "count": 1
-      },
-      {
-        "itemId": "bronze_axe",
-        "count": 1
-      },
-      {
-        "itemId": "copper_ingot",
-        "count": 45
-      },
-      {
-        "itemId": "cut_amethyst_rough",
-        "count": 1
+        "itemId": "stone",
+        "count": 17
       },
       {
         "itemId": "greyling_hide",
-        "count": 20
-      },
-      {
-        "itemId": "copper_ore",
-        "count": 4
-      },
-      {
-        "itemId": "cut_sapphire_rough",
-        "count": 1
-      },
-      {
-        "itemId": "insect_bait",
-        "count": 1
+        "count": 6
       },
       {
         "itemId": "raw_meat",
-        "count": 16
-      },
-      {
-        "itemId": "greyling_tear",
-        "count": 10
+        "count": 32
       },
       {
         "itemId": "stick",
-        "count": 50
+        "count": 3
       },
       {
-        "itemId": "gold",
-        "count": 95
-      },
-      {
-        "itemId": "bone_fragment",
-        "count": 42
-      },
-      {
-        "itemId": "copper_ore",
-        "count": 50
-      },
-      {
-        "itemId": "stone",
-        "count": 50
-      },
-      {
-        "itemId": "stick",
-        "count": 50
-      },
-      {
-        "itemId": "copper_ore",
-        "count": 50
-      },
-      {
-        "itemId": "stone",
-        "count": 50
-      },
-      {
-        "itemId": "copper_ore",
-        "count": 50
-      },
-      {
-        "itemId": "raw_gem_rough",
+        "itemId": "berries",
         "count": 18
       },
       {
-        "itemId": "copper_ingot",
-        "count": 50
-      },
-      null,
-      {
-        "itemId": "linen_thread",
-        "count": 2
+        "itemId": "flax",
+        "count": 3
       },
       {
-        "itemId": "bone_hook",
-        "count": 1
-      },
-      {
-        "itemId": "copper_ore",
-        "count": 28
-      },
-      {
-        "itemId": "greyling_tear",
+        "itemId": "leather_scrap",
         "count": 10
       },
       {
-        "itemId": "bone_pickaxe",
-        "count": 1
+        "itemId": "greyling_tear",
+        "count": 4
       },
       {
-        "itemId": "stone",
+        "itemId": "copper_ore",
         "count": 50
-      },
-      {
-        "itemId": "meadow_ring",
-        "count": 1
       },
       {
         "itemId": "bone_fragment",
         "count": 22
       },
       {
+        "itemId": "copper_ore",
+        "count": 50
+      },
+      {
         "itemId": "meadow_ring",
         "count": 1
       },
       {
-        "itemId": "stone",
+        "itemId": "copper_ore",
         "count": 26
       },
-      {
-        "itemId": "meadow_ring",
-        "count": 1
-      },
-      {
-        "itemId": "bronze_ingot",
-        "count": 6
-      },
-      {
-        "itemId": "flax",
-        "count": 2
-      },
       null,
       null,
       null,
       null,
-      {
-        "itemId": "stick",
-        "count": 16
-      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
       null,
       null,
       null,
@@ -233,44 +167,14 @@
   },
   "equipment": {
     "weapon": null,
-    "head": {
-      "id": "leather_cap",
-      "gems": [],
-      "upgradeLevel": 0,
-      "upgradeXp": 0
-    },
-    "body": {
-      "id": "leather_tunic",
-      "gems": [],
-      "upgradeLevel": 0,
-      "upgradeXp": 0
-    },
+    "head": null,
+    "body": null,
     "legs": null,
-    "feet": {
-      "id": "hide_boots",
-      "gems": [],
-      "upgradeLevel": 0,
-      "upgradeXp": 0
-    },
+    "feet": null,
     "shield": null,
-    "ring1": {
-      "id": "meadow_ring",
-      "gems": [],
-      "upgradeLevel": 0,
-      "upgradeXp": 0
-    },
-    "ring2": {
-      "id": "meadow_ring",
-      "gems": [],
-      "upgradeLevel": 0,
-      "upgradeXp": 0
-    },
-    "tool": {
-      "id": "bronze_pickaxe",
-      "gems": [],
-      "upgradeLevel": 0,
-      "upgradeXp": 0
-    }
+    "ring1": null,
+    "ring2": null,
+    "tool": null
   },
   "skills": {
     "learnedSkills": [
@@ -280,9 +184,7 @@
       "cleave",
       "war_cry",
       "iron_skin",
-      "whirlwind",
-      "execute",
-      "regeneration"
+      "whirlwind"
     ],
     "cooldowns": {},
     "hotbar": [
@@ -293,34 +195,7 @@
     ]
   },
   "quests": {
-    "activeQuests": {
-      "quest_feed_village": {
-        "objectives": [
-          {
-            "type": "collect",
-            "target": "berry",
-            "current": 0,
-            "required": 10
-          },
-          {
-            "type": "collect",
-            "target": "raw_meat",
-            "current": 5,
-            "required": 5
-          }
-        ]
-      },
-      "quest_first_catch": {
-        "objectives": [
-          {
-            "type": "collect",
-            "target": "river_trout",
-            "current": 0,
-            "required": 3
-          }
-        ]
-      }
-    },
+    "activeQuests": {},
     "completedQuests": []
   }
 }

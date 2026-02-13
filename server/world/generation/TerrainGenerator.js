@@ -26,8 +26,16 @@ export default class TerrainGenerator {
         const detail = this.noise.detail(worldX, worldY, 0.08);
         const idx = ty * CHUNK_SIZE + tx;
 
+        // Zone noise: low-frequency clusters for localized mountain/cave areas
+        const zoneConfig = biomeData.terrain.zones;
+        let zone = 1; // default: everything is "in zone" (no restriction)
+        if (zoneConfig && zoneConfig.enabled) {
+          const zoneNoise = this.noise.detail(worldX, worldY, zoneConfig.scale);
+          zone = zoneNoise > zoneConfig.threshold ? 1 : 0;
+        }
+
         // Build values map for condition evaluation
-        const values = { elevation, moisture, detail };
+        const values = { elevation, moisture, detail, zone };
 
         // Apply tile rules from biome config
         let tile = tilesConfig.baseTile;
