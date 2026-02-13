@@ -60,6 +60,49 @@
       "behavior": "aggressive",
       "aggroRange": 200,
       "deaggroRange": 352
+    },
+    {
+      "id": "slime_beast",
+      "name": "Slime Beast",
+      "health": 50,
+      "damage": 12,
+      "speed": 45,
+      "xpReward": 25,
+      "drops": [
+        { "item": "guck", "chance": 0.5, "min": 1, "max": 3 }
+      ],
+      "minGradient": 0.0,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.04,
+      "densityAtRight": 0.06,
+      "color": "#4a6a2a",
+      "size": 24,
+      "behavior": "aggressive",
+      "aggroRange": 128,
+      "deaggroRange": 256,
+      "caveOnly": true
+    },
+    {
+      "id": "blind_crawler",
+      "name": "Blind Crawler",
+      "health": 60,
+      "damage": 18,
+      "speed": 55,
+      "xpReward": 30,
+      "drops": [
+        { "item": "iron_scrap", "chance": 0.4, "min": 1, "max": 2 },
+        { "item": "bone_fragment", "chance": 0.3, "min": 1, "max": 2 }
+      ],
+      "minGradient": 0.0,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.03,
+      "densityAtRight": 0.05,
+      "color": "#5a4a4a",
+      "size": 22,
+      "behavior": "aggressive",
+      "aggroRange": 96,
+      "deaggroRange": 224,
+      "caveOnly": true
     }
   ]
 }

@@ -1,0 +1,51 @@
+{
+  "shops": {
+    "general_shop": {
+      "name": "Bryn's General Store",
+      "sellMultiplier": 0.5,
+      "inventory": [
+        { "itemId": "berry", "price": 2, "stock": -1 },
+        { "itemId": "stick", "price": 1, "stock": -1 },
+        { "itemId": "wood", "price": 3, "stock": -1 },
+        { "itemId": "stone", "price": 3, "stock": -1 },
+        { "itemId": "leather", "price": 8, "stock": -1 },
+        { "itemId": "wooden_club", "price": 15, "stock": -1 },
+        { "itemId": "bone_sword", "price": 30, "stock": -1 }
+      ]
+    },
+    "blacksmith_shop": {
+      "name": "Greta's Smithy",
+      "sellMultiplier": 0.4,
+      "inventory": [
+        { "itemId": "stone_pickaxe", "price": 25, "stock": -1 },
+        { "itemId": "stone_axe", "price": 25, "stock": -1 },
+        { "itemId": "bronze_sword", "price": 80, "stock": -1 },
+        { "itemId": "bronze_pickaxe", "price": 60, "stock": -1 },
+        { "itemId": "bronze_axe", "price": 60, "stock": -1 },
+        { "itemId": "bronze_nails", "price": 5, "stock": -1 },
+        { "itemId": "iron_nails", "price": 12, "stock": -1 }
+      ]
+    },
+    "alchemist_shop": {
+      "name": "Hilda's Apothecary",
+      "sellMultiplier": 0.6,
+      "inventory": [
+        { "itemId": "berry_juice", "price": 8, "stock": -1 },
+        { "itemId": "mushroom_soup", "price": 12, "stock": -1 },
+        { "itemId": "berry", "price": 2, "stock": -1 },
+        { "itemId": "mushroom", "price": 4, "stock": -1 },
+        { "itemId": "thistle", "price": 6, "stock": -1 }
+      ]
+    },
+    "innkeeper_shop": {
+      "name": "Sven's Tavern",
+      "sellMultiplier": 0.5,
+      "inventory": [
+        { "itemId": "cooked_meat", "price": 10, "stock": -1 },
+        { "itemId": "berry_juice", "price": 8, "stock": -1 },
+        { "itemId": "mushroom_soup", "price": 12, "stock": -1 },
+        { "itemId": "grilled_fish", "price": 15, "stock": -1 }
+      ]
+    }
+  }
+}

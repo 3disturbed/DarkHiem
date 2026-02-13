@@ -33,12 +33,28 @@ export const TILE = {
   LAVA:         51,
   OBSIDIAN:     52,
   CHARRED_STONE: 53,
+
+  // Town
+  WALL:         60,
+  FLOOR_WOOD:   61,
+  FLOOR_STONE:  62,
+  DOOR:         63,
+  MARKET_STALL: 64,
+
+  // Caves
+  CAVE_FLOOR:     70,
+  CAVE_WALL:      71,
+  CAVE_ENTRANCE:  72,
+  CAVE_MOSS:      73,
+  CAVE_CRYSTAL:   74,
 };
 
 // Tiles that block movement
 export const SOLID_TILES = new Set([
   TILE.LAVA,
   TILE.CLIFF,
+  TILE.WALL,
+  TILE.CAVE_WALL,
 ]);
 
 // Tiles that slow movement (multiplier on PLAYER_SPEED)
@@ -51,7 +67,13 @@ export const SLOW_TILES = {
   [TILE.SAND]:        0.85,
   [TILE.SNOW]:        0.8,
   [TILE.ICE]:         1.2,  // slippery but fast
+  [TILE.CAVE_MOSS]:   0.9,
 };
+
+// Water tile IDs (for resource/enemy placement checks)
+export const WATER_TILE_IDS = new Set([
+  TILE.WATER, TILE.DEEP_WATER, TILE.MARSH_WATER, TILE.LAVA, TILE.ICE,
+]);
 
 // Base tile colors (placeholder rendering)
 export const TILE_COLORS = {
@@ -78,4 +100,14 @@ export const TILE_COLORS = {
   [TILE.LAVA]:         '#ff4500',
   [TILE.OBSIDIAN]:     '#1a1a2e',
   [TILE.CHARRED_STONE]: '#2a2a2a',
+  [TILE.WALL]:          '#556677',
+  [TILE.FLOOR_WOOD]:    '#8B7355',
+  [TILE.FLOOR_STONE]:   '#707070',
+  [TILE.DOOR]:          '#6B4226',
+  [TILE.MARKET_STALL]:  '#C4A35A',
+  [TILE.CAVE_FLOOR]:    '#3a3a3a',
+  [TILE.CAVE_WALL]:     '#1a1a1a',
+  [TILE.CAVE_ENTRANCE]: '#4a3a2a',
+  [TILE.CAVE_MOSS]:     '#2a3a2a',
+  [TILE.CAVE_CRYSTAL]:  '#4a4a6a',
 };

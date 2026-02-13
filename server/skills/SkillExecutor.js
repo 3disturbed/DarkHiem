@@ -1,4 +1,7 @@
 import { SKILL, SKILL_DB } from '../../shared/SkillTypes.js';
+import { TILE_SIZE, CHUNK_SIZE, CHUNK_PIXEL_SIZE } from '../../shared/Constants.js';
+import { MSG } from '../../shared/MessageTypes.js';
+import { MINEABLE_TILES } from '../network/handlers/CombatHandler.js';
 import PositionComponent from '../ecs/components/PositionComponent.js';
 import HealthComponent from '../ecs/components/HealthComponent.js';
 import CombatComponent from '../ecs/components/CombatComponent.js';
@@ -6,11 +9,13 @@ import StatusEffectComponent from '../ecs/components/StatusEffectComponent.js';
 import SkillComponent from '../ecs/components/SkillComponent.js';
 import StatsComponent from '../ecs/components/StatsComponent.js';
 import PlayerComponent from '../ecs/components/PlayerComponent.js';
+import InventoryComponent from '../ecs/components/InventoryComponent.js';
 import HitDetector from '../combat/HitDetector.js';
 
 export default class SkillExecutor {
-  constructor(combatResolver) {
+  constructor(combatResolver, gameServer) {
     this.combatResolver = combatResolver;
+    this.gameServer = gameServer;
   }
 
   execute(entity, skillId, entityManager) {
@@ -122,8 +127,14 @@ export default class SkillExecutor {
     // Default to down if no facing
     if (dx === 0 && dy === 0) dy = 1;
 
+    const startX = pos.x;
+    const startY = pos.y;
+
     pos.x += dx * def.distance;
     pos.y += dy * def.distance;
+
+    // Destroy mineable walls along the dash path
+    this._destroyTilesAlongPath(entity, startX, startY, dx, dy, def.distance);
 
     // Brief invulnerability
     if (se) {
@@ -138,6 +149,75 @@ export default class SkillExecutor {
       success: true, skillId: def.id, type: 'dash',
       x: pos.x, y: pos.y,
     };
+  }
+
+  _destroyTilesAlongPath(entity, startX, startY, dx, dy, distance) {
+    const gs = this.gameServer;
+    if (!gs) return;
+
+    const inv = entity.getComponent(InventoryComponent);
+    let droppedItems = false;
+
+    for (let step = TILE_SIZE; step <= distance; step += TILE_SIZE) {
+      const px = startX + dx * step;
+      const py = startY + dy * step;
+
+      const chunkX = Math.floor(px / CHUNK_PIXEL_SIZE);
+      const chunkY = Math.floor(py / CHUNK_PIXEL_SIZE);
+      const chunk = gs.worldManager.chunkManager.getChunk(chunkX, chunkY);
+      if (!chunk || !chunk.generated) continue;
+
+      const localX = Math.floor((px - chunkX * CHUNK_PIXEL_SIZE) / TILE_SIZE);
+      const localY = Math.floor((py - chunkY * CHUNK_PIXEL_SIZE) / TILE_SIZE);
+      if (localX < 0 || localX >= CHUNK_SIZE || localY < 0 || localY >= CHUNK_SIZE) continue;
+
+      const idx = localY * CHUNK_SIZE + localX;
+      const tileId = chunk.tiles[idx];
+      const config = MINEABLE_TILES[tileId];
+      if (!config) continue;
+
+      // Destroy the tile
+      chunk.tiles[idx] = config.resultTile;
+      chunk.modified = true;
+
+      // Clear any partial mine health from CombatHandler
+      const tileKey = `${chunkX},${chunkY},${localX},${localY}`;
+      if (gs.combatHandler) gs.combatHandler.tileHealth.delete(tileKey);
+
+      // Broadcast tile change
+      gs.io.emit(MSG.TILE_UPDATE, {
+        chunkX, chunkY, localX, localY,
+        newTile: config.resultTile,
+      });
+
+      // Drop items into player inventory
+      if (inv) {
+        for (const drop of config.drops) {
+          const count = drop.min + Math.floor(Math.random() * (drop.max - drop.min + 1));
+          inv.addItem(drop.item, count);
+        }
+        droppedItems = true;
+      }
+
+      // Damage number feedback
+      const tileWorldX = chunkX * CHUNK_PIXEL_SIZE + localX * TILE_SIZE + TILE_SIZE / 2;
+      const tileWorldY = chunkY * CHUNK_PIXEL_SIZE + localY * TILE_SIZE + TILE_SIZE / 2;
+      this.combatResolver.damageEvents.push({
+        targetId: `tile:${tileKey}`,
+        attackerId: entity.id,
+        damage: config.health, isCrit: false,
+        x: tileWorldX, y: tileWorldY,
+        killed: true, isResource: true,
+      });
+    }
+
+    // Send inventory update if items were dropped
+    if (droppedItems && inv) {
+      const playerConn = gs.players.get(entity.id);
+      if (playerConn) {
+        playerConn.emit(MSG.INVENTORY_UPDATE, { slots: inv.serialize().slots });
+      }
+    }
   }
 
   executeCleave(entity, def, entityManager) {

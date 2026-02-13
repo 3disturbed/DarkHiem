@@ -14,6 +14,14 @@
     "rockChance": 0.15,
     "waterLevel": 0.2
   },
+  "cave": {
+    "caveThreshold": 0.30,
+    "caveMinElevation": 0.45,
+    "caveMaxElevation": 0.75,
+    "caveScale": 0.06,
+    "caveMossChance": 0.0,
+    "caveCrystalChance": 0.4
+  },
   "ambientLight": 0.5,
   "music": "volcanic_theme"
 }

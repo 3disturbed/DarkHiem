@@ -1,10 +1,15 @@
 {
   "baseTile": 20,
   "tileRules": [
-    { "condition": "elevation < 0.25", "tile": 4, "solid": false },
-    { "condition": "elevation < 0.3", "tile": 1, "solid": false },
+    { "condition": "elevation < 0.30", "tile": 1, "solid": false },
+    { "condition": "elevation < 0.50 AND detail > 0.75", "tile": 22, "solid": false },
+    { "condition": "elevation < 0.50 AND moisture > 0.6", "tile": 21, "solid": false },
+    { "condition": "elevation < 0.50", "tile": 20, "solid": false },
+    { "condition": "elevation < 0.65 AND detail < 0.15", "tile": 1, "solid": false },
+    { "condition": "elevation < 0.65 AND detail > 0.7", "tile": 22, "solid": false },
     { "condition": "elevation < 0.65", "tile": 20, "solid": false },
-    { "condition": "elevation < 0.75", "tile": 21, "solid": false },
-    { "condition": "elevation >= 0.75", "tile": 3, "solid": false }
+    { "condition": "elevation < 0.80 AND moisture > 0.5", "tile": 21, "solid": false },
+    { "condition": "elevation < 0.80", "tile": 3, "solid": false },
+    { "condition": "elevation >= 0.80", "tile": 3, "solid": false }
   ]
 }

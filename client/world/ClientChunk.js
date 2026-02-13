@@ -2,7 +2,8 @@ import { CHUNK_SIZE, TILE_SIZE } from '../../shared/Constants.js';
 import { TILE_COLORS, SOLID_TILES, TILE } from '../../shared/TileTypes.js';
 import tileSprites from './TileSprites.js';
 
-const WATER_TILES = new Set([TILE.WATER, TILE.DEEP_WATER, TILE.LAVA, TILE.MARSH_WATER]);
+const WATER_TILES = new Set([TILE.WATER, TILE.DEEP_WATER, TILE.LAVA, TILE.MARSH_WATER, TILE.BOG, TILE.ICE]);
+const CAVE_TILES = new Set([TILE.CAVE_FLOOR, TILE.CAVE_WALL, TILE.CAVE_ENTRANCE, TILE.CAVE_MOSS, TILE.CAVE_CRYSTAL]);
 
 export default class ClientChunk {
   constructor(data) {
@@ -52,6 +53,15 @@ export default class ClientChunk {
     return id >= 0 && WATER_TILES.has(id);
   }
 
+  // Update a single tile (e.g. from tile mining)
+  setTile(localX, localY, newTileId) {
+    if (localX < 0 || localX >= CHUNK_SIZE || localY < 0 || localY >= CHUNK_SIZE) return;
+    const idx = localY * CHUNK_SIZE + localX;
+    this.tiles[idx] = newTileId;
+    this.solids[idx] = SOLID_TILES.has(newTileId);
+    this.dirty = true; // triggers re-render next frame
+  }
+
   // Pre-render tiles to offscreen canvas
   preRender() {
     const size = CHUNK_SIZE * TILE_SIZE;
@@ -78,6 +88,11 @@ export default class ClientChunk {
         if (WATER_TILES.has(tileId)) {
           this.renderWaterTile(ctx, px, py, tileId, tx, ty);
         }
+
+        // Cave tile detail overlays
+        if (CAVE_TILES.has(tileId)) {
+          this.renderCaveTile(ctx, px, py, tileId, tx, ty);
+        }
       }
     }
 
@@ -101,10 +116,39 @@ export default class ClientChunk {
     const seed = (tx * 7 + ty * 13) & 0xFF;
     const isDeep = tileId === TILE.DEEP_WATER;
     const isLava = tileId === TILE.LAVA;
+    const isIce = tileId === TILE.ICE;
+    const isBog = tileId === TILE.BOG;
+    const isMarsh = tileId === TILE.MARSH_WATER;
+
+    if (isIce) {
+      // Ice: subtle crack lines instead of waves
+      ctx.globalAlpha = 0.2;
+      ctx.strokeStyle = '#c0d8ee';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(px + (seed % 16) + 4, py + 2);
+      ctx.lineTo(px + (seed % 12) + 10, py + TILE_SIZE - 4);
+      ctx.stroke();
+      ctx.globalAlpha = 1.0;
+      return;
+    }
+
+    if (isBog) {
+      // Bog: murky bubbles
+      ctx.globalAlpha = 0.15;
+      ctx.fillStyle = '#3a4a2a';
+      const bx = px + (seed % 22) + 4;
+      const by = py + ((seed * 3) % 22) + 4;
+      ctx.beginPath();
+      ctx.arc(bx, by, 2 + (seed % 2), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1.0;
+      return;
+    }
 
     // Wave highlights
     ctx.globalAlpha = 0.15;
-    ctx.fillStyle = isLava ? '#ff6600' : (isDeep ? '#1a6999' : '#5bb0d9');
+    ctx.fillStyle = isLava ? '#ff6600' : isMarsh ? '#4a6a2a' : (isDeep ? '#1a6999' : '#5bb0d9');
     const waveCount = 2 + (seed % 2);
     for (let w = 0; w < waveCount; w++) {
       const wx = px + ((seed + w * 11) % 24) + 2;
@@ -146,6 +190,50 @@ export default class ClientChunk {
     if (waterS) ctx.fillRect(px, py + TILE_SIZE - 1, TILE_SIZE, 1);
     if (waterW) ctx.fillRect(px, py, 1, TILE_SIZE);
     if (waterE) ctx.fillRect(px + TILE_SIZE - 1, py, 1, TILE_SIZE);
+  }
+
+  renderCaveTile(ctx, px, py, tileId, tx, ty) {
+    const seed = (tx * 11 + ty * 23) & 0xFF;
+
+    if (tileId === TILE.CAVE_ENTRANCE) {
+      // Dark opening with stone arch effect
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.fillRect(px + 2, py + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+      // Arch top
+      ctx.fillStyle = '#5a4a3a';
+      ctx.fillRect(px, py, TILE_SIZE, 4);
+      ctx.fillRect(px, py, 4, TILE_SIZE);
+      ctx.fillRect(px + TILE_SIZE - 4, py, 4, TILE_SIZE);
+    } else if (tileId === TILE.CAVE_FLOOR) {
+      // Subtle rock texture - small dots
+      ctx.globalAlpha = 0.15;
+      ctx.fillStyle = '#555';
+      const dots = 2 + (seed % 3);
+      for (let d = 0; d < dots; d++) {
+        const dx = px + ((seed + d * 13) % 28) + 2;
+        const dy = py + ((seed + d * 19) % 28) + 2;
+        ctx.fillRect(dx, dy, 2, 2);
+      }
+      ctx.globalAlpha = 1.0;
+    } else if (tileId === TILE.CAVE_MOSS) {
+      // Green moss patches
+      ctx.globalAlpha = 0.2;
+      ctx.fillStyle = '#3a5a2a';
+      const mx = px + (seed % 20) + 4;
+      const my = py + ((seed * 3) % 20) + 4;
+      ctx.fillRect(mx, my, 8 + (seed % 6), 6 + (seed % 4));
+      ctx.globalAlpha = 1.0;
+    } else if (tileId === TILE.CAVE_CRYSTAL) {
+      // Glowing crystal highlights
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = '#8888ff';
+      const cx = px + (seed % 22) + 4;
+      const cy = py + ((seed * 7) % 22) + 4;
+      ctx.fillRect(cx, cy, 4, 8);
+      ctx.fillRect(cx + 6, cy + 2, 3, 6);
+      ctx.globalAlpha = 1.0;
+    }
+    // CAVE_WALL has no extra overlay — just the dark base color
   }
 
   // Render chunk to main canvas

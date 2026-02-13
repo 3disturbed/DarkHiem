@@ -1,0 +1,176 @@
+{
+  "dialogs": {
+    "elder_thorvald_dialog": {
+      "startNode": "greeting",
+      "nodes": {
+        "greeting": {
+          "text": "Welcome, traveler. I am Elder Thorvald. These lands are dangerous, but our town is safe... for now.",
+          "choices": [
+            { "text": "What is this place?", "nextNode": "about_town" },
+            { "text": "Do you have any tasks for me?", "action": "show_quests" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        },
+        "about_town": {
+          "text": "This is Darkheim, the last settlement of the living. Beyond our walls, monsters roam freely. We need brave warriors to push back the darkness.",
+          "choices": [
+            { "text": "I'll help.", "action": "show_quests" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        }
+      }
+    },
+    "merchant_bryn_dialog": {
+      "startNode": "greeting",
+      "nodes": {
+        "greeting": {
+          "text": "Welcome to my shop! I've got supplies for any adventurer. What can I do for you?",
+          "choices": [
+            { "text": "Show me your wares.", "action": "open_shop" },
+            { "text": "Just browsing. Farewell.", "action": "close" }
+          ]
+        }
+      }
+    },
+    "scout_renna_dialog": {
+      "startNode": "greeting",
+      "nodes": {
+        "greeting": {
+          "text": "I've been scouting the regions beyond the meadow. There are terrible things out there... and great treasures.",
+          "choices": [
+            { "text": "What have you found?", "nextNode": "expeditions" },
+            { "text": "Do you need anything?", "action": "show_quests" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        },
+        "expeditions": {
+          "text": "Each biome has a powerful guardian. Defeat them all, and we may be able to open a portal to the source of all this evil -- the Volcanic Wasteland.",
+          "choices": [
+            { "text": "I'll take on this challenge.", "action": "show_quests" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        }
+      }
+    },
+    "blacksmith_greta_dialog": {
+      "startNode": "greeting",
+      "nodes": {
+        "greeting": {
+          "text": "The forge runs hot and the steel sings! I'm Greta, best blacksmith this side of the mountains. Need tools or weapons?",
+          "choices": [
+            { "text": "Show me your wares.", "action": "open_shop" },
+            { "text": "Tell me about your craft.", "nextNode": "about_craft" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        },
+        "about_craft": {
+          "text": "Every piece I forge is tested in battle. Bronze for beginners, iron for the determined, and steel for the true warriors.",
+          "choices": [
+            { "text": "I'd like to buy something.", "action": "open_shop" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        }
+      }
+    },
+    "alchemist_hilda_dialog": {
+      "startNode": "greeting",
+      "nodes": {
+        "greeting": {
+          "text": "Ah, another adventurer seeking potions? I am Hilda. My concoctions can heal wounds and restore vigor.",
+          "choices": [
+            { "text": "Show me what you have.", "action": "open_shop" },
+            { "text": "What do you sell?", "nextNode": "about_potions" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        },
+        "about_potions": {
+          "text": "Berry juice for minor wounds, mushroom soup for stamina. Bring me rare ingredients and I can brew something truly special.",
+          "choices": [
+            { "text": "Let me see your shop.", "action": "open_shop" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        }
+      }
+    },
+    "fishmonger_olaf_dialog": {
+      "startNode": "greeting",
+      "nodes": {
+        "greeting": {
+          "text": "Ho there! Name's Olaf. Fresh fish daily -- when someone catches them! The rivers are full of trout and the lakes hold even bigger prizes.",
+          "choices": [
+            { "text": "Any work for a fisherman?", "action": "show_quests" },
+            { "text": "Tell me about fishing.", "nextNode": "about_fishing" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        },
+        "about_fishing": {
+          "text": "Get yourself a rod and head to any river or lake. The deeper the water, the bigger the catch. Different biomes have different fish too!",
+          "choices": [
+            { "text": "I'll give it a try.", "action": "show_quests" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        }
+      }
+    },
+    "innkeeper_sven_dialog": {
+      "startNode": "greeting",
+      "nodes": {
+        "greeting": {
+          "text": "Welcome to Sven's Tavern! Pull up a chair. We've got hot food and cold drinks.",
+          "choices": [
+            { "text": "What's on the menu?", "action": "open_shop" },
+            { "text": "Tell me the latest news.", "nextNode": "news" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        },
+        "news": {
+          "text": "Travelers say the caves are rich with ore, but watch out for the creatures within. Captain Eira has been recruiting warriors to clear them out.",
+          "choices": [
+            { "text": "I'll have some food.", "action": "open_shop" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        }
+      }
+    },
+    "captain_eira_dialog": {
+      "startNode": "greeting",
+      "nodes": {
+        "greeting": {
+          "text": "Halt! I am Captain Eira of the Darkheim Guard. The wilds grow more dangerous by the day. If you've got steel in your spine, I could use your help.",
+          "choices": [
+            { "text": "What do you need?", "action": "show_quests" },
+            { "text": "What's the situation?", "nextNode": "situation" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        },
+        "situation": {
+          "text": "The caves beneath our lands teem with monsters. Worse, creatures from the dark forest and mountains press closer to our walls. We need fighters.",
+          "choices": [
+            { "text": "I'll fight.", "action": "show_quests" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        }
+      }
+    },
+    "farmer_bjorn_dialog": {
+      "startNode": "greeting",
+      "nodes": {
+        "greeting": {
+          "text": "Well met, friend! I'm Bjorn. I tend the fields near the south gate. The soil here is good, but I could always use an extra pair of hands gathering supplies.",
+          "choices": [
+            { "text": "Need any help?", "action": "show_quests" },
+            { "text": "What do you grow?", "nextNode": "farming" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        },
+        "farming": {
+          "text": "Berries, flax, herbs -- the land provides if you know where to look. The meadow has the basics, but rarer plants grow in the darker biomes.",
+          "choices": [
+            { "text": "I'll help you gather.", "action": "show_quests" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        }
+      }
+    }
+  }
+}

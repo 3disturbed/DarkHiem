@@ -5,6 +5,7 @@ export const STATION_TYPE = {
   FORGE: 'forge',
   COOKING_FIRE: 'cooking_fire',
   GEM_TABLE: 'gem_table',
+  ARCANE_TABLE: 'arcane_table',
 };
 
 export const STATION_DB = {
@@ -53,12 +54,72 @@ export const STATION_DB = {
     size: 36,
     interactRange: 80,
   },
+  arcane_table: {
+    id: 'arcane_table',
+    name: 'Arcane Table',
+    type: 'arcane_table',
+    maxLevel: 3,
+    color: '#6a0dad',
+    size: 38,
+    interactRange: 80,
+  },
+  boss_altar: {
+    id: 'boss_altar',
+    name: 'Summoning Shrine',
+    color: '#B87333',
+    size: 48,
+    interactRange: 100,
+    maxLevel: 1,
+  },
+
+  // Chests (placeable storage)
+  wooden_chest: {
+    id: 'wooden_chest',
+    name: 'Wooden Chest',
+    color: '#8B6914',
+    size: 32,
+    interactRange: 64,
+    maxLevel: 1,
+    isChest: true,
+    chestSlots: 20,
+  },
+  reinforced_chest: {
+    id: 'reinforced_chest',
+    name: 'Reinforced Chest',
+    color: '#A0782C',
+    size: 34,
+    interactRange: 64,
+    maxLevel: 1,
+    isChest: true,
+    chestSlots: 40,
+  },
+  iron_chest: {
+    id: 'iron_chest',
+    name: 'Iron Chest',
+    color: '#6A6A6A',
+    size: 36,
+    interactRange: 64,
+    maxLevel: 1,
+    isChest: true,
+    chestSlots: 80,
+  },
+  obsidian_vault: {
+    id: 'obsidian_vault',
+    name: 'Obsidian Vault',
+    color: '#2A1A3A',
+    size: 38,
+    interactRange: 64,
+    maxLevel: 1,
+    isChest: true,
+    chestSlots: 120,
+  },
 };
 
 // Town station placements (pre-placed in the starting town area)
 export const TOWN_STATIONS = [
-  { stationId: 'workbench', x: 440, y: 480, level: 1 },
-  { stationId: 'furnace',   x: 560, y: 440, level: 1 },
-  { stationId: 'forge',     x: 600, y: 480, level: 1 },
-  { stationId: 'cooking_fire', x: 480, y: 560, level: 1 },
+  { stationId: 'workbench',    x: -80,  y: 576, level: 2 },   // Workshop building (SW)
+  { stationId: 'furnace',      x: -368, y: 848, level: 1 },   // Furnace House (SW)
+  { stationId: 'forge',        x: -320, y: 620, level: 1 },   // Forge building (SW)
+  { stationId: 'cooking_fire', x: 580,  y: 1056, level: 1 },  // Inn building (SE)
+  { stationId: 'gem_table',    x: -120, y: 576, level: 1 },   // Workshop building (SW)
 ];

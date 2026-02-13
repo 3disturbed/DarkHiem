@@ -33,6 +33,30 @@ export default class NetworkClient {
     this.onSkillUpdate = null;
     this.onSkillResult = null;
     this.onSkillCooldown = null;
+
+    // Dialog, quest, shop callbacks
+    this.onDialogStart = null;
+    this.onDialogNode = null;
+    this.onDialogEnd = null;
+    this.onQuestList = null;
+    this.onQuestProgress = null;
+    this.onQuestComplete = null;
+    this.onShopData = null;
+    this.onShopResult = null;
+
+    // Chest callbacks
+    this.onChestData = null;
+    this.onChestClose = null;
+
+    // Fishing callbacks
+    this.onFishCast = null;
+    this.onFishBite = null;
+    this.onFishReel = null;
+    this.onFishCatch = null;
+    this.onFishFail = null;
+
+    // Tile mining
+    this.onTileUpdate = null;
   }
 
   connect() {
@@ -161,6 +185,66 @@ export default class NetworkClient {
     this.socket.on(MSG.SKILL_COOLDOWN, (data) => {
       if (this.onSkillCooldown) this.onSkillCooldown(data);
     });
+
+    // Dialog
+    this.socket.on(MSG.DIALOG_START, (data) => {
+      if (this.onDialogStart) this.onDialogStart(data);
+    });
+    this.socket.on(MSG.DIALOG_NODE, (data) => {
+      if (this.onDialogNode) this.onDialogNode(data);
+    });
+    this.socket.on(MSG.DIALOG_END, (data) => {
+      if (this.onDialogEnd) this.onDialogEnd(data);
+    });
+
+    // Quests
+    this.socket.on(MSG.QUEST_LIST, (data) => {
+      if (this.onQuestList) this.onQuestList(data);
+    });
+    this.socket.on(MSG.QUEST_PROGRESS, (data) => {
+      if (this.onQuestProgress) this.onQuestProgress(data);
+    });
+    this.socket.on(MSG.QUEST_COMPLETE, (data) => {
+      if (this.onQuestComplete) this.onQuestComplete(data);
+    });
+
+    // Shop
+    this.socket.on(MSG.SHOP_DATA, (data) => {
+      if (this.onShopData) this.onShopData(data);
+    });
+    this.socket.on(MSG.SHOP_RESULT, (data) => {
+      if (this.onShopResult) this.onShopResult(data);
+    });
+
+    // Chests
+    this.socket.on(MSG.CHEST_DATA, (data) => {
+      if (this.onChestData) this.onChestData(data);
+    });
+    this.socket.on(MSG.CHEST_CLOSE, (data) => {
+      if (this.onChestClose) this.onChestClose(data);
+    });
+
+    // Fishing
+    this.socket.on(MSG.FISH_CAST, (data) => {
+      if (this.onFishCast) this.onFishCast(data);
+    });
+    this.socket.on(MSG.FISH_BITE, (data) => {
+      if (this.onFishBite) this.onFishBite(data);
+    });
+    this.socket.on(MSG.FISH_REEL, (data) => {
+      if (this.onFishReel) this.onFishReel(data);
+    });
+    this.socket.on(MSG.FISH_CATCH, (data) => {
+      if (this.onFishCatch) this.onFishCatch(data);
+    });
+    this.socket.on(MSG.FISH_FAIL, (data) => {
+      if (this.onFishFail) this.onFishFail(data);
+    });
+
+    // Tile mining
+    this.socket.on(MSG.TILE_UPDATE, (data) => {
+      if (this.onTileUpdate) this.onTileUpdate(data);
+    });
   }
 
   processServerState(data) {
@@ -241,6 +325,11 @@ export default class NetworkClient {
     this.socket.emit(MSG.PLAYER_RESPAWN, {});
   }
 
+  sendRecall() {
+    if (!this.connected) return;
+    this.socket.emit(MSG.TOWN_RECALL, {});
+  }
+
   sendInteract() {
     if (!this.connected) return;
     this.socket.emit(MSG.STATION_INTERACT, {});
@@ -284,6 +373,81 @@ export default class NetworkClient {
   sendSkillHotbarSet(slot, skillId) {
     if (!this.connected) return;
     this.socket.emit(MSG.SKILL_HOTBAR_SET, { slot, skillId });
+  }
+
+  // Dialog
+  sendDialogChoice(npcId, choiceIndex) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.DIALOG_CHOICE, { npcId, choiceIndex });
+  }
+
+  sendDialogEnd(npcId) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.DIALOG_END, { npcId });
+  }
+
+  // Quests
+  sendQuestAccept(questId) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.QUEST_ACCEPT, { questId });
+  }
+
+  sendQuestComplete(questId) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.QUEST_COMPLETE, { questId });
+  }
+
+  // Shop
+  sendShopBuy(itemId, count) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.SHOP_BUY, { itemId, count });
+  }
+
+  sendShopSell(slotIndex, count) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.SHOP_SELL, { slotIndex, count });
+  }
+
+  // Chests
+  sendChestDeposit(entityId, playerSlot, count) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.CHEST_DEPOSIT, { entityId, playerSlot, count });
+  }
+
+  sendChestWithdraw(entityId, chestSlot, count) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.CHEST_WITHDRAW, { entityId, chestSlot, count });
+  }
+
+  sendChestClose(entityId) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.CHEST_CLOSE, { entityId });
+  }
+
+  // Fishing
+  sendFishCast(aimX, aimY) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.FISH_CAST, { aimX, aimY });
+  }
+
+  sendFishReel() {
+    if (!this.connected) return;
+    this.socket.emit(MSG.FISH_REEL, {});
+  }
+
+  sendFishCancel() {
+    if (!this.connected) return;
+    this.socket.emit(MSG.FISH_FAIL, {});
+  }
+
+  sendRodPartAttach(partSlot, itemId, invSlot) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.ROD_PART_ATTACH, { partSlot, itemId, invSlot });
+  }
+
+  sendRodPartRemove(partSlot) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.ROD_PART_REMOVE, { partSlot });
   }
 
   getLocalPlayerState() {

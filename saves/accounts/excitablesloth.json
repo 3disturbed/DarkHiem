@@ -1,0 +1,13 @@
+{
+  "username": "excitablesloth",
+  "passwordHash": "$2b$10$hlqlYotJl4q/YeqLTh6Tq.t67Ey2784./B./yjdSM1UMTeUp7OHMy",
+  "createdAt": 1770836380890,
+  "characters": [
+    {
+      "id": "165d9fb3-7f15-45f8-ab63-aac9b111188f",
+      "name": "Wazzok",
+      "color": "#ecf0f1",
+      "createdAt": 1770836395479
+    }
+  ]
+}

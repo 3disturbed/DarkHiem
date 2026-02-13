@@ -1,34 +1,54 @@
 import { ITEM_DB, RARITY_COLORS } from '../../shared/ItemTypes.js';
 
-const COLS = 5;
-const ROWS = 4;
-const SLOT_SIZE = 48;
-const SLOT_PAD = 4;
-const PANEL_PAD = 12;
-const ACTION_BAR_H = 32;
-const BTN_W = 76;
+// Layout constants
+const PANEL_W = 520;
+const PANEL_H = 420;
+const PANEL_PAD = 10;
+const TAB_H = 22;
+const TAB_PAD = 2;
+const LIST_W = 210;
+const DETAIL_W = PANEL_W - LIST_W - PANEL_PAD * 3;
+const ROW_H = 22;
+const VISIBLE_ROWS = 14;
+const BTN_W = 90;
 const BTN_H = 22;
-const BTN_GAP = 8;
+const BTN_GAP = 6;
+const HEADER_H = 28;
+
+const CATEGORIES = [
+  { id: 'all', label: 'All', filter: () => true },
+  { id: 'weapon', label: 'Wpn', filter: (d) => d.type === 'equipment' && d.slot === 'weapon' },
+  { id: 'armor', label: 'Arm', filter: (d) => d.type === 'equipment' && ['head', 'body', 'legs', 'feet', 'shield'].includes(d.slot) },
+  { id: 'tool', label: 'Tool', filter: (d) => d.type === 'equipment' && d.slot === 'tool' },
+  { id: 'ring', label: 'Ring', filter: (d) => d.type === 'equipment' && (d.slot === 'ring1' || d.slot === 'ring2') },
+  { id: 'material', label: 'Mat', filter: (d) => d.type === 'material' },
+  { id: 'consumable', label: 'Cons', filter: (d) => d.type === 'consumable' },
+  { id: 'gem', label: 'Gem', filter: (d) => d.type === 'gem' },
+];
 
 export default class InventoryPanel {
   constructor() {
     this.visible = false;
-    this.selectedSlot = -1;
-    this.hoveredSlot = -1;
-    this.swapSource = -1; // slot index when in swap mode, -1 otherwise
-    this._lastClickSlot = -1;
-    this._lastClickTime = 0;
+    this.selectedCategory = 0;
+    this.selectedItemIndex = -1;
+    this.hoveredItemIndex = -1;
+    this.scrollOffset = 0;
+    this.swapSource = -1; // slotIndex in swap mode
     this.mouseX = 0;
     this.mouseY = 0;
     this.x = 0;
     this.y = 0;
-    this.width = COLS * (SLOT_SIZE + SLOT_PAD) + SLOT_PAD + PANEL_PAD * 2;
-    this.height = ROWS * (SLOT_SIZE + SLOT_PAD) + SLOT_PAD + PANEL_PAD * 2 + 24 + ACTION_BAR_H;
+    this.width = PANEL_W;
+    this.height = PANEL_H;
+    this._cachedItems = [];
   }
 
   toggle() {
     this.visible = !this.visible;
-    if (!this.visible) { this.selectedSlot = -1; this.swapSource = -1; }
+    if (!this.visible) {
+      this.selectedItemIndex = -1;
+      this.swapSource = -1;
+    }
   }
 
   cancelSwap() {
@@ -40,328 +60,588 @@ export default class InventoryPanel {
     this.y = canvasHeight / 2 - this.height / 2 + 40;
   }
 
+  // API compat: selectedSlot returns the real inventory slot index of the selected item
+  get selectedSlot() {
+    if (this.selectedItemIndex >= 0 && this.selectedItemIndex < this._cachedItems.length) {
+      return this._cachedItems[this.selectedItemIndex].slotIndex;
+    }
+    return -1;
+  }
+  set selectedSlot(v) {
+    // Find item in cached list by slotIndex
+    if (v < 0) { this.selectedItemIndex = -1; return; }
+    const idx = this._cachedItems.findIndex(i => i.slotIndex === v);
+    this.selectedItemIndex = idx;
+  }
+
+  // API compat: hoveredSlot
+  get hoveredSlot() {
+    if (this.hoveredItemIndex >= 0 && this.hoveredItemIndex < this._cachedItems.length) {
+      return this._cachedItems[this.hoveredItemIndex].slotIndex;
+    }
+    return -1;
+  }
+
+  handleScroll(delta) {
+    if (!this.visible) return false;
+    const maxScroll = Math.max(0, this._cachedItems.length - VISIBLE_ROWS);
+    if (delta > 0) {
+      this.scrollOffset = Math.min(this.scrollOffset + 1, maxScroll);
+    } else if (delta < 0) {
+      this.scrollOffset = Math.max(this.scrollOffset - 1, 0);
+    }
+    return true;
+  }
+
   handleClick(mx, my, inventory, onEquip, onUse, onDrop, onSwap) {
     if (!this.visible) return false;
     if (mx < this.x || mx > this.x + this.width) return false;
     if (my < this.y || my > this.y + this.height) return false;
 
-    // In swap mode: clicking any slot completes the swap
+    this._updateCache(inventory);
+
+    // Swap mode: click item in list to complete swap
     if (this.swapSource >= 0) {
-      const slotIndex = this.getSlotAt(mx, my);
-      if (slotIndex >= 0 && slotIndex !== this.swapSource) {
-        if (onSwap) onSwap(this.swapSource, slotIndex);
-        this.selectedSlot = slotIndex;
+      const clickedIdx = this._getItemIndexAt(mx, my);
+      if (clickedIdx >= 0) {
+        const targetSlot = this._cachedItems[clickedIdx].slotIndex;
+        if (targetSlot !== this.swapSource && onSwap) {
+          onSwap(this.swapSource, targetSlot);
+        }
       }
       this.swapSource = -1;
       return true;
     }
 
-    // Check action buttons first
-    const action = this._getActionAt(mx, my, inventory);
-    if (action && this.selectedSlot >= 0) {
-      const slot = inventory.getSlot(this.selectedSlot);
+    // Check tab clicks
+    const tabIdx = this._getTabAt(mx, my);
+    if (tabIdx >= 0) {
+      this.selectedCategory = tabIdx;
+      this.selectedItemIndex = -1;
+      this.scrollOffset = 0;
+      this._updateCache(inventory);
+      return true;
+    }
+
+    // Check action button clicks
+    const action = this._getActionAt(mx, my);
+    if (action && this.selectedItemIndex >= 0 && this.selectedItemIndex < this._cachedItems.length) {
+      const item = this._cachedItems[this.selectedItemIndex];
+      const slot = inventory.getSlot(item.slotIndex);
       if (slot) {
         if (action === 'primary') {
-          const itemDef = ITEM_DB[slot.itemId];
-          if (itemDef && itemDef.type === 'equipment' && onEquip) onEquip(this.selectedSlot);
-          else if (itemDef && itemDef.type === 'consumable' && onUse) onUse(this.selectedSlot);
+          const def = ITEM_DB[slot.itemId];
+          if (def && def.type === 'equipment' && onEquip) onEquip(item.slotIndex);
+          else if (def && def.type === 'consumable' && onUse) onUse(item.slotIndex);
         } else if (action === 'drop') {
-          if (onDrop) onDrop(this.selectedSlot, 1);
+          if (onDrop) onDrop(item.slotIndex, 1);
         } else if (action === 'dropAll') {
-          if (onDrop) onDrop(this.selectedSlot, slot.count);
+          if (onDrop) onDrop(item.slotIndex, slot.count);
         } else if (action === 'swap') {
-          this.swapSource = this.selectedSlot;
+          this.swapSource = item.slotIndex;
         }
       }
       return true;
     }
 
-    const slotIndex = this.getSlotAt(mx, my);
-    if (slotIndex === -1) return true; // clicked panel but not a slot
-
-    const slot = inventory.getSlot(slotIndex);
-    if (!slot) {
-      this.selectedSlot = -1;
+    // Check item list clicks
+    const clickedIdx = this._getItemIndexAt(mx, my);
+    if (clickedIdx >= 0) {
+      if (clickedIdx === this.selectedItemIndex) {
+        // Double-click behavior: equip equipment, use consumables
+        const item = this._cachedItems[clickedIdx];
+        const def = item.def;
+        if (def && def.type === 'equipment' && onEquip) onEquip(item.slotIndex);
+        else if (def && def.type === 'consumable' && onUse) onUse(item.slotIndex);
+      }
+      this.selectedItemIndex = clickedIdx;
       return true;
     }
 
-    // Click on item: equip immediately, or select consumable (double-click to consume)
-    const itemDef = ITEM_DB[slot.itemId];
-    const now = Date.now();
-    const isDoubleClick = slotIndex === this._lastClickSlot && (now - this._lastClickTime) < 400;
-
-    if (itemDef && itemDef.type === 'equipment') {
-      if (onEquip) onEquip(slotIndex);
-    } else if (itemDef && itemDef.type === 'consumable' && isDoubleClick) {
-      if (onUse) onUse(slotIndex);
-    }
-
-    this._lastClickSlot = slotIndex;
-    this._lastClickTime = now;
-    this.selectedSlot = slotIndex;
-    return true;
+    return true; // consumed click (inside panel)
   }
 
-  // Right-click to drop an item at mouse position
   handleRightClick(mx, my, inventory, onDrop) {
     if (!this.visible) return false;
-    const slotIndex = this.getSlotAt(mx, my);
-    if (slotIndex < 0) return false;
-    const slot = inventory.getSlot(slotIndex);
-    if (!slot) return false;
-    if (onDrop) onDrop(slotIndex, 1);
-    this.selectedSlot = slotIndex;
+    this._updateCache(inventory);
+    const clickedIdx = this._getItemIndexAt(mx, my);
+    if (clickedIdx < 0) return false;
+    const item = this._cachedItems[clickedIdx];
+    if (onDrop) onDrop(item.slotIndex, 1);
+    this.selectedItemIndex = clickedIdx;
     return true;
   }
 
-  // Gamepad Y: drop the currently selected item
   dropSelected(inventory, onDrop) {
-    if (this.selectedSlot < 0) return;
-    const slot = inventory.getSlot(this.selectedSlot);
-    if (!slot) return;
-    if (onDrop) onDrop(this.selectedSlot, 1);
+    this._updateCache(inventory);
+    if (this.selectedItemIndex < 0 || this.selectedItemIndex >= this._cachedItems.length) return;
+    const item = this._cachedItems[this.selectedItemIndex];
+    if (onDrop) onDrop(item.slotIndex, 1);
   }
 
   selectDir(dx, dy) {
-    if (this.selectedSlot === -1) {
-      this.selectedSlot = 0;
+    // Left/right = switch category tabs
+    if (dx !== 0) {
+      this.selectedCategory = Math.max(0, Math.min(CATEGORIES.length - 1, this.selectedCategory + dx));
+      this.selectedItemIndex = -1;
+      this.scrollOffset = 0;
       return;
     }
-    const col = this.selectedSlot % COLS;
-    const row = Math.floor(this.selectedSlot / COLS);
-    const newCol = Math.max(0, Math.min(COLS - 1, col + dx));
-    const newRow = Math.max(0, Math.min(ROWS - 1, row + dy));
-    this.selectedSlot = newRow * COLS + newCol;
+    // Up/down = navigate item list
+    if (dy !== 0) {
+      const maxIdx = this._cachedItems.length - 1;
+      if (this.selectedItemIndex === -1) {
+        this.selectedItemIndex = 0;
+      } else {
+        this.selectedItemIndex = Math.max(0, Math.min(maxIdx, this.selectedItemIndex + dy));
+      }
+      // Auto-scroll
+      if (this.selectedItemIndex < this.scrollOffset) {
+        this.scrollOffset = this.selectedItemIndex;
+      } else if (this.selectedItemIndex >= this.scrollOffset + VISIBLE_ROWS) {
+        this.scrollOffset = this.selectedItemIndex - VISIBLE_ROWS + 1;
+      }
+    }
   }
 
   confirmSelected(inventory, onEquip, onUse) {
-    if (this.selectedSlot < 0) return;
-    const slot = inventory.getSlot(this.selectedSlot);
-    if (!slot) return;
-    const itemDef = ITEM_DB[slot.itemId];
-    if (itemDef && itemDef.type === 'equipment' && onEquip) {
-      onEquip(this.selectedSlot);
-    } else if (itemDef && itemDef.type === 'consumable' && onUse) {
-      onUse(this.selectedSlot);
-    }
+    this._updateCache(inventory);
+    if (this.selectedItemIndex < 0 || this.selectedItemIndex >= this._cachedItems.length) return;
+    const item = this._cachedItems[this.selectedItemIndex];
+    const def = item.def;
+    if (def && def.type === 'equipment' && onEquip) onEquip(item.slotIndex);
+    else if (def && def.type === 'consumable' && onUse) onUse(item.slotIndex);
   }
 
-  getSlotAt(mx, my) {
-    const startX = this.x + PANEL_PAD + SLOT_PAD;
-    const startY = this.y + PANEL_PAD + 24 + SLOT_PAD;
+  handleMouseMove(mx, my) {
+    if (!this.visible) { this.hoveredItemIndex = -1; return; }
+    this.mouseX = mx;
+    this.mouseY = my;
+    this.hoveredItemIndex = this._getItemIndexAt(mx, my);
+  }
 
-    for (let row = 0; row < ROWS; row++) {
-      for (let col = 0; col < COLS; col++) {
-        const sx = startX + col * (SLOT_SIZE + SLOT_PAD);
-        const sy = startY + row * (SLOT_SIZE + SLOT_PAD);
-        if (mx >= sx && mx < sx + SLOT_SIZE && my >= sy && my < sy + SLOT_SIZE) {
-          return row * COLS + col;
-        }
-      }
+  // ---- Filtering & Cache ----
+
+  _updateCache(inventory) {
+    const filter = CATEGORIES[this.selectedCategory].filter;
+    const items = [];
+    if (!inventory || !inventory.slots) { this._cachedItems = items; return; }
+    for (let i = 0; i < inventory.slots.length; i++) {
+      const slot = inventory.slots[i];
+      if (!slot) continue;
+      const def = ITEM_DB[slot.itemId];
+      if (!def) continue;
+      if (!filter(def)) continue;
+      items.push({
+        slotIndex: i,
+        itemId: slot.itemId,
+        count: slot.count,
+        def,
+        upgradeLevel: slot.upgradeLevel || 0,
+        gems: slot.gems || [],
+        upgradeXp: slot.upgradeXp || 0,
+      });
+    }
+    // Sort: equipment first (by slot), then materials, consumables, gems; alphabetical within
+    const typeOrder = { equipment: 0, consumable: 1, material: 2, gem: 3 };
+    items.sort((a, b) => {
+      const ta = typeOrder[a.def.type] ?? 9;
+      const tb = typeOrder[b.def.type] ?? 9;
+      if (ta !== tb) return ta - tb;
+      return a.def.name.localeCompare(b.def.name);
+    });
+    this._cachedItems = items;
+    // Clamp selection
+    if (this.selectedItemIndex >= items.length) {
+      this.selectedItemIndex = items.length - 1;
+    }
+    const maxScroll = Math.max(0, items.length - VISIBLE_ROWS);
+    if (this.scrollOffset > maxScroll) this.scrollOffset = maxScroll;
+  }
+
+  // ---- Hit Detection ----
+
+  _getTabAt(mx, my) {
+    const tabY = this.y + HEADER_H;
+    if (my < tabY || my > tabY + TAB_H) return -1;
+    const tabTotalW = CATEGORIES.length * (this._tabWidth() + TAB_PAD);
+    const tabStartX = this.x + PANEL_PAD;
+    for (let i = 0; i < CATEGORIES.length; i++) {
+      const tx = tabStartX + i * (this._tabWidth() + TAB_PAD);
+      if (mx >= tx && mx < tx + this._tabWidth()) return i;
     }
     return -1;
   }
 
-  _getActionAt(mx, my, inventory) {
-    if (this.selectedSlot < 0) return null;
-    const slot = inventory.getSlot(this.selectedSlot);
-    if (!slot) return null;
+  _tabWidth() {
+    return Math.floor((PANEL_W - PANEL_PAD * 2) / CATEGORIES.length) - TAB_PAD;
+  }
 
-    const actionY = this.y + this.height - ACTION_BAR_H + 4;
-    const btns = this._getButtons(slot);
-    const totalW = btns.length * BTN_W + (btns.length - 1) * BTN_GAP;
-    const startBtnX = this.x + (this.width - totalW) / 2;
+  _getItemIndexAt(mx, my) {
+    const listX = this.x + PANEL_PAD;
+    const listY = this.y + HEADER_H + TAB_H + TAB_PAD + 4;
+    const listH = VISIBLE_ROWS * ROW_H;
+    if (mx < listX || mx > listX + LIST_W) return -1;
+    if (my < listY || my > listY + listH) return -1;
+    const row = Math.floor((my - listY) / ROW_H);
+    const idx = this.scrollOffset + row;
+    if (idx < 0 || idx >= this._cachedItems.length) return -1;
+    return idx;
+  }
 
-    for (let i = 0; i < btns.length; i++) {
-      const bx = startBtnX + i * (BTN_W + BTN_GAP);
-      if (mx >= bx && mx < bx + BTN_W && my >= actionY && my < actionY + BTN_H) {
-        return btns[i].action;
+  _getActionAt(mx, my) {
+    if (this.selectedItemIndex < 0 || this.selectedItemIndex >= this._cachedItems.length) return null;
+    const item = this._cachedItems[this.selectedItemIndex];
+    const btns = this._getButtons(item);
+    const detailX = this.x + PANEL_PAD + LIST_W + PANEL_PAD;
+    const btnY = this.y + this.height - PANEL_PAD - BTN_H * 2 - BTN_GAP;
+    for (let row = 0; row < 2; row++) {
+      for (let col = 0; col < 2; col++) {
+        const bIdx = row * 2 + col;
+        if (bIdx >= btns.length) break;
+        const bx = detailX + col * (BTN_W + BTN_GAP);
+        const by = btnY + row * (BTN_H + BTN_GAP);
+        if (mx >= bx && mx < bx + BTN_W && my >= by && my < by + BTN_H) {
+          return btns[bIdx].action;
+        }
       }
     }
     return null;
   }
 
-  _getButtons(slot) {
-    const itemDef = ITEM_DB[slot.itemId];
+  _getButtons(item) {
     const btns = [];
-    if (itemDef && (itemDef.type === 'equipment' || itemDef.type === 'consumable')) {
-      const label = itemDef.type === 'equipment' ? 'Equip' : 'Consume';
-      btns.push({ action: 'primary', label, bg: '#2a6e3a', border: '#3a8' });
+    if (item.def.type === 'equipment') {
+      btns.push({ action: 'primary', label: 'Equip', bg: '#2a6e3a', border: '#3a8' });
+    } else if (item.def.type === 'consumable') {
+      btns.push({ action: 'primary', label: 'Use', bg: '#2a6e3a', border: '#3a8' });
     }
-    btns.push({ action: 'swap', label: 'Swap', bg: '#2a4a6e', border: '#58a' });
+    btns.push({ action: 'swap', label: 'Move', bg: '#2a4a6e', border: '#58a' });
     btns.push({ action: 'drop', label: 'Drop 1', bg: '#6e2a2a', border: '#a55' });
-    if (slot.count > 1) {
+    if (item.count > 1) {
       btns.push({ action: 'dropAll', label: 'Drop All', bg: '#6e2a4a', border: '#a5a' });
     }
     return btns;
   }
 
-  handleMouseMove(mx, my) {
-    if (!this.visible) { this.hoveredSlot = -1; return; }
-    this.mouseX = mx;
-    this.mouseY = my;
-    this.hoveredSlot = this.getSlotAt(mx, my);
-  }
+  // ---- Rendering ----
 
   render(ctx, inventory) {
     if (!this.visible) return;
+    this._updateCache(inventory);
 
     // Panel background
-    ctx.fillStyle = 'rgba(20, 20, 30, 0.92)';
+    ctx.fillStyle = 'rgba(15, 15, 25, 0.94)';
     ctx.fillRect(this.x, this.y, this.width, this.height);
-    ctx.strokeStyle = '#555';
+    ctx.strokeStyle = '#444';
     ctx.lineWidth = 2;
     ctx.strokeRect(this.x, this.y, this.width, this.height);
 
-    // Title
-    ctx.fillStyle = '#ddd';
-    ctx.font = '14px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('Inventory', this.x + this.width / 2, this.y + PANEL_PAD + 14);
+    // Header
+    ctx.fillStyle = '#ccc';
+    ctx.font = 'bold 13px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('INVENTORY', this.x + PANEL_PAD, this.y + 18);
+    // Item count
+    ctx.fillStyle = '#666';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${this._cachedItems.length} items`, this.x + this.width - PANEL_PAD, this.y + 18);
 
-    // Slots
-    const startX = this.x + PANEL_PAD + SLOT_PAD;
-    const startY = this.y + PANEL_PAD + 24 + SLOT_PAD;
+    // Category tabs
+    this._renderTabs(ctx);
 
-    for (let row = 0; row < ROWS; row++) {
-      for (let col = 0; col < COLS; col++) {
-        const index = row * COLS + col;
-        const sx = startX + col * (SLOT_SIZE + SLOT_PAD);
-        const sy = startY + row * (SLOT_SIZE + SLOT_PAD);
+    // Item list
+    this._renderItemList(ctx);
 
-        // Slot background
-        const isSwapSrc = index === this.swapSource;
-        const isSelected = index === this.selectedSlot;
-        const isHovered = index === this.hoveredSlot;
-        ctx.fillStyle = isSwapSrc ? '#4a3a1a' : isSelected ? '#3a3a4a' : isHovered ? '#333344' : '#2a2a3a';
-        ctx.fillRect(sx, sy, SLOT_SIZE, SLOT_SIZE);
-        ctx.strokeStyle = isSwapSrc ? '#fa0' : isSelected ? '#88f' : isHovered ? '#668' : '#444';
-        ctx.lineWidth = isSwapSrc ? 2 : 1;
-        ctx.strokeRect(sx, sy, SLOT_SIZE, SLOT_SIZE);
+    // Detail panel
+    this._renderDetailPanel(ctx, inventory);
 
-        const slot = inventory.getSlot(index);
-        if (slot) {
-          this._renderSlotItem(ctx, sx, sy, slot);
-        }
-      }
-    }
-
-    // Action bar
-    this._renderActionBar(ctx, inventory);
-
-    // Tooltip for hovered item
-    const tipSlot = this.hoveredSlot >= 0 ? this.hoveredSlot : this.selectedSlot;
-    if (tipSlot >= 0) {
-      const slot = inventory.getSlot(tipSlot);
-      if (slot) {
-        const itemDef = ITEM_DB[slot.itemId];
-        if (itemDef) {
-          this._renderTooltip(ctx, itemDef, slot);
-        }
-      }
+    // Swap mode indicator
+    if (this.swapSource >= 0) {
+      ctx.fillStyle = '#ff0';
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('Click an item to swap with', this.x + this.width / 2, this.y + this.height - 4);
     }
 
     ctx.textAlign = 'left'; // reset
   }
 
-  _renderSlotItem(ctx, sx, sy, slot) {
-    const itemDef = ITEM_DB[slot.itemId];
-    if (!itemDef) return;
-
-    // Item color indicator (dim background)
-    const bgColor = itemDef.type === 'gem' ? '#5a3a6a'
-      : itemDef.type === 'equipment' ? '#3a4a3a' : '#4a4a3a';
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(sx + 4, sy + 4, SLOT_SIZE - 8, SLOT_SIZE - 8);
-
-    // Rarity border for equipment/gems
-    if (itemDef.rarity && RARITY_COLORS[itemDef.rarity]) {
-      ctx.strokeStyle = RARITY_COLORS[itemDef.rarity];
-      ctx.lineWidth = 2;
-      ctx.strokeRect(sx + 2, sy + 2, SLOT_SIZE - 4, SLOT_SIZE - 4);
-    }
-
-    // Item name (abbreviated)
-    ctx.fillStyle = RARITY_COLORS[itemDef.rarity] || '#fff';
-    ctx.font = '9px monospace';
-    ctx.textAlign = 'center';
-    const shortName = itemDef.name.length > 7
-      ? itemDef.name.slice(0, 6) + '.'
-      : itemDef.name;
-    ctx.fillText(shortName, sx + SLOT_SIZE / 2, sy + SLOT_SIZE / 2 + 3);
-
-    // Upgrade level indicator
-    if (slot.upgradeLevel > 0) {
-      ctx.fillStyle = '#ffd700';
-      ctx.font = 'bold 9px monospace';
-      ctx.textAlign = 'left';
-      ctx.fillText(`+${slot.upgradeLevel}`, sx + 3, sy + 12);
-    }
-
-    // Gem socket indicators (tiny circles at bottom)
-    if (itemDef.gemSlots > 0) {
-      const gems = slot.gems || [];
-      for (let g = 0; g < itemDef.gemSlots; g++) {
-        const gx = sx + 8 + g * 10;
-        const gy = sy + SLOT_SIZE - 8;
-        ctx.beginPath();
-        ctx.arc(gx, gy, 3, 0, Math.PI * 2);
-        if (gems[g]) {
-          const gemDef = ITEM_DB[gems[g]];
-          ctx.fillStyle = gemDef?.gemColor || '#fff';
-        } else {
-          ctx.fillStyle = '#555';
-        }
-        ctx.fill();
-        ctx.strokeStyle = '#888';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-    }
-
-    // Upgrade XP progress bar
-    if (slot.upgradeXp > 0 && slot.upgradeLevel < 5) {
-      const xpNeeded = { 1: 100, 2: 200, 3: 350, 4: 550, 5: 800 }[(slot.upgradeLevel || 0) + 1] || 100;
-      const pct = Math.min(1, slot.upgradeXp / xpNeeded);
-      ctx.fillStyle = '#333';
-      ctx.fillRect(sx + 3, sy + SLOT_SIZE - 4, SLOT_SIZE - 6, 2);
-      ctx.fillStyle = '#ffd700';
-      ctx.fillRect(sx + 3, sy + SLOT_SIZE - 4, Math.round((SLOT_SIZE - 6) * pct), 2);
-    }
-
-    // Stack count
-    if (slot.count > 1) {
-      ctx.fillStyle = '#ff0';
-      ctx.font = 'bold 10px monospace';
-      ctx.textAlign = 'right';
-      ctx.fillText(String(slot.count), sx + SLOT_SIZE - 3, sy + SLOT_SIZE - 3);
+  _renderTabs(ctx) {
+    const tabY = this.y + HEADER_H;
+    const tw = this._tabWidth();
+    for (let i = 0; i < CATEGORIES.length; i++) {
+      const tx = this.x + PANEL_PAD + i * (tw + TAB_PAD);
+      const isActive = i === this.selectedCategory;
+      ctx.fillStyle = isActive ? '#3a3a5a' : '#1a1a2a';
+      ctx.fillRect(tx, tabY, tw, TAB_H);
+      ctx.strokeStyle = isActive ? '#88f' : '#333';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(tx, tabY, tw, TAB_H);
+      ctx.fillStyle = isActive ? '#fff' : '#888';
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(CATEGORIES[i].label, tx + tw / 2, tabY + TAB_H - 6);
     }
   }
 
-  _renderActionBar(ctx, inventory) {
-    if (this.swapSource >= 0) {
-      // Swap mode indicator
-      const actionY = this.y + this.height - ACTION_BAR_H + 4;
-      ctx.fillStyle = '#ff0';
+  _renderItemList(ctx) {
+    const listX = this.x + PANEL_PAD;
+    const listY = this.y + HEADER_H + TAB_H + TAB_PAD + 4;
+    const listH = VISIBLE_ROWS * ROW_H;
+
+    // List background
+    ctx.fillStyle = '#0e0e1a';
+    ctx.fillRect(listX, listY, LIST_W, listH);
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(listX, listY, LIST_W, listH);
+
+    // Clip
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(listX, listY, LIST_W, listH);
+    ctx.clip();
+
+    for (let i = 0; i < VISIBLE_ROWS; i++) {
+      const idx = this.scrollOffset + i;
+      if (idx >= this._cachedItems.length) break;
+      const item = this._cachedItems[idx];
+      const rowY = listY + i * ROW_H;
+
+      // Row background
+      const isSelected = idx === this.selectedItemIndex;
+      const isHovered = idx === this.hoveredItemIndex;
+      if (isSelected) {
+        ctx.fillStyle = '#2a2a4a';
+        ctx.fillRect(listX + 1, rowY, LIST_W - 2, ROW_H);
+      } else if (isHovered) {
+        ctx.fillStyle = '#1a1a30';
+        ctx.fillRect(listX + 1, rowY, LIST_W - 2, ROW_H);
+      }
+
+      // Selection indicator
+      if (isSelected) {
+        ctx.fillStyle = '#88f';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText('>', listX + 4, rowY + ROW_H - 6);
+      }
+
+      // Rarity color pip
+      const rarityColor = RARITY_COLORS[item.def.rarity] || '#888';
+      ctx.fillStyle = rarityColor;
+      ctx.fillRect(listX + 14, rowY + 6, 3, ROW_H - 12);
+
+      // Item name
+      let displayName = item.def.name;
+      if (item.upgradeLevel > 0) displayName += ` +${item.upgradeLevel}`;
+      ctx.fillStyle = rarityColor;
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'left';
+      // Truncate long names
+      if (displayName.length > 18) displayName = displayName.slice(0, 17) + '.';
+      ctx.fillText(displayName, listX + 22, rowY + ROW_H - 6);
+
+      // Count (right-aligned)
+      if (item.count > 1) {
+        ctx.fillStyle = '#aa0';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText(`x${item.count}`, listX + LIST_W - 6, rowY + ROW_H - 6);
+      }
+    }
+
+    ctx.restore(); // end clip
+
+    // Scrollbar
+    if (this._cachedItems.length > VISIBLE_ROWS) {
+      const sbX = listX + LIST_W - 6;
+      const ratio = VISIBLE_ROWS / this._cachedItems.length;
+      const thumbH = Math.max(12, listH * ratio);
+      const maxScroll = this._cachedItems.length - VISIBLE_ROWS;
+      const thumbY = listY + (this.scrollOffset / maxScroll) * (listH - thumbH);
+      ctx.fillStyle = '#222';
+      ctx.fillRect(sbX, listY, 4, listH);
+      ctx.fillStyle = '#555';
+      ctx.fillRect(sbX, thumbY, 4, thumbH);
+    }
+  }
+
+  _renderDetailPanel(ctx, inventory) {
+    const detailX = this.x + PANEL_PAD + LIST_W + PANEL_PAD;
+    const detailY = this.y + HEADER_H + TAB_H + TAB_PAD + 4;
+    const detailH = VISIBLE_ROWS * ROW_H;
+
+    // Detail background
+    ctx.fillStyle = '#0e0e1a';
+    ctx.fillRect(detailX, detailY, DETAIL_W, detailH);
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(detailX, detailY, DETAIL_W, detailH);
+
+    if (this.selectedItemIndex < 0 || this.selectedItemIndex >= this._cachedItems.length) {
+      ctx.fillStyle = '#555';
       ctx.font = '10px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('Click a slot to swap', this.x + this.width / 2, actionY + BTN_H / 2 + 3);
+      ctx.fillText('Select an item', detailX + DETAIL_W / 2, detailY + detailH / 2);
       return;
     }
 
-    if (this.selectedSlot < 0) return;
-    const slot = inventory.getSlot(this.selectedSlot);
+    const item = this._cachedItems[this.selectedItemIndex];
+    const def = item.def;
+    const slot = inventory.getSlot(item.slotIndex);
     if (!slot) return;
 
-    const btns = this._getButtons(slot);
-    const actionY = this.y + this.height - ACTION_BAR_H + 4;
-    const totalW = btns.length * BTN_W + (btns.length - 1) * BTN_GAP;
-    const startBtnX = this.x + (this.width - totalW) / 2;
+    let lineY = detailY + 16;
+    const lx = detailX + 8;
+    const lineH = 14;
 
+    // Name
+    let name = def.name;
+    if (item.upgradeLevel > 0) name += ` +${item.upgradeLevel}`;
+    ctx.fillStyle = RARITY_COLORS[def.rarity] || '#fff';
+    ctx.font = 'bold 12px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(name, lx, lineY);
+    lineY += lineH + 2;
+
+    // Rarity
+    if (def.rarity) {
+      ctx.fillStyle = RARITY_COLORS[def.rarity];
+      ctx.font = '10px monospace';
+      ctx.fillText(def.rarity.charAt(0).toUpperCase() + def.rarity.slice(1), lx, lineY);
+      lineY += lineH;
+    }
+
+    // Type / slot
+    if (def.type === 'equipment' && def.slot) {
+      ctx.fillStyle = '#777';
+      ctx.font = '10px monospace';
+      ctx.fillText(def.slot.charAt(0).toUpperCase() + def.slot.slice(1), lx, lineY);
+      lineY += lineH;
+    }
+
+    // Separator
+    lineY += 4;
+    ctx.strokeStyle = '#333';
+    ctx.beginPath();
+    ctx.moveTo(lx, lineY);
+    ctx.lineTo(detailX + DETAIL_W - 8, lineY);
+    ctx.stroke();
+    lineY += 8;
+
+    // Description
+    if (def.description) {
+      ctx.fillStyle = '#999';
+      ctx.font = '10px monospace';
+      // Word wrap
+      const words = def.description.split(' ');
+      let line = '';
+      const maxW = DETAIL_W - 16;
+      for (const word of words) {
+        const test = line ? line + ' ' + word : word;
+        if (ctx.measureText(test).width > maxW) {
+          ctx.fillText(line, lx, lineY);
+          lineY += lineH;
+          line = word;
+        } else {
+          line = test;
+        }
+      }
+      if (line) { ctx.fillText(line, lx, lineY); lineY += lineH; }
+      lineY += 4;
+    }
+
+    // Stat bonuses
+    if (def.type === 'equipment' && def.statBonuses) {
+      const stats = Object.entries(def.statBonuses).filter(([, v]) => v !== 0);
+      if (stats.length > 0) {
+        ctx.fillStyle = '#8cf';
+        ctx.font = '10px monospace';
+        for (const [k, v] of stats) {
+          ctx.fillText(`${k}: ${v > 0 ? '+' : ''}${v}`, lx, lineY);
+          lineY += lineH;
+        }
+        lineY += 2;
+      }
+    }
+
+    // Tool info
+    if (def.toolType) {
+      ctx.fillStyle = '#aaa';
+      ctx.font = '10px monospace';
+      ctx.fillText(`Tool: ${def.toolType} (tier ${def.toolTier})`, lx, lineY);
+      lineY += lineH;
+    }
+
+    // Gem sockets
+    if (def.gemSlots > 0) {
+      const gems = slot.gems || [];
+      const filled = gems.filter(g => g).length;
+      ctx.fillStyle = '#bbb';
+      ctx.font = '10px monospace';
+      ctx.fillText(`Sockets: ${filled}/${def.gemSlots}`, lx, lineY);
+      lineY += lineH;
+      for (const gemId of gems) {
+        if (gemId) {
+          const gDef = ITEM_DB[gemId];
+          if (gDef) {
+            ctx.fillStyle = gDef.gemColor || '#fff';
+            ctx.fillText(`  ${gDef.name}`, lx, lineY);
+            lineY += lineH;
+          }
+        }
+      }
+    }
+
+    // Gem bonus info
+    if (def.type === 'gem' && def.gemBonus) {
+      ctx.fillStyle = '#4f8';
+      ctx.font = '10px monospace';
+      for (const [k, v] of Object.entries(def.gemBonus)) {
+        ctx.fillText(`+${v} ${k.toUpperCase()}`, lx, lineY);
+        lineY += lineH;
+      }
+    }
+
+    // Consumable effect
+    if (def.effect && def.effect.healAmount) {
+      ctx.fillStyle = '#2ecc71';
+      ctx.font = '10px monospace';
+      ctx.fillText(`Heals ${def.effect.healAmount} HP`, lx, lineY);
+      lineY += lineH;
+    }
+
+    // Upgrade XP
+    if (item.upgradeLevel > 0 || item.upgradeXp > 0) {
+      const xpNeeded = { 1: 100, 2: 200, 3: 350, 4: 550, 5: 800 }[(item.upgradeLevel || 0) + 1] || 100;
+      if (item.upgradeLevel < 5) {
+        ctx.fillStyle = '#ffd700';
+        ctx.font = '10px monospace';
+        ctx.fillText(`Upgrade XP: ${item.upgradeXp}/${xpNeeded}`, lx, lineY);
+        lineY += lineH;
+      }
+    }
+
+    // Stack count
+    if (item.count > 1) {
+      ctx.fillStyle = '#aa0';
+      ctx.font = '10px monospace';
+      ctx.fillText(`Count: ${item.count}`, lx, lineY);
+      lineY += lineH;
+    }
+
+    // Action buttons (2×2 grid at bottom of detail panel)
+    const btns = this._getButtons(item);
+    const btnY = detailY + detailH - PANEL_PAD - BTN_H * 2 - BTN_GAP;
     for (let i = 0; i < btns.length; i++) {
-      const b = btns[i];
-      const bx = startBtnX + i * (BTN_W + BTN_GAP);
-      this._renderBtn(ctx, bx, actionY, BTN_W, BTN_H, b.label, b.bg, b.border);
+      const row = Math.floor(i / 2);
+      const col = i % 2;
+      const bx = detailX + col * (BTN_W + BTN_GAP);
+      const by = btnY + row * (BTN_H + BTN_GAP);
+      this._renderBtn(ctx, bx, by, BTN_W, BTN_H, btns[i].label, btns[i].bg, btns[i].border);
     }
   }
 
@@ -377,99 +657,10 @@ export default class InventoryPanel {
     ctx.fillText(label, x + w / 2, y + h / 2 + 3);
   }
 
-  _renderTooltip(ctx, itemDef, slot) {
-    const lines = [];
-    const colors = [];
-
-    // Name with upgrade level
-    let name = itemDef.name;
-    if (slot.upgradeLevel > 0) name += ` +${slot.upgradeLevel}`;
-    lines.push(name);
-    colors.push(RARITY_COLORS[itemDef.rarity] || '#fff');
-
-    // Rarity label
-    if (itemDef.rarity) {
-      lines.push(itemDef.rarity.charAt(0).toUpperCase() + itemDef.rarity.slice(1));
-      colors.push(RARITY_COLORS[itemDef.rarity]);
-    }
-
-    if (itemDef.description) { lines.push(itemDef.description); colors.push('#999'); }
-
-    // Stats for equipment
-    if (itemDef.type === 'equipment' && itemDef.statBonuses) {
-      const stats = Object.entries(itemDef.statBonuses)
-        .filter(([, v]) => v !== 0)
-        .map(([k, v]) => `${k}: ${v > 0 ? '+' : ''}${v}`);
-      if (stats.length > 0) { lines.push(stats.join('  ')); colors.push('#8cf'); }
-    }
-
-    // Gem sockets
-    if (itemDef.gemSlots > 0) {
-      const gems = slot.gems || [];
-      const filled = gems.filter(g => g).length;
-      lines.push(`Sockets: ${filled}/${itemDef.gemSlots}`);
-      colors.push('#bbb');
-      for (const gemId of gems) {
-        if (gemId) {
-          const gDef = ITEM_DB[gemId];
-          if (gDef) { lines.push(`  ${gDef.name}`); colors.push(gDef.gemColor || '#fff'); }
-        }
-      }
-    }
-
-    // Gem bonus info
-    if (itemDef.type === 'gem' && itemDef.gemBonus) {
-      const bonuses = Object.entries(itemDef.gemBonus)
-        .map(([k, v]) => `+${v} ${k.toUpperCase()}`).join(', ');
-      lines.push(bonuses);
-      colors.push('#4f8');
-    }
-
-    // Consumable effect
-    if (itemDef.effect && itemDef.effect.healAmount) {
-      lines.push(`Heals ${itemDef.effect.healAmount} HP`);
-      colors.push('#2ecc71');
-    }
-
-    // Action hints
-    if (itemDef.type === 'equipment') {
-      lines.push('[Click: equip] [Right-click: drop]');
-      colors.push('#666');
-    } else if (itemDef.type === 'consumable') {
-      lines.push('[Dbl-click: consume] [Right-click: drop]');
-      colors.push('#666');
-    } else {
-      lines.push('[Right-click: drop]');
-      colors.push('#666');
-    }
-
-    // Measure tooltip size
-    ctx.font = '10px monospace';
-    const tipW = Math.max(...lines.map(l => ctx.measureText(l).width)) + 16;
-    const tipH = lines.length * 14 + 10;
-
-    // Position tooltip near mouse (or near panel for gamepad)
-    let tx = this.mouseX + 12;
-    let ty = this.mouseY - tipH - 4;
-    if (this.hoveredSlot < 0) {
-      tx = this.x + this.width + 4;
-      ty = this.y;
-    }
-    if (tx + tipW > this.x + this.width + 200) tx = this.mouseX - tipW - 4;
-    if (ty < 0) ty = this.mouseY + 16;
-
-    // Background
-    ctx.fillStyle = 'rgba(10, 10, 20, 0.95)';
-    ctx.fillRect(tx, ty, tipW, tipH);
-    ctx.strokeStyle = RARITY_COLORS[itemDef.rarity] || '#777';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(tx, ty, tipW, tipH);
-
-    // Text
-    ctx.textAlign = 'left';
-    for (let i = 0; i < lines.length; i++) {
-      ctx.fillStyle = colors[i] || '#bbb';
-      ctx.fillText(lines[i], tx + 8, ty + 14 + i * 14);
-    }
+  // Legacy method stubs for compatibility
+  getSlotAt(mx, my) {
+    const idx = this._getItemIndexAt(mx, my);
+    if (idx >= 0 && idx < this._cachedItems.length) return this._cachedItems[idx].slotIndex;
+    return -1;
   }
 }

@@ -15,6 +15,7 @@ export const ITEM_TYPE = {
   CONSUMABLE: 'consumable',
   MATERIAL: 'material',
   GEM: 'gem',
+  FISHING_PART: 'fishing_part',
 };
 
 export const RARITY = {
@@ -103,6 +104,320 @@ export const ITEM_DB = {
     description: 'Burns with primordial flame.',
   },
 
+  // --- Primitive (new) ---
+  wooden_spear: {
+    id: 'wooden_spear', name: 'Wooden Spear', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.8, range: 56,
+    statBonuses: { baseDamage: 8, dex: 1 }, tier: 0, rarity: 'common', gemSlots: 0,
+    description: 'A sharpened wooden spear.',
+  },
+  bone_dagger: {
+    id: 'bone_dagger', name: 'Bone Dagger', type: 'equipment', slot: 'weapon',
+    attackSpeed: 2.5, range: 28,
+    statBonuses: { baseDamage: 6, dex: 1, lck: 1, critChance: 0.05 }, tier: 0, rarity: 'common', gemSlots: 0,
+    description: 'A small bone blade.',
+  },
+  stone_knuckles: {
+    id: 'stone_knuckles', name: 'Stone Knuckles', type: 'equipment', slot: 'weapon',
+    attackSpeed: 2.8, range: 24,
+    statBonuses: { baseDamage: 5, str: 1, dex: 1 }, tier: 0, rarity: 'common', gemSlots: 0,
+    description: 'Crude stone fist wraps.',
+  },
+
+  // --- Bronze (new) ---
+  bronze_axe: {
+    id: 'bronze_axe', name: 'Bronze Axe', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.2, range: 38,
+    statBonuses: { baseDamage: 20, str: 3 }, tier: 1, rarity: 'uncommon', gemSlots: 1,
+    description: 'A sharp bronze axe.',
+  },
+  bronze_battleaxe: {
+    id: 'bronze_battleaxe', name: 'Bronze Battleaxe', type: 'equipment', slot: 'weapon',
+    attackSpeed: 0.8, range: 42,
+    statBonuses: { baseDamage: 26, str: 3, dex: -2 }, tier: 1, rarity: 'uncommon', gemSlots: 1,
+    description: 'A massive bronze battleaxe.',
+  },
+  bronze_dagger: {
+    id: 'bronze_dagger', name: 'Bronze Dagger', type: 'equipment', slot: 'weapon',
+    attackSpeed: 2.5, range: 28,
+    statBonuses: { baseDamage: 12, dex: 2, lck: 1, critChance: 0.05 }, tier: 1, rarity: 'uncommon', gemSlots: 1,
+    description: 'A swift bronze dagger.',
+  },
+  bronze_atgeir: {
+    id: 'bronze_atgeir', name: 'Bronze Atgeir', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.3, range: 64,
+    statBonuses: { baseDamage: 19, str: 2, dex: 1 }, tier: 1, rarity: 'uncommon', gemSlots: 1,
+    description: 'A long bronze polearm.',
+  },
+  bronze_bow: {
+    id: 'bronze_bow', name: 'Bronze Bow', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.0, range: 96,
+    statBonuses: { baseDamage: 16, dex: 3 }, tier: 1, rarity: 'uncommon', gemSlots: 1,
+    description: 'A bronze-tipped bow.',
+  },
+  bronze_knuckles: {
+    id: 'bronze_knuckles', name: 'Bronze Knuckles', type: 'equipment', slot: 'weapon',
+    attackSpeed: 2.8, range: 24,
+    statBonuses: { baseDamage: 10, str: 2, dex: 1 }, tier: 1, rarity: 'uncommon', gemSlots: 1,
+    description: 'Bronze fist wraps.',
+  },
+  bronze_greatsword: {
+    id: 'bronze_greatsword', name: 'Bronze Greatsword', type: 'equipment', slot: 'weapon',
+    attackSpeed: 0.7, range: 44,
+    statBonuses: { baseDamage: 30, str: 3, dex: -2 }, tier: 1, rarity: 'uncommon', gemSlots: 1,
+    description: 'A heavy bronze greatsword.',
+  },
+
+  // --- Iron/Steel (new) ---
+  iron_mace: {
+    id: 'iron_mace', name: 'Iron Mace', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.0, range: 36,
+    statBonuses: { baseDamage: 34, str: 4, dex: -1 }, tier: 2, rarity: 'rare', gemSlots: 2,
+    description: 'A heavy iron mace.',
+  },
+  iron_axe: {
+    id: 'iron_axe', name: 'Iron Axe', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.2, range: 38,
+    statBonuses: { baseDamage: 30, str: 4 }, tier: 2, rarity: 'rare', gemSlots: 2,
+    description: 'A keen iron axe.',
+  },
+  iron_battleaxe: {
+    id: 'iron_battleaxe', name: 'Iron Battleaxe', type: 'equipment', slot: 'weapon',
+    attackSpeed: 0.8, range: 42,
+    statBonuses: { baseDamage: 40, str: 4, dex: -2 }, tier: 2, rarity: 'rare', gemSlots: 2,
+    description: 'A massive iron battleaxe.',
+  },
+  iron_spear: {
+    id: 'iron_spear', name: 'Iron Spear', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.8, range: 56,
+    statBonuses: { baseDamage: 24, dex: 4 }, tier: 2, rarity: 'rare', gemSlots: 2,
+    description: 'A long iron spear.',
+  },
+  iron_dagger: {
+    id: 'iron_dagger', name: 'Iron Dagger', type: 'equipment', slot: 'weapon',
+    attackSpeed: 2.5, range: 28,
+    statBonuses: { baseDamage: 20, dex: 3, lck: 2, critChance: 0.05 }, tier: 2, rarity: 'rare', gemSlots: 2,
+    description: 'A razor-sharp iron dagger.',
+  },
+  iron_atgeir: {
+    id: 'iron_atgeir', name: 'Iron Atgeir', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.3, range: 64,
+    statBonuses: { baseDamage: 29, str: 3, dex: 2 }, tier: 2, rarity: 'rare', gemSlots: 2,
+    description: 'An iron polearm with sweeping reach.',
+  },
+  iron_bow: {
+    id: 'iron_bow', name: 'Iron Bow', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.0, range: 96,
+    statBonuses: { baseDamage: 26, dex: 4 }, tier: 2, rarity: 'rare', gemSlots: 2,
+    description: 'An iron-reinforced bow.',
+  },
+  iron_knuckles: {
+    id: 'iron_knuckles', name: 'Iron Knuckles', type: 'equipment', slot: 'weapon',
+    attackSpeed: 2.8, range: 24,
+    statBonuses: { baseDamage: 18, str: 3, dex: 2 }, tier: 2, rarity: 'rare', gemSlots: 2,
+    description: 'Iron fist wraps.',
+  },
+
+  // --- Silver (new) ---
+  silver_mace: {
+    id: 'silver_mace', name: 'Silver Mace', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.0, range: 36,
+    statBonuses: { baseDamage: 48, str: 5, dex: -1 }, tier: 3, rarity: 'epic', gemSlots: 2,
+    description: 'A gleaming silver mace.',
+  },
+  silver_axe: {
+    id: 'silver_axe', name: 'Silver Axe', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.2, range: 38,
+    statBonuses: { baseDamage: 44, str: 5 }, tier: 3, rarity: 'epic', gemSlots: 2,
+    description: 'A hallowed silver axe.',
+  },
+  silver_battleaxe: {
+    id: 'silver_battleaxe', name: 'Silver Battleaxe', type: 'equipment', slot: 'weapon',
+    attackSpeed: 0.8, range: 42,
+    statBonuses: { baseDamage: 56, str: 5, dex: -2 }, tier: 3, rarity: 'epic', gemSlots: 2,
+    description: 'A massive silver battleaxe.',
+  },
+  silver_spear: {
+    id: 'silver_spear', name: 'Silver Spear', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.8, range: 56,
+    statBonuses: { baseDamage: 35, dex: 5 }, tier: 3, rarity: 'epic', gemSlots: 2,
+    description: 'A silver-tipped spear.',
+  },
+  silver_dagger: {
+    id: 'silver_dagger', name: 'Silver Dagger', type: 'equipment', slot: 'weapon',
+    attackSpeed: 2.5, range: 28,
+    statBonuses: { baseDamage: 30, dex: 4, lck: 3, critChance: 0.05 }, tier: 3, rarity: 'epic', gemSlots: 2,
+    description: 'A deadly silver stiletto.',
+  },
+  silver_atgeir: {
+    id: 'silver_atgeir', name: 'Silver Atgeir', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.3, range: 64,
+    statBonuses: { baseDamage: 42, str: 4, dex: 3 }, tier: 3, rarity: 'epic', gemSlots: 2,
+    description: 'A silver polearm of great reach.',
+  },
+  silver_bow: {
+    id: 'silver_bow', name: 'Silver Bow', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.0, range: 96,
+    statBonuses: { baseDamage: 38, dex: 5 }, tier: 3, rarity: 'epic', gemSlots: 2,
+    description: 'A silver-stringed bow.',
+  },
+  silver_knuckles: {
+    id: 'silver_knuckles', name: 'Silver Knuckles', type: 'equipment', slot: 'weapon',
+    attackSpeed: 2.8, range: 24,
+    statBonuses: { baseDamage: 28, str: 4, dex: 3 }, tier: 3, rarity: 'epic', gemSlots: 2,
+    description: 'Silver fist wraps.',
+  },
+  silver_greatsword: {
+    id: 'silver_greatsword', name: 'Silver Greatsword', type: 'equipment', slot: 'weapon',
+    attackSpeed: 0.7, range: 44,
+    statBonuses: { baseDamage: 62, str: 5, dex: -2 }, tier: 3, rarity: 'epic', gemSlots: 2,
+    description: 'A massive silver greatsword.',
+  },
+
+  // --- Obsidian (new) ---
+  obsidian_mace: {
+    id: 'obsidian_mace', name: 'Obsidian Mace', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.0, range: 36,
+    statBonuses: { baseDamage: 64, str: 7, dex: -1 }, tier: 4, rarity: 'epic', gemSlots: 3,
+    description: 'A devastating obsidian mace.',
+  },
+  obsidian_axe: {
+    id: 'obsidian_axe', name: 'Obsidian Axe', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.2, range: 38,
+    statBonuses: { baseDamage: 58, str: 7 }, tier: 4, rarity: 'epic', gemSlots: 3,
+    description: 'A razor-sharp obsidian axe.',
+  },
+  obsidian_battleaxe: {
+    id: 'obsidian_battleaxe', name: 'Obsidian Battleaxe', type: 'equipment', slot: 'weapon',
+    attackSpeed: 0.8, range: 42,
+    statBonuses: { baseDamage: 74, str: 7, dex: -2 }, tier: 4, rarity: 'epic', gemSlots: 3,
+    description: 'A colossal obsidian battleaxe.',
+  },
+  obsidian_spear: {
+    id: 'obsidian_spear', name: 'Obsidian Spear', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.8, range: 56,
+    statBonuses: { baseDamage: 48, dex: 7 }, tier: 4, rarity: 'epic', gemSlots: 3,
+    description: 'An obsidian-tipped spear.',
+  },
+  obsidian_dagger: {
+    id: 'obsidian_dagger', name: 'Obsidian Dagger', type: 'equipment', slot: 'weapon',
+    attackSpeed: 2.5, range: 28,
+    statBonuses: { baseDamage: 42, dex: 5, lck: 4, critChance: 0.05 }, tier: 4, rarity: 'epic', gemSlots: 3,
+    description: 'A lethal obsidian dagger.',
+  },
+  obsidian_atgeir: {
+    id: 'obsidian_atgeir', name: 'Obsidian Atgeir', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.3, range: 64,
+    statBonuses: { baseDamage: 56, str: 5, dex: 4 }, tier: 4, rarity: 'epic', gemSlots: 3,
+    description: 'An obsidian polearm of immense reach.',
+  },
+  obsidian_bow: {
+    id: 'obsidian_bow', name: 'Obsidian Bow', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.0, range: 96,
+    statBonuses: { baseDamage: 52, dex: 7 }, tier: 4, rarity: 'epic', gemSlots: 3,
+    description: 'An obsidian-limbed bow.',
+  },
+  obsidian_knuckles: {
+    id: 'obsidian_knuckles', name: 'Obsidian Knuckles', type: 'equipment', slot: 'weapon',
+    attackSpeed: 2.8, range: 24,
+    statBonuses: { baseDamage: 38, str: 5, dex: 4 }, tier: 4, rarity: 'epic', gemSlots: 3,
+    description: 'Obsidian fist wraps.',
+  },
+  obsidian_greatsword: {
+    id: 'obsidian_greatsword', name: 'Obsidian Greatsword', type: 'equipment', slot: 'weapon',
+    attackSpeed: 0.7, range: 44,
+    statBonuses: { baseDamage: 82, str: 7, dex: -2 }, tier: 4, rarity: 'epic', gemSlots: 3,
+    description: 'A titanic obsidian greatsword.',
+  },
+
+  // --- Flametal (new) ---
+  flametal_mace: {
+    id: 'flametal_mace', name: 'Flametal Mace', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.0, range: 36,
+    statBonuses: { baseDamage: 84, str: 10, dex: -1 }, tier: 5, rarity: 'epic', gemSlots: 3,
+    description: 'A blazing flametal mace.',
+  },
+  flametal_axe: {
+    id: 'flametal_axe', name: 'Flametal Axe', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.2, range: 38,
+    statBonuses: { baseDamage: 78, str: 10 }, tier: 5, rarity: 'epic', gemSlots: 3,
+    description: 'An incandescent flametal axe.',
+  },
+  flametal_battleaxe: {
+    id: 'flametal_battleaxe', name: 'Flametal Battleaxe', type: 'equipment', slot: 'weapon',
+    attackSpeed: 0.8, range: 42,
+    statBonuses: { baseDamage: 96, str: 10, dex: -2 }, tier: 5, rarity: 'epic', gemSlots: 3,
+    description: 'A volcanic flametal battleaxe.',
+  },
+  flametal_spear: {
+    id: 'flametal_spear', name: 'Flametal Spear', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.8, range: 56,
+    statBonuses: { baseDamage: 62, dex: 10 }, tier: 5, rarity: 'epic', gemSlots: 3,
+    description: 'A flametal-tipped spear.',
+  },
+  flametal_dagger: {
+    id: 'flametal_dagger', name: 'Flametal Dagger', type: 'equipment', slot: 'weapon',
+    attackSpeed: 2.5, range: 28,
+    statBonuses: { baseDamage: 55, dex: 7, lck: 5, critChance: 0.05 }, tier: 5, rarity: 'epic', gemSlots: 3,
+    description: 'A searing flametal dagger.',
+  },
+  flametal_atgeir: {
+    id: 'flametal_atgeir', name: 'Flametal Atgeir', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.3, range: 64,
+    statBonuses: { baseDamage: 74, str: 7, dex: 5 }, tier: 5, rarity: 'epic', gemSlots: 3,
+    description: 'A flametal polearm wreathed in fire.',
+  },
+  flametal_bow: {
+    id: 'flametal_bow', name: 'Flametal Bow', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.0, range: 96,
+    statBonuses: { baseDamage: 68, dex: 10 }, tier: 5, rarity: 'epic', gemSlots: 3,
+    description: 'A flametal bow of eternal fire.',
+  },
+  flametal_knuckles: {
+    id: 'flametal_knuckles', name: 'Flametal Knuckles', type: 'equipment', slot: 'weapon',
+    attackSpeed: 2.8, range: 24,
+    statBonuses: { baseDamage: 50, str: 7, dex: 5 }, tier: 5, rarity: 'epic', gemSlots: 3,
+    description: 'Flametal fist wraps.',
+  },
+  flametal_greatsword: {
+    id: 'flametal_greatsword', name: 'Flametal Greatsword', type: 'equipment', slot: 'weapon',
+    attackSpeed: 0.7, range: 44,
+    statBonuses: { baseDamage: 106, str: 10, dex: -2 }, tier: 5, rarity: 'epic', gemSlots: 3,
+    description: 'An apocalyptic flametal greatsword.',
+  },
+
+  // --- Magic Weapons ---
+  fire_staff: {
+    id: 'fire_staff', name: 'Fire Staff', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.2, range: 80,
+    statBonuses: { baseDamage: 38, vit: 5, str: 3 }, tier: 3, rarity: 'rare', gemSlots: 2,
+    description: 'A staff crackling with flame.',
+  },
+  ice_staff: {
+    id: 'ice_staff', name: 'Ice Staff', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.2, range: 80,
+    statBonuses: { baseDamage: 32, vit: 5, dex: 4 }, tier: 3, rarity: 'rare', gemSlots: 2,
+    description: 'A staff of frozen power.',
+  },
+  lightning_staff: {
+    id: 'lightning_staff', name: 'Lightning Staff', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.2, range: 80,
+    statBonuses: { baseDamage: 48, vit: 3, lck: 5 }, tier: 3, rarity: 'rare', gemSlots: 2,
+    description: 'A staff surging with lightning.',
+  },
+  nature_staff: {
+    id: 'nature_staff', name: 'Nature Staff', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.2, range: 80,
+    statBonuses: { baseDamage: 22, vit: 8 }, tier: 3, rarity: 'rare', gemSlots: 2,
+    description: 'A staff of living wood.',
+  },
+  runic_blade: {
+    id: 'runic_blade', name: 'Runic Blade', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.5, range: 40,
+    statBonuses: { baseDamage: 52, str: 4, lck: 4 }, tier: 4, rarity: 'epic', gemSlots: 3,
+    description: 'An ancient blade etched with runes.',
+  },
+
   // ============================================================
   //  ARMOR
   // ============================================================
@@ -173,6 +488,94 @@ export const ITEM_DB = {
     description: 'Heavy iron boots.',
   },
 
+  // --- Silver Armor ---
+  silver_helmet: {
+    id: 'silver_helmet', name: 'Silver Helmet', type: 'equipment', slot: 'head',
+    statBonuses: { armor: 20, vit: 4, end: 4, lck: 2 }, tier: 3, rarity: 'epic', gemSlots: 2,
+    description: 'Gleaming silver helm.',
+  },
+  silver_chestplate: {
+    id: 'silver_chestplate', name: 'Silver Chestplate', type: 'equipment', slot: 'body',
+    statBonuses: { armor: 30, vit: 4, end: 4, lck: 2 }, tier: 3, rarity: 'epic', gemSlots: 2,
+    description: 'Hallowed silver chest armor.',
+  },
+  silver_greaves: {
+    id: 'silver_greaves', name: 'Silver Greaves', type: 'equipment', slot: 'legs',
+    statBonuses: { armor: 22, vit: 4, end: 4, lck: 2 }, tier: 3, rarity: 'epic', gemSlots: 2,
+    description: 'Silver leg armor.',
+  },
+  silver_boots: {
+    id: 'silver_boots', name: 'Silver Boots', type: 'equipment', slot: 'feet',
+    statBonuses: { armor: 14, vit: 4, end: 4, lck: 2 }, tier: 3, rarity: 'epic', gemSlots: 2,
+    description: 'Silver-plated boots.',
+  },
+
+  // --- Obsidian Armor ---
+  obsidian_helmet: {
+    id: 'obsidian_helmet', name: 'Obsidian Helmet', type: 'equipment', slot: 'head',
+    statBonuses: { armor: 28, vit: 5, end: 5, dex: 3 }, tier: 4, rarity: 'epic', gemSlots: 3,
+    description: 'Dark obsidian helm.',
+  },
+  obsidian_chestplate: {
+    id: 'obsidian_chestplate', name: 'Obsidian Chestplate', type: 'equipment', slot: 'body',
+    statBonuses: { armor: 40, vit: 5, end: 5, dex: 3 }, tier: 4, rarity: 'epic', gemSlots: 3,
+    description: 'Obsidian chest armor.',
+  },
+  obsidian_greaves: {
+    id: 'obsidian_greaves', name: 'Obsidian Greaves', type: 'equipment', slot: 'legs',
+    statBonuses: { armor: 30, vit: 5, end: 5, dex: 3 }, tier: 4, rarity: 'epic', gemSlots: 3,
+    description: 'Obsidian leg armor.',
+  },
+  obsidian_boots: {
+    id: 'obsidian_boots', name: 'Obsidian Boots', type: 'equipment', slot: 'feet',
+    statBonuses: { armor: 20, vit: 5, end: 5, dex: 3 }, tier: 4, rarity: 'epic', gemSlots: 3,
+    description: 'Obsidian-plated boots.',
+  },
+
+  // --- Flametal Armor ---
+  flametal_helmet: {
+    id: 'flametal_helmet', name: 'Flametal Helmet', type: 'equipment', slot: 'head',
+    statBonuses: { armor: 36, vit: 7, end: 7, str: 4 }, tier: 5, rarity: 'epic', gemSlots: 3,
+    description: 'A blazing flametal helm.',
+  },
+  flametal_chestplate: {
+    id: 'flametal_chestplate', name: 'Flametal Chestplate', type: 'equipment', slot: 'body',
+    statBonuses: { armor: 50, vit: 7, end: 7, str: 4 }, tier: 5, rarity: 'epic', gemSlots: 3,
+    description: 'Flametal chest armor.',
+  },
+  flametal_greaves: {
+    id: 'flametal_greaves', name: 'Flametal Greaves', type: 'equipment', slot: 'legs',
+    statBonuses: { armor: 38, vit: 7, end: 7, str: 4 }, tier: 5, rarity: 'epic', gemSlots: 3,
+    description: 'Flametal leg armor.',
+  },
+  flametal_boots: {
+    id: 'flametal_boots', name: 'Flametal Boots', type: 'equipment', slot: 'feet',
+    statBonuses: { armor: 26, vit: 7, end: 7, str: 4 }, tier: 5, rarity: 'epic', gemSlots: 3,
+    description: 'Flametal-plated boots.',
+  },
+
+  // --- Mage Armor ---
+  mage_hood: {
+    id: 'mage_hood', name: 'Mage Hood', type: 'equipment', slot: 'head',
+    statBonuses: { armor: 12, vit: 5, lck: 3 }, tier: 3, rarity: 'rare', gemSlots: 2,
+    description: 'An enchanted mage hood.',
+  },
+  mage_robe: {
+    id: 'mage_robe', name: 'Mage Robe', type: 'equipment', slot: 'body',
+    statBonuses: { armor: 18, vit: 6, lck: 4 }, tier: 3, rarity: 'rare', gemSlots: 2,
+    description: 'Arcane-woven robes.',
+  },
+  mage_leggings: {
+    id: 'mage_leggings', name: 'Mage Leggings', type: 'equipment', slot: 'legs',
+    statBonuses: { armor: 14, vit: 4, lck: 3 }, tier: 3, rarity: 'rare', gemSlots: 2,
+    description: 'Enchanted cloth leggings.',
+  },
+  mage_sandals: {
+    id: 'mage_sandals', name: 'Mage Sandals', type: 'equipment', slot: 'feet',
+    statBonuses: { armor: 10, vit: 3, dex: 3 }, tier: 3, rarity: 'rare', gemSlots: 2,
+    description: 'Light enchanted sandals.',
+  },
+
   // ============================================================
   //  SHIELDS
   // ============================================================
@@ -191,6 +594,21 @@ export const ITEM_DB = {
     statBonuses: { armor: 20, end: 2 }, tier: 2, rarity: 'rare', gemSlots: 2,
     description: 'Heavy iron tower shield.',
   },
+  silver_shield: {
+    id: 'silver_shield', name: 'Silver Shield', type: 'equipment', slot: 'shield',
+    statBonuses: { armor: 28, end: 3 }, tier: 3, rarity: 'epic', gemSlots: 2,
+    description: 'A hallowed silver shield.',
+  },
+  obsidian_shield: {
+    id: 'obsidian_shield', name: 'Obsidian Shield', type: 'equipment', slot: 'shield',
+    statBonuses: { armor: 38, end: 4 }, tier: 4, rarity: 'epic', gemSlots: 3,
+    description: 'A dark obsidian shield.',
+  },
+  flametal_shield: {
+    id: 'flametal_shield', name: 'Flametal Shield', type: 'equipment', slot: 'shield',
+    statBonuses: { armor: 48, end: 5 }, tier: 5, rarity: 'epic', gemSlots: 3,
+    description: 'A blazing flametal shield.',
+  },
 
   // ============================================================
   //  RINGS
@@ -205,6 +623,27 @@ export const ITEM_DB = {
     statBonuses: { str: 2, end: 1 }, tier: 1, rarity: 'uncommon', gemSlots: 1,
     description: 'A polished bronze band.',
   },
+  meadow_ring: {
+    id: 'meadow_ring', name: 'Meadow Ring', type: 'equipment', slot: 'ring1',
+    statBonuses: { lck: 3 }, tier: 1, rarity: 'rare', gemSlots: 1,
+    specialEffect: 'meadow_bounty',
+    description: 'Mining yields 2x ore and improved gem drops.',
+  },
+  iron_ring: {
+    id: 'iron_ring', name: 'Iron Ring', type: 'equipment', slot: 'ring1',
+    statBonuses: { str: 3, vit: 2 }, tier: 2, rarity: 'rare', gemSlots: 1,
+    description: 'A forged iron band.',
+  },
+  silver_ring: {
+    id: 'silver_ring', name: 'Silver Ring', type: 'equipment', slot: 'ring1',
+    statBonuses: { dex: 4, lck: 3 }, tier: 3, rarity: 'epic', gemSlots: 1,
+    description: 'A gleaming silver band.',
+  },
+  obsidian_ring: {
+    id: 'obsidian_ring', name: 'Obsidian Ring', type: 'equipment', slot: 'ring1',
+    statBonuses: { str: 5, end: 3 }, tier: 4, rarity: 'epic', gemSlots: 1,
+    description: 'A dark obsidian band.',
+  },
 
   // ============================================================
   //  TOOLS
@@ -215,13 +654,21 @@ export const ITEM_DB = {
     id: 'stone_pickaxe', name: 'Stone Pickaxe', type: 'equipment', slot: 'tool',
     toolType: 'pickaxe', toolTier: 0, tier: 0, rarity: 'common', gemSlots: 0,
     statBonuses: {},
-    description: 'Mines stone, copper, tin.',
+    description: 'Mines stone.',
   },
   stone_hatchet: {
     id: 'stone_hatchet', name: 'Stone Hatchet', type: 'equipment', slot: 'tool',
     toolType: 'axe', toolTier: 0, tier: 0, rarity: 'common', gemSlots: 0,
     statBonuses: {},
     description: 'Chops oak and birch.',
+  },
+
+  // --- Bone (Tier 1 stepping stone) ---
+  bone_pickaxe: {
+    id: 'bone_pickaxe', name: 'Bone Pickaxe', type: 'equipment', slot: 'tool',
+    toolType: 'pickaxe', toolTier: 1, tier: 0, rarity: 'common', gemSlots: 0,
+    statBonuses: {},
+    description: 'Mines copper and tin. Forged from the spoils of Bramblethorn.',
   },
 
   // --- Bronze (Tier 1) ---
@@ -268,7 +715,70 @@ export const ITEM_DB = {
     description: 'Mines flametal and sulfite.',
   },
 
+  // --- Silver (Tier 3) ---
+  silver_hatchet: {
+    id: 'silver_hatchet', name: 'Silver Hatchet', type: 'equipment', slot: 'tool',
+    toolType: 'axe', toolTier: 3, tier: 3, rarity: 'epic', gemSlots: 0,
+    statBonuses: {},
+    description: 'Chops ancient and swamp trees.',
+  },
+
+  // --- Obsidian (Tier 4) ---
+  obsidian_hatchet: {
+    id: 'obsidian_hatchet', name: 'Obsidian Hatchet', type: 'equipment', slot: 'tool',
+    toolType: 'axe', toolTier: 4, tier: 4, rarity: 'epic', gemSlots: 0,
+    statBonuses: {},
+    description: 'Chops mountain trees.',
+  },
+
+  // --- Flametal (Tier 5) ---
+  flametal_pickaxe: {
+    id: 'flametal_pickaxe', name: 'Flametal Pickaxe', type: 'equipment', slot: 'tool',
+    toolType: 'pickaxe', toolTier: 5, tier: 5, rarity: 'epic', gemSlots: 0,
+    statBonuses: {},
+    description: 'Mines everything.',
+  },
+  flametal_hatchet: {
+    id: 'flametal_hatchet', name: 'Flametal Hatchet', type: 'equipment', slot: 'tool',
+    toolType: 'axe', toolTier: 5, tier: 5, rarity: 'epic', gemSlots: 0,
+    statBonuses: {},
+    description: 'Chops all trees.',
+  },
+
+  // --- Fishing Rods ---
+  wooden_rod: {
+    id: 'wooden_rod', name: 'Wooden Rod', type: 'equipment', slot: 'tool',
+    toolType: 'fishing_rod', toolTier: 0, tier: 0, rarity: 'common', gemSlots: 0,
+    statBonuses: {},
+    description: 'A basic fishing rod.',
+  },
+  bronze_rod: {
+    id: 'bronze_rod', name: 'Bronze Rod', type: 'equipment', slot: 'tool',
+    toolType: 'fishing_rod', toolTier: 1, tier: 1, rarity: 'uncommon', gemSlots: 1,
+    statBonuses: {},
+    description: 'A sturdy bronze fishing rod.',
+  },
+  iron_rod: {
+    id: 'iron_rod', name: 'Iron Rod', type: 'equipment', slot: 'tool',
+    toolType: 'fishing_rod', toolTier: 2, tier: 2, rarity: 'rare', gemSlots: 1,
+    statBonuses: {},
+    description: 'A strong iron fishing rod.',
+  },
+  silver_rod: {
+    id: 'silver_rod', name: 'Silver Rod', type: 'equipment', slot: 'tool',
+    toolType: 'fishing_rod', toolTier: 3, tier: 3, rarity: 'epic', gemSlots: 2,
+    statBonuses: {},
+    description: 'A masterwork silver fishing rod.',
+  },
+
   // ============================================================
+  //  CURRENCY
+  // ============================================================
+  gold: {
+    id: 'gold', name: 'Gold', type: 'material', stackable: true, maxStack: 9999,
+    description: 'Gold coins, used for trading.',
+  },
+
   //  RAW MATERIALS (from gathering)
   // ============================================================
   stick: {
@@ -310,6 +820,11 @@ export const ITEM_DB = {
   greyling_hide: {
     id: 'greyling_hide', name: 'Greyling Hide', type: 'material', stackable: true, maxStack: 50,
     description: 'Rough grey hide.',
+  },
+  greyling_tear: {
+    id: 'greyling_tear', name: 'Greyling Tear', type: 'material',
+    rarity: 'uncommon', stackable: true, maxStack: 10,
+    description: 'A strange tear from a Greyling. It pulses with energy.',
   },
   raw_meat: {
     id: 'raw_meat', name: 'Raw Meat', type: 'material', stackable: true, maxStack: 50,
@@ -396,6 +911,48 @@ export const ITEM_DB = {
     description: 'Molten elemental core.',
   },
 
+  // --- Fish (from fishing) ---
+  river_trout: {
+    id: 'river_trout', name: 'River Trout', type: 'material', stackable: true, maxStack: 20,
+    fishBiome: 'meadow', rarity: 'common',
+    description: 'A common freshwater trout.',
+  },
+  golden_carp: {
+    id: 'golden_carp', name: 'Golden Carp', type: 'material', stackable: true, maxStack: 20,
+    fishBiome: 'meadow', rarity: 'uncommon',
+    description: 'A rare golden-scaled carp.',
+  },
+  lake_bass: {
+    id: 'lake_bass', name: 'Lake Bass', type: 'material', stackable: true, maxStack: 20,
+    fishBiome: 'darkForest', rarity: 'common',
+    description: 'A hearty lake bass.',
+  },
+  shadow_pike: {
+    id: 'shadow_pike', name: 'Shadow Pike', type: 'material', stackable: true, maxStack: 20,
+    fishBiome: 'darkForest', rarity: 'rare',
+    description: 'An elusive dark-water pike.',
+  },
+  swamp_eel: {
+    id: 'swamp_eel', name: 'Swamp Eel', type: 'material', stackable: true, maxStack: 20,
+    fishBiome: 'swamp', rarity: 'common',
+    description: 'A slippery swamp eel.',
+  },
+  poison_catfish: {
+    id: 'poison_catfish', name: 'Poison Catfish', type: 'material', stackable: true, maxStack: 20,
+    fishBiome: 'swamp', rarity: 'uncommon',
+    description: 'A venomous catfish. Used in alchemy.',
+  },
+  frost_salmon: {
+    id: 'frost_salmon', name: 'Frost Salmon', type: 'material', stackable: true, maxStack: 20,
+    fishBiome: 'mountain', rarity: 'rare',
+    description: 'A prized ice-water salmon.',
+  },
+  lava_eel: {
+    id: 'lava_eel', name: 'Lava Eel', type: 'material', stackable: true, maxStack: 20,
+    fishBiome: 'volcanic', rarity: 'epic',
+    description: 'A legendary eel that thrives in magma.',
+  },
+
   // ============================================================
   //  PROCESSED MATERIALS (from crafting stations)
   // ============================================================
@@ -473,6 +1030,15 @@ export const ITEM_DB = {
     id: 'flametal_ingot', name: 'Flametal Ingot', type: 'material', stackable: true, maxStack: 50,
     description: 'Glowing metal of eternal flame.',
   },
+  arcane_essence: {
+    id: 'arcane_essence', name: 'Arcane Essence', type: 'material', stackable: true, maxStack: 50,
+    rarity: 'uncommon',
+    description: 'Refined magical essence.',
+  },
+  blasting_powder: {
+    id: 'blasting_powder', name: 'Blasting Powder', type: 'material', stackable: true, maxStack: 50,
+    description: 'Explosive powder for crafting bombs.',
+  },
 
   // ============================================================
   //  CONSUMABLES
@@ -491,6 +1057,145 @@ export const ITEM_DB = {
     id: 'mushroom_soup', name: 'Mushroom Soup', type: 'consumable', stackable: true, maxStack: 20,
     effect: { healAmount: 50 },
     description: 'Hearty soup. Restores 50 HP.',
+  },
+
+  // --- Bombs ---
+  bomb: {
+    id: 'bomb', name: 'Bomb', type: 'consumable', stackable: true, maxStack: 20,
+    effect: { bomb: true, bombRadius: 2 },
+    description: 'Destroys nearby mineable walls. 2-tile radius.',
+  },
+  fire_bomb: {
+    id: 'fire_bomb', name: 'Fire Bomb', type: 'consumable', stackable: true, maxStack: 20,
+    effect: { bomb: true, bombRadius: 3, bombDamage: 30 },
+    description: 'Destroys walls and damages nearby enemies. 3-tile radius.',
+  },
+  frost_bomb: {
+    id: 'frost_bomb', name: 'Frost Bomb', type: 'consumable', stackable: true, maxStack: 20,
+    effect: { bomb: true, bombRadius: 2, bombSlow: 3 },
+    description: 'Destroys walls and slows nearby enemies. 2-tile radius.',
+  },
+
+  // --- Cooked fish ---
+  grilled_trout: {
+    id: 'grilled_trout', name: 'Grilled Trout', type: 'consumable', stackable: true, maxStack: 20,
+    effect: { healAmount: 20 },
+    description: 'Grilled river trout. Restores 20 HP.',
+  },
+  grilled_carp: {
+    id: 'grilled_carp', name: 'Grilled Carp', type: 'consumable', stackable: true, maxStack: 20,
+    effect: { healAmount: 35 },
+    description: 'Grilled golden carp. Restores 35 HP.',
+  },
+  grilled_bass: {
+    id: 'grilled_bass', name: 'Grilled Bass', type: 'consumable', stackable: true, maxStack: 20,
+    effect: { healAmount: 30 },
+    description: 'Grilled lake bass. Restores 30 HP.',
+  },
+  grilled_pike: {
+    id: 'grilled_pike', name: 'Grilled Pike', type: 'consumable', stackable: true, maxStack: 20,
+    effect: { healAmount: 50 },
+    description: 'Grilled shadow pike. Restores 50 HP.',
+  },
+  grilled_eel: {
+    id: 'grilled_eel', name: 'Grilled Eel', type: 'consumable', stackable: true, maxStack: 20,
+    effect: { healAmount: 25 },
+    description: 'Grilled swamp eel. Restores 25 HP.',
+  },
+  grilled_salmon: {
+    id: 'grilled_salmon', name: 'Grilled Salmon', type: 'consumable', stackable: true, maxStack: 20,
+    effect: { healAmount: 60 },
+    description: 'Grilled frost salmon. Restores 60 HP.',
+  },
+  grilled_lava_eel: {
+    id: 'grilled_lava_eel', name: 'Grilled Lava Eel', type: 'consumable', stackable: true, maxStack: 20,
+    effect: { healAmount: 80 },
+    description: 'Grilled lava eel. Restores 80 HP.',
+  },
+  grilled_fish: {
+    id: 'grilled_fish', name: 'Grilled Fish', type: 'consumable', stackable: true, maxStack: 20,
+    effect: { healAmount: 25 },
+    description: 'A simply grilled fish. Restores 25 HP.',
+  },
+
+  // ============================================================
+  //  FISHING PARTS (rod attachments)
+  // ============================================================
+
+  // --- Reels (affect reel speed) ---
+  wooden_reel: {
+    id: 'wooden_reel', name: 'Wooden Reel', type: 'fishing_part',
+    partSlot: 'reel', partTier: 0, reelSpeed: 1.0,
+    description: 'A basic wooden reel.',
+  },
+  bronze_reel: {
+    id: 'bronze_reel', name: 'Bronze Reel', type: 'fishing_part',
+    partSlot: 'reel', partTier: 1, reelSpeed: 1.3,
+    description: 'A smooth bronze reel. 1.3x reel speed.',
+  },
+  iron_reel: {
+    id: 'iron_reel', name: 'Iron Reel', type: 'fishing_part',
+    partSlot: 'reel', partTier: 2, reelSpeed: 1.6,
+    description: 'A precision iron reel. 1.6x reel speed.',
+  },
+  silver_reel: {
+    id: 'silver_reel', name: 'Silver Reel', type: 'fishing_part',
+    partSlot: 'reel', partTier: 3, reelSpeed: 2.0,
+    description: 'A masterwork silver reel. 2.0x reel speed.',
+  },
+
+  // --- Lines (affect cast range) ---
+  hemp_line: {
+    id: 'hemp_line', name: 'Hemp Line', type: 'fishing_part',
+    partSlot: 'line', partTier: 0, castRange: 3,
+    description: 'A rough hemp fishing line. 3 tile range.',
+  },
+  silk_line: {
+    id: 'silk_line', name: 'Silk Line', type: 'fishing_part',
+    partSlot: 'line', partTier: 1, castRange: 5,
+    description: 'A fine silk line. 5 tile range.',
+  },
+  spider_silk_line: {
+    id: 'spider_silk_line', name: 'Spider Silk Line', type: 'fishing_part',
+    partSlot: 'line', partTier: 2, castRange: 7,
+    description: 'Incredibly strong spider silk. 7 tile range.',
+  },
+
+  // --- Hooks (affect catch quality) ---
+  bone_hook: {
+    id: 'bone_hook', name: 'Bone Hook', type: 'fishing_part',
+    partSlot: 'hook', partTier: 0, rareCatchBonus: 0,
+    description: 'A carved bone hook.',
+  },
+  bronze_hook: {
+    id: 'bronze_hook', name: 'Bronze Hook', type: 'fishing_part',
+    partSlot: 'hook', partTier: 1, rareCatchBonus: 0.10,
+    description: 'A sharp bronze hook. +10% rare catch.',
+  },
+  barbed_hook: {
+    id: 'barbed_hook', name: 'Barbed Hook', type: 'fishing_part',
+    partSlot: 'hook', partTier: 2, rareCatchBonus: 0.25,
+    description: 'A barbed steel hook. +25% rare catch.',
+  },
+
+  // --- Bait (consumable, affects bite speed) ---
+  worm_bait: {
+    id: 'worm_bait', name: 'Worm Bait', type: 'fishing_part',
+    partSlot: 'bait', partTier: 0, biteSpeed: 1.0,
+    stackable: true, maxStack: 50,
+    description: 'Common worms. Standard bite speed.',
+  },
+  insect_bait: {
+    id: 'insect_bait', name: 'Insect Bait', type: 'fishing_part',
+    partSlot: 'bait', partTier: 1, biteSpeed: 1.5,
+    stackable: true, maxStack: 50,
+    description: 'Cave insects. 1.5x bite speed.',
+  },
+  fish_chunk_bait: {
+    id: 'fish_chunk_bait', name: 'Fish Chunk Bait', type: 'fishing_part',
+    partSlot: 'bait', partTier: 2, biteSpeed: 2.0,
+    stackable: true, maxStack: 50,
+    description: 'Fish chunks. 2.0x bite speed.',
   },
 
   // ============================================================
@@ -515,6 +1220,26 @@ export const ITEM_DB = {
   raw_gem_pristine: {
     id: 'raw_gem_pristine', name: 'Pristine Gem', type: 'material', stackable: true, maxStack: 20, tier: 4,
     description: 'Uncut pristine gemstone. Cut at a Gem Table.',
+  },
+
+  // ============================================================
+  //  CHESTS (placeable storage)
+  // ============================================================
+  wooden_chest: {
+    id: 'wooden_chest', name: 'Wooden Chest', type: 'material', stackable: false,
+    description: 'A simple wooden chest. Place to store items. 20 slots.',
+  },
+  reinforced_chest: {
+    id: 'reinforced_chest', name: 'Reinforced Chest', type: 'material', stackable: false,
+    description: 'A sturdy reinforced chest. 40 slots.',
+  },
+  iron_chest: {
+    id: 'iron_chest', name: 'Iron Chest', type: 'material', stackable: false,
+    description: 'A heavy iron chest. 80 slots.',
+  },
+  obsidian_vault: {
+    id: 'obsidian_vault', name: 'Obsidian Vault', type: 'material', stackable: false,
+    description: 'An indestructible obsidian vault. 120 slots.',
   },
 
   // ============================================================
@@ -562,4 +1287,4 @@ function generateCutGems() {
   return gems;
 }
 
-export const INVENTORY_SLOTS = 20;
+export const INVENTORY_SLOTS = 100;

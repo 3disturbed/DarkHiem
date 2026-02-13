@@ -48,11 +48,13 @@ export default class InputManager {
     this.actions.mergeButton('craft', this.keyboard.wasAnyJustPressed(['KeyC']));
     this.actions.mergeButton('upgrade', this.keyboard.wasAnyJustPressed(['KeyU']));
     this.actions.mergeButton('skills', this.keyboard.wasAnyJustPressed(['KeyK']));
+    this.actions.mergeButton('questLog', this.keyboard.wasAnyJustPressed(['KeyJ']));
     this.actions.mergeButton('skill1', this.keyboard.wasAnyJustPressed(['Digit1']));
     this.actions.mergeButton('skill2', this.keyboard.wasAnyJustPressed(['Digit2']));
     this.actions.mergeButton('skill3', this.keyboard.wasAnyJustPressed(['Digit3']));
     this.actions.mergeButton('skill4', this.keyboard.wasAnyJustPressed(['Digit4']));
     this.actions.mergeButton('map', this.keyboard.wasAnyJustPressed(['KeyM']));
+    this.actions.mergeButton('fishingRod', this.keyboard.wasAnyJustPressed(['KeyR']));
     this.actions.mergeButton('chat', this.keyboard.wasAnyJustPressed(['Enter']));
     this.actions.mergeButton('action', this.keyboard.wasAnyJustPressed(['Space', 'KeyF']));
 

@@ -3,6 +3,9 @@ import GradientResolver from './GradientResolver.js';
 import TerrainGenerator from './TerrainGenerator.js';
 import ResourcePlacer from './ResourcePlacer.js';
 import EnemySpawner from './EnemySpawner.js';
+import CaveGenerator from './CaveGenerator.js';
+import RiverGenerator from './RiverGenerator.js';
+import TownTerrainOverlay from './TownTerrainOverlay.js';
 
 export default class WorldGenerator {
   constructor(seed, biomeIndex, biomeDataMap) {
@@ -12,7 +15,14 @@ export default class WorldGenerator {
     this.terrain = new TerrainGenerator(this.noise);
     this.resources = new ResourcePlacer(this.noise, this.gradient);
     this.enemies = new EnemySpawner(this.noise, this.gradient);
+    this.caves = new CaveGenerator(this.noise);
+    this.rivers = new RiverGenerator(this.noise, biomeIndex);
     this.biomeDataMap = biomeDataMap; // biomeId -> {biome.json, tiles.json, resources.json, enemies.json}
+    this.townOverlay = new TownTerrainOverlay(biomeIndex);
+    this.biomeIndex = biomeIndex;
+
+    // Generate persistent river network once at startup
+    this.rivers.generateRiverMap();
   }
 
   generateChunk(chunkX, chunkY) {
@@ -29,14 +39,30 @@ export default class WorldGenerator {
       chunkX, chunkY, biomeData.biome, biomeData.tiles
     );
 
-    // Place resources
-    const resources = this.resources.placeResources(
-      chunkX, chunkY, biome, biomeData.resources, solids
+    // Apply cave generation (skip in town)
+    const inTown = this.isInTown(chunkX, chunkY, this.biomeIndex);
+    if (!inTown) {
+      this.caves.generateCaves(chunkX, chunkY, biomeData, tiles, solids);
+    }
+
+    // Apply rivers/lakes (after terrain + caves, before town overlay)
+    if (!inTown) {
+      this.rivers.applyWater(chunkX, chunkY, tiles, solids);
+    }
+
+    // Apply town wall/road overlay for chunks near town
+    if (this.townOverlay.chunkNeedOverlay(chunkX, chunkY)) {
+      this.townOverlay.applyOverlay(chunkX, chunkY, tiles, solids);
+    }
+
+    // Place resources (skip in town to keep it clean)
+    const resources = inTown ? [] : this.resources.placeResources(
+      chunkX, chunkY, biome, biomeData.resources, solids, tiles
     );
 
     // Determine enemy spawn points
     const spawnPoints = this.enemies.getSpawnPoints(
-      chunkX, chunkY, biome, biomeData.enemies, solids
+      chunkX, chunkY, biome, biomeData.enemies, solids, tiles
     );
 
     return {

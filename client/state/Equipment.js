@@ -14,7 +14,7 @@ export default class Equipment {
       if (!val) {
         this.slots[slot] = null;
       } else if (typeof val === 'object' && val.id) {
-        // New format: { id, gems, upgradeLevel, upgradeXp }
+        // New format: { id, gems, upgradeLevel, upgradeXp, rodParts? }
         this.slots[slot] = val;
       } else if (typeof val === 'string') {
         // Old format: plain item ID string
@@ -29,12 +29,14 @@ export default class Equipment {
     const itemDef = ITEM_DB[entry.id];
     if (!itemDef) return null;
     // Return item def merged with per-instance data
-    return {
+    const result = {
       ...itemDef,
       gems: entry.gems || [],
       upgradeLevel: entry.upgradeLevel || 0,
       upgradeXp: entry.upgradeXp || 0,
     };
+    if (entry.rodParts) result.rodParts = entry.rodParts;
+    return result;
   }
 
   getSlotNames() {

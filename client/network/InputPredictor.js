@@ -38,16 +38,17 @@ export default class InputPredictor {
     for (const input of this.pendingInputs) {
       const velX = input.moveX * PLAYER_SPEED;
       const velY = input.moveY * PLAYER_SPEED;
-      x += velX * input.dt;
-      y += velY * input.dt;
 
-      // Apply tile collision to match server behavior
       if (this.collision) {
-        const result = this.collision.resolveAABB(
-          x, y, PLAYER_SIZE, PLAYER_SIZE, velX, velY
+        const halfSize = PLAYER_SIZE / 2;
+        const result = this.collision.moveAndSlide(
+          x, y, halfSize, halfSize, velX * input.dt, velY * input.dt
         );
-        x += result.x;
-        y += result.y;
+        x = result.x;
+        y = result.y;
+      } else {
+        x += velX * input.dt;
+        y += velY * input.dt;
       }
     }
 

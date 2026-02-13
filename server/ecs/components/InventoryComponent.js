@@ -46,6 +46,33 @@ export default class InventoryComponent extends Component {
     return remaining;
   }
 
+  removeItem(itemId, count = 1) {
+    let remaining = count;
+    for (let i = 0; i < this.slotCount && remaining > 0; i++) {
+      const slot = this.slots[i];
+      if (slot && slot.itemId === itemId) {
+        const toRemove = Math.min(slot.count, remaining);
+        slot.count -= toRemove;
+        remaining -= toRemove;
+        if (slot.count <= 0) {
+          this.slots[i] = null;
+        }
+      }
+    }
+    return count - remaining; // returns amount actually removed
+  }
+
+  countItem(itemId) {
+    let total = 0;
+    for (let i = 0; i < this.slotCount; i++) {
+      const slot = this.slots[i];
+      if (slot && slot.itemId === itemId) {
+        total += slot.count;
+      }
+    }
+    return total;
+  }
+
   removeFromSlot(slotIndex, count = 1) {
     const slot = this.slots[slotIndex];
     if (!slot) return null;

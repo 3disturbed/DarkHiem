@@ -8,6 +8,7 @@ import EquipmentComponent from '../ecs/components/EquipmentComponent.js';
 import ResourceNodeComponent from '../ecs/components/ResourceNodeComponent.js';
 import StatusEffectComponent from '../ecs/components/StatusEffectComponent.js';
 import SkillComponent from '../ecs/components/SkillComponent.js';
+import { findBestTool } from '../network/handlers/CombatHandler.js';
 
 export default class CombatResolver {
   constructor(io) {
@@ -114,12 +115,11 @@ export default class CombatResolver {
     const resNode = resource.getComponent(ResourceNodeComponent);
     if (!resNode) return;
 
-    // Tool check: if resource requires a tool, verify the player has one equipped
+    // Tool check: if resource requires a tool, verify the player has one (equipped or in inventory)
     if (resNode.tool !== 'none') {
-      const equip = attacker.getComponent(EquipmentComponent);
-      const tool = equip ? equip.getEquipped('tool') : null;
+      const found = findBestTool(attacker, resNode.tool, resNode.toolTier);
 
-      if (!tool || tool.toolType !== resNode.tool) {
+      if (!found) {
         // Wrong tool or no tool — show a "needs <tool>" message via 0 damage
         this.damageEvents.push({
           targetId: resource.id,
@@ -130,21 +130,6 @@ export default class CombatResolver {
           y: resource.getComponent(PositionComponent).y,
           killed: false,
           blocked: `Needs ${resNode.tool}`,
-        });
-        return;
-      }
-
-      if (tool.toolTier < resNode.toolTier) {
-        // Tool tier too low
-        this.damageEvents.push({
-          targetId: resource.id,
-          attackerId: attacker.id,
-          damage: 0,
-          isCrit: false,
-          x: resource.getComponent(PositionComponent).x,
-          y: resource.getComponent(PositionComponent).y,
-          killed: false,
-          blocked: 'Tool tier too low',
         });
         return;
       }

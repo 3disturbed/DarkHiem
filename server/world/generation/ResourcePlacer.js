@@ -1,4 +1,5 @@
 import { CHUNK_SIZE, TILE_SIZE } from '../../../shared/Constants.js';
+import { TILE, WATER_TILE_IDS } from '../../../shared/TileTypes.js';
 
 export default class ResourcePlacer {
   constructor(noiseGen, gradientResolver) {
@@ -7,7 +8,7 @@ export default class ResourcePlacer {
   }
 
   // Place resources in a chunk based on biome gradient
-  placeResources(chunkX, chunkY, biome, resourceConfig, solids) {
+  placeResources(chunkX, chunkY, biome, resourceConfig, solids, tiles) {
     const resources = [];
     const baseWorldX = chunkX * CHUNK_SIZE * TILE_SIZE;
     const baseWorldY = chunkY * CHUNK_SIZE * TILE_SIZE;
@@ -18,6 +19,18 @@ export default class ResourcePlacer {
         for (let tx = 0; tx < CHUNK_SIZE; tx += 2) {
           const idx = ty * CHUNK_SIZE + tx;
           if (solids[idx]) continue; // Don't place on solid tiles
+
+          // Skip water tiles
+          if (tiles && WATER_TILE_IDS.has(tiles[idx])) continue;
+
+          // Cave-only resources only on cave floor tiles
+          if (entry.caveOnly) {
+            if (!tiles || (tiles[idx] !== TILE.CAVE_FLOOR && tiles[idx] !== TILE.CAVE_MOSS && tiles[idx] !== TILE.CAVE_CRYSTAL)) continue;
+          } else if (tiles) {
+            // Non-cave resources skip cave tiles
+            const t = tiles[idx];
+            if (t === TILE.CAVE_FLOOR || t === TILE.CAVE_MOSS || t === TILE.CAVE_CRYSTAL || t === TILE.CAVE_ENTRANCE) continue;
+          }
 
           const worldX = baseWorldX + tx * TILE_SIZE + TILE_SIZE / 2;
           const worldY = baseWorldY + ty * TILE_SIZE + TILE_SIZE / 2;

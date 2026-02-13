@@ -35,7 +35,7 @@ export default class StatsPanel {
   }
 
   position(canvasWidth, canvasHeight) {
-    this.x = canvasWidth / 2 + 144 + 8; // right of inventory (288/2 = 144)
+    this.x = canvasWidth / 2 + 260 + 8; // right of inventory (520/2 = 260)
     this.y = canvasHeight / 2 - this.height / 2 + 40;
   }
 

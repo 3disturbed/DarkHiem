@@ -124,6 +124,128 @@ export default class EntityRenderer {
     r.drawText(label, x, y - half - 8, '#ffd700', 9, 'center');
   }
 
+  // Render a chest entity
+  static renderChest(r, x, y, color, size, name) {
+    const ctx = r.ctx;
+    const half = size / 2;
+    const w = size;
+    const h = size * 0.7;
+
+    // Body (box)
+    ctx.fillStyle = color;
+    ctx.fillRect(Math.round(x - w / 2), Math.round(y - h / 2), w, h);
+
+    // Lid (darker top portion)
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillRect(Math.round(x - w / 2), Math.round(y - h / 2), w, h * 0.35);
+
+    // Outline
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(Math.round(x - w / 2), Math.round(y - h / 2), w, h);
+
+    // Gold clasp
+    ctx.fillStyle = '#f1c40f';
+    ctx.fillRect(Math.round(x - 3), Math.round(y - h / 2 + h * 0.3), 6, 6);
+
+    // Name tag
+    r.drawText(name, x, y - h / 2 - 8, '#ffd700', 9, 'center');
+  }
+
+  // Render a summoning shrine/altar
+  static renderAltar(r, x, y, color, size, name, isActive) {
+    const half = size / 2;
+    const ctx = r.ctx;
+
+    // Pulsing glow
+    const pulse = isActive
+      ? 0.2 + Math.sin(Date.now() / 600) * 0.1
+      : 0.4 + Math.sin(Date.now() / 300) * 0.2;
+    ctx.save();
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle = isActive ? '#e74c3c' : '#B87333';
+    ctx.beginPath();
+    ctx.arc(Math.round(x), Math.round(y), half + 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Octagon body
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const angle = (Math.PI * 2 * i / 8) - Math.PI / 8;
+      const px = x + Math.cos(angle) * half;
+      const py = y + Math.sin(angle) * half;
+      if (i === 0) ctx.moveTo(Math.round(px), Math.round(py));
+      else ctx.lineTo(Math.round(px), Math.round(py));
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    // Border
+    ctx.strokeStyle = isActive ? '#e74c3c' : '#ffd700';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Name tag
+    r.drawText(name, x, y - half - 12, '#ffd700', 11, 'center');
+
+    // Status hint
+    const status = isActive ? 'Boss Active' : 'Press E';
+    r.drawText(status, x, y + half + 14, isActive ? '#e74c3c' : '#aaa', 8, 'center');
+  }
+
+  // Render an NPC entity
+  static renderNPC(r, x, y, color, size, name, npcType) {
+    const half = size / 2;
+    const ctx = r.ctx;
+
+    // Hexagonal body shape
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI * 2 * i / 6) - Math.PI / 6;
+      const px = x + Math.cos(angle) * half;
+      const py = y + Math.sin(angle) * half;
+      if (i === 0) ctx.moveTo(Math.round(px), Math.round(py));
+      else ctx.lineTo(Math.round(px), Math.round(py));
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    // Outline
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Name tag
+    r.drawText(name, x, y - half - 14, '#fff', 10, 'center');
+
+    // Citizens: no type indicator, no "Press E"
+    if (npcType === 'citizen') return;
+
+    // Type indicator above name
+    if (npcType === 'quest_giver') {
+      // Yellow exclamation mark
+      r.drawText('!', x, y - half - 26, '#ffd700', 16, 'center');
+    } else if (npcType === 'vendor') {
+      // Gold coin symbol
+      r.drawText('$', x, y - half - 26, '#f1c40f', 14, 'center');
+    } else if (npcType === 'guard') {
+      // Shield indicator - blue outline around body
+      ctx.strokeStyle = '#3498db';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(Math.round(x), Math.round(y), half + 4, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // "Press E" hint
+    if (npcType !== 'guard') {
+      r.drawText('Press E', x, y + half + 10, '#aaa', 7, 'center');
+    }
+  }
+
   // Render a ghost station for placement preview
   static renderStationGhost(r, x, y, color, size, name, isValid) {
     const half = size / 2;

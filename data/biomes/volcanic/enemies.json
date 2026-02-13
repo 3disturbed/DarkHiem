@@ -61,6 +61,49 @@
       "behavior": "aggressive",
       "aggroRange": 208,
       "deaggroRange": 352
+    },
+    {
+      "id": "fire_bat",
+      "name": "Fire Bat",
+      "health": 40,
+      "damage": 25,
+      "speed": 100,
+      "xpReward": 35,
+      "drops": [
+        { "item": "sulfite", "chance": 0.3, "min": 1, "max": 1 }
+      ],
+      "minGradient": 0.0,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.04,
+      "densityAtRight": 0.07,
+      "color": "#ff4400",
+      "size": 16,
+      "behavior": "aggressive",
+      "aggroRange": 160,
+      "deaggroRange": 288,
+      "caveOnly": true
+    },
+    {
+      "id": "magma_worm",
+      "name": "Magma Worm",
+      "health": 100,
+      "damage": 35,
+      "speed": 45,
+      "xpReward": 55,
+      "drops": [
+        { "item": "magma_core", "chance": 0.3, "min": 1, "max": 1 },
+        { "item": "flametal_ore", "chance": 0.2, "min": 1, "max": 2 }
+      ],
+      "minGradient": 0.0,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.02,
+      "densityAtRight": 0.04,
+      "color": "#cc3300",
+      "size": 26,
+      "behavior": "aggressive",
+      "aggroRange": 128,
+      "deaggroRange": 256,
+      "caveOnly": true
     }
   ]
 }

@@ -91,6 +91,13 @@ export default class ClientWorldManager {
     return this.chunks.get(`${chunkX},${chunkY}`) || null;
   }
 
+  // Update a single tile (from server tile mining)
+  updateTile(chunkX, chunkY, localX, localY, newTileId) {
+    const chunk = this.chunks.get(`${chunkX},${chunkY}`);
+    if (!chunk) return;
+    chunk.setTile(localX, localY, newTileId);
+  }
+
   render(ctx, camera, viewWidth, viewHeight) {
     for (const chunk of this.chunks.values()) {
       chunk.render(ctx, camera.x, camera.y, camera.zoom, viewWidth, viewHeight);

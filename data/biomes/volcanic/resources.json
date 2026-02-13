@@ -59,6 +59,38 @@
       "densityAtRight": 0.05,
       "color": "#444444",
       "size": 18
+    },
+    {
+      "id": "cave_flametal_vein",
+      "name": "Flametal Vein",
+      "tool": "pickaxe",
+      "toolTier": 4,
+      "drops": [{ "item": "flametal_ore", "min": 2, "max": 4 }, { "item": "raw_gem_pristine", "chance": 0.06, "min": 1, "max": 1 }],
+      "health": 150,
+      "respawnTime": 900,
+      "minGradient": 0.0,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.06,
+      "densityAtRight": 0.10,
+      "color": "#ff6600",
+      "size": 24,
+      "caveOnly": true
+    },
+    {
+      "id": "cave_sulfite_deposit",
+      "name": "Sulfite Deposit",
+      "tool": "pickaxe",
+      "toolTier": 4,
+      "drops": [{ "item": "sulfite", "min": 2, "max": 5 }],
+      "health": 100,
+      "respawnTime": 700,
+      "minGradient": 0.0,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.05,
+      "densityAtRight": 0.08,
+      "color": "#cccc00",
+      "size": 20,
+      "caveOnly": true
     }
   ]
 }

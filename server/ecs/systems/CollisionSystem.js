@@ -33,31 +33,32 @@ export default class CollisionSystem extends System {
       );
     }
 
-    // Tile collision for all moving entities (separate axis resolution)
+    // Tile collision for non-player moving entities (sweep-and-clamp)
     if (this.tileCollisionMap) {
       const movers = entityManager.query([PositionComponent, VelocityComponent, ColliderComponent]);
       for (const entity of movers) {
+        if (entity.hasTag('player')) continue; // Players are client-authoritative
         const pos = entity.getComponent(PositionComponent);
         const col = entity.getComponent(ColliderComponent);
         const vel = entity.getComponent(VelocityComponent);
 
         if (!col.solid) continue;
 
-        const result = this.tileCollisionMap.resolveAABB(
-          pos.x + col.offsetX,
-          pos.y + col.offsetY,
-          col.width,
-          col.height,
-          vel.dx,
-          vel.dy
+        const halfW = col.width / 2;
+        const halfH = col.height / 2;
+
+        // Reverse the movement to get pre-move position, then sweep forward
+        const preX = pos.x + col.offsetX - vel.dx * dt;
+        const preY = pos.y + col.offsetY - vel.dy * dt;
+
+        const result = this.tileCollisionMap.moveAndSlide(
+          preX, preY, halfW, halfH, vel.dx * dt, vel.dy * dt
         );
 
-        if (result.x !== 0 || result.y !== 0) {
-          pos.x += result.x;
-          pos.y += result.y;
-          if (result.hitX) vel.dx = 0;
-          if (result.hitY) vel.dy = 0;
-        }
+        pos.x = result.x - col.offsetX;
+        pos.y = result.y - col.offsetY;
+        if (result.hitX) vel.dx = 0;
+        if (result.hitY) vel.dy = 0;
       }
     }
 
@@ -98,6 +99,23 @@ export default class CollisionSystem extends System {
             }
           }
         }
+      }
+    }
+
+    // Post-entity depenetrate: fix entities pushed into tiles by entity-entity collision
+    if (this.tileCollisionMap) {
+      for (const entity of entities) {
+        if (entity.hasTag('player')) continue;
+        const col = entity.getComponent(ColliderComponent);
+        if (!col.solid) continue;
+        const pos = entity.getComponent(PositionComponent);
+        const halfW = col.width / 2;
+        const halfH = col.height / 2;
+        const safe = this.tileCollisionMap.depenetrate(
+          pos.x + col.offsetX, pos.y + col.offsetY, halfW, halfH
+        );
+        pos.x = safe.x - col.offsetX;
+        pos.y = safe.y - col.offsetY;
       }
     }
   }

@@ -1,0 +1,400 @@
+{
+  "version": 1,
+  "id": "165d9fb3-7f15-45f8-ab63-aac9b111188f",
+  "name": "Wazzok",
+  "color": "#ecf0f1",
+  "savedAt": 1770949298584,
+  "position": {
+    "x": 179.56274344413436,
+    "y": 315.76057724659535
+  },
+  "health": {
+    "current": 108,
+    "max": 108
+  },
+  "stats": {
+    "level": 16,
+    "xp": 7800,
+    "statPoints": 0,
+    "str": 5,
+    "dex": 5,
+    "vit": 5,
+    "end": 5,
+    "lck": 48
+  },
+  "inventory": {
+    "slots": [
+      {
+        "itemId": "wood",
+        "count": 40
+      },
+      {
+        "itemId": "wood",
+        "count": 11
+      },
+      {
+        "itemId": "oak_plank",
+        "count": 3
+      },
+      null,
+      {
+        "itemId": "stick",
+        "count": 16
+      },
+      null,
+      null,
+      {
+        "itemId": "bone_fragment",
+        "count": 39
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "itemId": "gold",
+        "count": 817
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "itemId": "copper_ore",
+        "count": 50
+      },
+      null,
+      null,
+      {
+        "itemId": "copper_ingot",
+        "count": 22
+      },
+      null,
+      null,
+      null,
+      {
+        "itemId": "iron_ore",
+        "count": 34
+      },
+      null,
+      null,
+      null,
+      {
+        "itemId": "cured_troll_hide",
+        "count": 9
+      },
+      null,
+      {
+        "itemId": "iron_ingot",
+        "count": 12
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "itemId": "stone",
+        "count": 6
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "bronze_hatchet",
+        "count": 1
+      },
+      {
+        "itemId": "stone_hatchet",
+        "count": 1
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "thistle",
+        "count": 1
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      null,
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 50
+      },
+      {
+        "itemId": "stone",
+        "count": 33
+      },
+      {
+        "itemId": "bone_dagger",
+        "count": 1
+      },
+      null,
+      null,
+      null
+    ]
+  },
+  "equipment": {
+    "weapon": {
+      "id": "bronze_spear",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    },
+    "head": {
+      "id": "bronze_helmet",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    },
+    "body": {
+      "id": "bronze_chestplate",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    },
+    "legs": {
+      "id": "bronze_greaves",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    },
+    "feet": null,
+    "shield": {
+      "id": "bronze_shield",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    },
+    "ring1": {
+      "id": "meadow_ring",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    },
+    "ring2": {
+      "id": "meadow_ring",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    },
+    "tool": {
+      "id": "bone_pickaxe",
+      "gems": [],
+      "upgradeLevel": 0,
+      "upgradeXp": 0
+    }
+  },
+  "skills": {
+    "learnedSkills": [
+      "power_strike",
+      "heal",
+      "dash",
+      "cleave",
+      "war_cry",
+      "iron_skin",
+      "whirlwind",
+      "execute",
+      "regeneration"
+    ],
+    "cooldowns": {},
+    "hotbar": [
+      "power_strike",
+      "heal",
+      "dash",
+      "cleave"
+    ]
+  },
+  "quests": {
+    "activeQuests": {
+      "quest_gather_wood": {
+        "objectives": [
+          {
+            "type": "collect",
+            "target": "wood",
+            "current": 10,
+            "required": 10
+          },
+          {
+            "type": "collect",
+            "target": "stone",
+            "current": 5,
+            "required": 5
+          }
+        ]
+      },
+      "quest_forest_patrol": {
+        "objectives": [
+          {
+            "type": "kill",
+            "target": "forest_troll",
+            "current": 0,
+            "required": 3
+          }
+        ]
+      }
+    },
+    "completedQuests": [
+      "quest_guard_duty",
+      "quest_welcome",
+      "quest_cave_clearance"
+    ]
+  }
+}

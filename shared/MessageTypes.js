@@ -84,6 +84,8 @@ export const MSG = {
   FISH_REEL:          'fish:reel',
   FISH_CATCH:         'fish:catch',
   FISH_FAIL:          'fish:fail',
+  ROD_PART_ATTACH:    'rod:part:attach',
+  ROD_PART_REMOVE:    'rod:part:remove',
 
   // Farming
   FARM_PLANT:         'farm:plant',
@@ -117,6 +119,19 @@ export const MSG = {
   SKILL_HOTBAR_SET:   'skill:hotbar:set',
   STAT_ALLOCATE:      'stat:allocate',
   LEVEL_UP:           'level:up',
+
+  // Chests
+  CHEST_OPEN:         'chest:open',
+  CHEST_DATA:         'chest:data',
+  CHEST_DEPOSIT:      'chest:deposit',
+  CHEST_WITHDRAW:     'chest:withdraw',
+  CHEST_CLOSE:        'chest:close',
+
+  // Tile mining
+  TILE_UPDATE:        'tile:update',
+
+  // Town recall
+  TOWN_RECALL:        'player:recall',
 
   // World events
   BIOME_UNLOCK:       'world:biome_unlock',

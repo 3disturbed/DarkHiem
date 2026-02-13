@@ -49,12 +49,14 @@ export default class EquipmentComponent extends Component {
     const data = {};
     for (const [slot, item] of Object.entries(this.slots)) {
       if (item) {
-        data[slot] = {
+        const entry = {
           id: item.id,
           gems: item.gems || [],
           upgradeLevel: item.upgradeLevel || 0,
           upgradeXp: item.upgradeXp || 0,
         };
+        if (item.rodParts) entry.rodParts = item.rodParts;
+        data[slot] = entry;
       } else {
         data[slot] = null;
       }

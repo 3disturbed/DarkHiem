@@ -27,6 +27,7 @@ export default class InputActions {
     this.skill4 = false;
     this.map = false;
     this.chat = false;
+    this.questLog = false;
     this.secondaryAction = false; // right-click / gamepad Y (drop, etc.)
 
     // D-pad (for UI navigation)

@@ -1,4 +1,4 @@
-import { PLAYER_SPEED, PLAYER_SIZE, TILE_SIZE } from '../shared/Constants.js';
+import { PLAYER_SPEED, PLAYER_SIZE, TILE_SIZE, CHUNK_PIXEL_SIZE } from '../shared/Constants.js';
 import { ITEM_DB } from '../shared/ItemTypes.js';
 import GameLoop from './engine/GameLoop.js';
 import Renderer from './engine/Renderer.js';
@@ -22,10 +22,18 @@ import Equipment from './state/Equipment.js';
 import CraftingPanel from './ui/CraftingPanel.js';
 import UpgradePanel from './ui/UpgradePanel.js';
 import DeathScreen from './ui/DeathScreen.js';
+import DialogPanel from './ui/DialogPanel.js';
+import QuestPanel from './ui/QuestPanel.js';
+import QuestLog from './state/QuestLog.js';
+import ShopPanel from './ui/ShopPanel.js';
 import Skills from './state/Skills.js';
 import SkillBar from './ui/SkillBar.js';
 import SkillsPanel from './ui/SkillsPanel.js';
 import { SKILL_DB } from '../shared/SkillTypes.js';
+import Minimap from './ui/Minimap.js';
+import WorldMap from './ui/WorldMap.js';
+import ChestPanel from './ui/ChestPanel.js';
+import FishingRodPanel from './ui/FishingRodPanel.js';
 
 export default class Game {
   constructor(canvas) {
@@ -46,6 +54,7 @@ export default class Game {
     this.enemies = new Map(); // id -> entity state from server
     this.resources = new Map(); // id -> resource entity state
     this.stations = new Map(); // id -> station entity state
+    this.npcs = new Map();     // id -> npc entity state
 
     // Combat effects
     this.damageNumbers = new DamageNumber();
@@ -70,17 +79,47 @@ export default class Game {
     this.upgradePanel = new UpgradePanel();
     this.skillsPanel = new SkillsPanel();
     this.deathScreen = new DeathScreen();
+    this.dialogPanel = new DialogPanel();
+    this.dialogOpen = false;
+    this.questPanel = new QuestPanel();
+    this.questLog = new QuestLog();
+    this.questPanelOpen = false;
+    this.shopPanel = new ShopPanel();
+    this.shopOpen = false;
+    this.chestPanel = new ChestPanel();
+    this.chestOpen = false;
+    this.fishingRodPanel = new FishingRodPanel();
+    this.fishingRodOpen = false;
+
+    // Fishing state
+    this.fishingState = null; // null | 'casting' | 'waiting' | 'bite' | 'reeling'
+    this.fishingCastX = 0;
+    this.fishingCastY = 0;
+    this.fishingMessage = '';
+    this.fishingMessageTimer = 0;
+
     this.panelsOpen = false;
     this.craftingOpen = false;
     this.upgradeOpen = false;
     this.skillsOpen = false;
     this.isDead = false;
 
+    // Town recall
+    this.recallTimer = 0;
+    this.recallDuration = 3; // seconds to hold H
+
     // Ghost placement mode
     this.placementMode = null; // null or { stationId, size, color, name }
     this.ghostX = 0;
     this.ghostY = 0;
     this.ghostValid = false;
+
+    // Minimap + World Map
+    this.minimap = new Minimap();
+    this.worldMap = new WorldMap();
+    this.exploredChunks = new Set();
+    this.biomeCache = new Map();      // "cx,cy" -> biomeId (persists after chunk pruned)
+    this.exploreSaveTimer = 0;
 
     this.setupNetworkCallbacks();
   }
@@ -104,6 +143,8 @@ export default class Game {
       // Initialize world streaming
       this.worldManager.init();
       this.worldManager.requestChunksAround(data.x, data.y);
+      // Load explored chunks from localStorage
+      this.loadExploredChunks(data.id);
       console.log(`[Game] Joined as ${data.name}`);
     };
 
@@ -157,9 +198,26 @@ export default class Game {
         this.craftingOpen = false;
         this.upgradeOpen = false;
         this.skillsOpen = false;
+        this.dialogOpen = false;
+        this.dialogPanel.close();
+        this.questPanelOpen = false;
+        this.questPanel.close();
+        this.shopOpen = false;
+        this.shopPanel.close();
+        if (this.chestOpen) {
+          this.network.sendChestClose(this.chestPanel.entityId);
+          this.chestPanel.close();
+          this.chestOpen = false;
+        }
         if (this.placementMode) {
           this.network.sendPlaceCancel();
           this.placementMode = null;
+        }
+        this.fishingRodPanel.close();
+        this.fishingRodOpen = false;
+        if (this.fishingState) {
+          this.network.sendFishCancel();
+          this.fishingState = null;
         }
         this.inventoryPanel.visible = false;
         this.equipmentPanel.visible = false;
@@ -308,13 +366,146 @@ export default class Game {
     };
 
     this.network.onItemPickup = (data) => {
+      const px = this.localPlayer ? this.localPlayer.x : 0;
+      const py = this.localPlayer ? this.localPlayer.y - 20 : 0;
       if (data.xp > 0) {
+        this.damageNumbers.add(px, py, `+${data.xp} XP`, false);
+      }
+      if (data.items) {
+        let yOff = 0;
+        for (const item of data.items) {
+          const def = ITEM_DB[item.itemId];
+          const name = def ? def.name : item.itemId;
+          yOff -= 16;
+          this.damageNumbers.add(px, py + yOff, `+${item.count} ${name}`, false, '#2ecc71');
+        }
+      }
+    };
+
+    // Dialog callbacks
+    this.network.onDialogStart = (data) => {
+      this.dialogPanel.position(this.renderer.width, this.renderer.height);
+      this.dialogPanel.open(data);
+      this.dialogOpen = true;
+      // Close other panels
+      if (this.craftingOpen) { this.craftingPanel.close(); this.craftingOpen = false; }
+      if (this.upgradeOpen) { this.upgradePanel.close(); this.upgradeOpen = false; }
+    };
+
+    this.network.onDialogNode = (data) => {
+      this.dialogPanel.updateNode(data);
+    };
+
+    this.network.onDialogEnd = () => {
+      this.dialogPanel.close();
+      this.dialogOpen = false;
+    };
+
+    // Quest callbacks
+    this.network.onQuestList = (data) => {
+      this.questLog.updateFromQuestList(data);
+      this.questPanel.position(this.renderer.width, this.renderer.height);
+      this.questPanel.openNpcQuests(data);
+      this.questPanelOpen = true;
+    };
+
+    this.network.onQuestProgress = (data) => {
+      this.questLog.updateProgress(data);
+      // Show floating progress text
+      if (this.localPlayer) {
+        const quest = this.questLog.quests.get(data.questId);
+        if (quest) {
+          for (const obj of data.objectives) {
+            if (obj.current < obj.required) {
+              this.damageNumbers.add(
+                this.localPlayer.x, this.localPlayer.y - 40,
+                `${obj.target}: ${obj.current}/${obj.required}`, false
+              );
+            }
+          }
+        }
+      }
+    };
+
+    this.network.onQuestComplete = (data) => {
+      this.questLog.markCompleted(data.questId);
+      if (this.questPanelOpen && this.questPanel.mode === 'npc') {
+        this.questPanel.close();
+        this.questPanelOpen = false;
+      }
+      if (this.localPlayer) {
         this.damageNumbers.add(
-          this.localPlayer ? this.localPlayer.x : 0,
-          this.localPlayer ? this.localPlayer.y - 20 : 0,
-          `+${data.xp} XP`, false
+          this.localPlayer.x, this.localPlayer.y - 40,
+          'Quest Complete!', false
         );
       }
+    };
+
+    // Shop callbacks
+    this.network.onShopData = (data) => {
+      this.shopPanel.position(this.renderer.width, this.renderer.height);
+      this.shopPanel.open(data);
+      this.shopOpen = true;
+    };
+
+    this.network.onShopResult = (data) => {
+      this.shopPanel.handleResult(data);
+      if (!data.success && data.message && this.localPlayer) {
+        this.damageNumbers.add(
+          this.localPlayer.x, this.localPlayer.y - 30,
+          data.message, false
+        );
+      }
+    };
+
+    // Chest
+    this.network.onChestData = (data) => {
+      if (!this.chestOpen) {
+        this.chestPanel.position(this.renderer.width, this.renderer.height);
+        this.chestPanel.open(data);
+        this.chestOpen = true;
+      } else {
+        this.chestPanel.updateSlots(data);
+      }
+    };
+
+    this.network.onChestClose = () => {
+      this.chestPanel.close();
+      this.chestOpen = false;
+    };
+
+    // Fishing callbacks
+    this.network.onFishCast = (data) => {
+      this.fishingState = 'waiting';
+      this.fishingCastX = data.castX;
+      this.fishingCastY = data.castY;
+    };
+
+    this.network.onFishBite = () => {
+      this.fishingState = 'bite';
+    };
+
+    this.network.onFishReel = () => {
+      this.fishingState = 'reeling';
+    };
+
+    this.network.onFishCatch = (data) => {
+      this.fishingState = null;
+      this.fishingMessage = `Caught ${data.fishName}!`;
+      this.fishingMessageTimer = 3;
+    };
+
+    this.network.onFishFail = (data) => {
+      this.fishingState = null;
+      if (data?.reason) {
+        this.fishingMessage = data.reason;
+        this.fishingMessageTimer = 2;
+      }
+    };
+
+    // Tile mining updates
+    this.network.onTileUpdate = (data) => {
+      this.worldManager.updateTile(data.chunkX, data.chunkY, data.localX, data.localY, data.newTile);
     };
   }
 
@@ -371,16 +562,16 @@ export default class Game {
         const speed = PLAYER_SPEED * speedMult;
         const velX = mx * speed;
         const velY = my * speed;
-        this.localPlayer.x += velX * dt;
-        this.localPlayer.y += velY * dt;
 
-        // Tile collision
-        const correction = this.clientCollision.resolveAABB(
+        // Sweep-and-clamp tile collision (calculate safe position before moving)
+        const halfSize = PLAYER_SIZE / 2;
+        const result = this.clientCollision.moveAndSlide(
           this.localPlayer.x, this.localPlayer.y,
-          PLAYER_SIZE, PLAYER_SIZE, velX, velY
+          halfSize, halfSize,
+          velX * dt, velY * dt
         );
-        this.localPlayer.x += correction.x;
-        this.localPlayer.y += correction.y;
+        this.localPlayer.x = result.x;
+        this.localPlayer.y = result.y;
 
         // Update facing
         if (Math.abs(mx) > Math.abs(my)) {
@@ -410,9 +601,40 @@ export default class Game {
       }
     }
 
+    // Toggle quest log with J key
+    if (actions.questLog && !this.placementMode) {
+      if (this.questPanelOpen) {
+        this.questPanel.close();
+        this.questPanelOpen = false;
+      } else {
+        this.questPanel.position(this.renderer.width, this.renderer.height);
+        this.questPanel.openQuestLog(this.questLog.getActiveQuests(), this.questLog.getCompletedQuests());
+        this.questPanelOpen = true;
+      }
+    }
+
+    // Toggle fishing rod panel with R key
+    if (actions.fishingRod && !this.placementMode) {
+      const equippedTool = this.equipment.getEquipped('tool');
+      if (equippedTool && ITEM_DB[equippedTool.id]?.toolType === 'fishing_rod') {
+        this.fishingRodOpen = !this.fishingRodOpen;
+        if (this.fishingRodOpen) {
+          this.fishingRodPanel.open(equippedTool);
+          this.fishingRodPanel.position(this.renderer.width, this.renderer.height);
+        } else {
+          this.fishingRodPanel.close();
+        }
+      }
+    }
+
     // Handle E/C key (interact with station / toggle crafting panel)
     if ((actions.interact || actions.craft) && !this.placementMode) {
-      if (this.craftingOpen) {
+      if (this.dialogOpen) {
+        // Close dialog when pressing E again
+        this.network.sendDialogEnd(this.dialogPanel.npcId);
+        this.dialogPanel.close();
+        this.dialogOpen = false;
+      } else if (this.craftingOpen) {
         this.craftingPanel.close();
         this.craftingOpen = false;
       } else if (!this.panelsOpen && !this.upgradeOpen) {
@@ -452,6 +674,23 @@ export default class Game {
       }
     }
 
+    // Toggle world map with M key
+    if (actions.map && !this.placementMode) {
+      this.worldMap.toggle(this.localPlayer);
+    }
+
+    // World map drag panning
+    if (this.worldMap.visible) {
+      if (actions.action) {
+        this.worldMap.handleMouseDown(actions.mouseScreenX, actions.mouseScreenY);
+      }
+      if (actions.actionHeld) {
+        this.worldMap.handleMouseMove(actions.mouseScreenX, actions.mouseScreenY);
+      } else {
+        this.worldMap.handleMouseUp();
+      }
+    }
+
     // Skill casting (1-4 keys or gamepad LB/RB/LT/RT)
     if (this.localPlayer && !this.panelsOpen && !this.craftingOpen && !this.upgradeOpen && !this.skillsOpen && !this.placementMode) {
       for (let i = 0; i < 4; i++) {
@@ -463,7 +702,23 @@ export default class Game {
 
     // Close panels / cancel placement with Escape / B button
     if (actions.cancel) {
-      if (this.placementMode) {
+      if (this.worldMap.visible) {
+        this.worldMap.close();
+      } else if (this.chestOpen) {
+        this.network.sendChestClose(this.chestPanel.entityId);
+        this.chestPanel.close();
+        this.chestOpen = false;
+      } else if (this.dialogOpen) {
+        this.network.sendDialogEnd(this.dialogPanel.npcId);
+        this.dialogPanel.close();
+        this.dialogOpen = false;
+      } else if (this.shopOpen) {
+        this.shopPanel.close();
+        this.shopOpen = false;
+      } else if (this.questPanelOpen) {
+        this.questPanel.close();
+        this.questPanelOpen = false;
+      } else if (this.placementMode) {
         this.network.sendPlaceCancel();
         this.placementMode = null;
       } else if (this.skillsOpen) {
@@ -543,22 +798,77 @@ export default class Game {
 
     // Scroll routing: panels get scroll when open, otherwise camera zoom
     if (actions.scrollDelta !== 0) {
-      if (this.skillsOpen) {
+      if (this.worldMap.visible) {
+        this.worldMap.handleScroll(actions.scrollDelta);
+      } else if (this.skillsOpen) {
         this.skillsPanel.handleScroll(actions.scrollDelta);
       } else if (this.upgradeOpen) {
         this.upgradePanel.handleScroll(actions.scrollDelta, this.inventory);
       } else if (this.craftingOpen) {
         this.craftingPanel.handleScroll(actions.scrollDelta);
+      } else if (this.panelsOpen) {
+        this.inventoryPanel.handleScroll(actions.scrollDelta);
       } else {
         this.camera.zoomBy(actions.scrollDelta * 0.2);
       }
     }
 
+    // Fishing message timer
+    if (this.fishingMessageTimer > 0) {
+      this.fishingMessageTimer -= dt;
+      if (this.fishingMessageTimer <= 0) {
+        this.fishingMessage = '';
+      }
+    }
+
     // Handle attack input (block when panels open, crafting open, or placement mode)
     this.attackCooldown = Math.max(0, this.attackCooldown - dt);
-    if (this.localPlayer && actions.action && this.attackCooldown <= 0 && !this.panelsOpen && !this.craftingOpen && !this.upgradeOpen && !this.skillsOpen && !this.placementMode) {
-      this.network.sendAttack(actions.aimX, actions.aimY);
-      this.attackCooldown = 0.4; // client-side cooldown to prevent spam
+    if (this.localPlayer && actions.action && this.attackCooldown <= 0 && !this.panelsOpen && !this.craftingOpen && !this.upgradeOpen && !this.skillsOpen && !this.placementMode && !this.dialogOpen && !this.fishingRodOpen) {
+      // Check if fishing rod is equipped
+      const equippedTool = this.equipment.getEquipped('tool');
+      if (equippedTool && ITEM_DB[equippedTool.id]?.toolType === 'fishing_rod') {
+        if (this.fishingState === 'bite') {
+          this.network.sendFishReel();
+          this.attackCooldown = 0.3;
+        } else if (!this.fishingState) {
+          this.network.sendFishCast(actions.aimX, actions.aimY);
+          this.attackCooldown = 0.5;
+        }
+        // While waiting/reeling, ignore clicks
+      } else {
+        this.network.sendAttack(actions.aimX, actions.aimY);
+        this.attackCooldown = 0.4; // client-side cooldown to prevent spam
+      }
+    }
+
+    // Cancel fishing on movement when waiting/reeling
+    if (this.fishingState && this.localPlayer) {
+      const moving = Math.abs(actions.moveX) > 0.1 || Math.abs(actions.moveY) > 0.1;
+      if (moving) {
+        this.network.sendFishCancel();
+        this.fishingState = null;
+      }
+    }
+
+    // Town recall: hold H for 3 seconds to teleport back to town
+    if (this.localPlayer && !this.isDead) {
+      const holdingH = this.input.keyboard.isDown('KeyH');
+      const isMoving = Math.abs(actions.moveX) > 0.1 || Math.abs(actions.moveY) > 0.1;
+      const panelBlocking = this.panelsOpen || this.craftingOpen || this.upgradeOpen ||
+        this.skillsOpen || this.dialogOpen || this.shopOpen || this.chestOpen ||
+        this.fishingRodOpen || this.placementMode || this.fishingState;
+
+      if (holdingH && !isMoving && !panelBlocking) {
+        this.recallTimer += dt;
+        if (this.recallTimer >= this.recallDuration) {
+          this.network.sendRecall();
+          this.recallTimer = 0;
+        }
+      } else {
+        this.recallTimer = 0;
+      }
+    } else {
+      this.recallTimer = 0;
     }
 
     // Handle crafting panel interaction (mouse click, gamepad confirm, or touch tap)
@@ -610,8 +920,103 @@ export default class Game {
       }
     }
 
+    // Handle dialog panel interaction
+    if (this.dialogOpen) {
+      this.dialogPanel.handleMouseMove(actions.mouseScreenX, actions.mouseScreenY);
+      if (actions.action || actions.screenTap) {
+        const result = this.dialogPanel.handleClick(actions.mouseScreenX, actions.mouseScreenY);
+        if (result) {
+          if (result.action === 'close') {
+            this.network.sendDialogEnd(this.dialogPanel.npcId);
+            this.dialogPanel.close();
+            this.dialogOpen = false;
+          } else if (result.action === 'choice') {
+            this.network.sendDialogChoice(this.dialogPanel.npcId, result.choiceIndex);
+          }
+        }
+      }
+    }
+
+    // Handle quest panel interaction
+    if (this.questPanelOpen) {
+      this.questPanel.handleMouseMove(actions.mouseScreenX, actions.mouseScreenY);
+      if (actions.action || actions.screenTap) {
+        const result = this.questPanel.handleClick(actions.mouseScreenX, actions.mouseScreenY);
+        if (result) {
+          if (result.action === 'close') {
+            this.questPanel.close();
+            this.questPanelOpen = false;
+          } else if (result.action === 'accept') {
+            this.network.sendQuestAccept(result.questId);
+          } else if (result.action === 'complete') {
+            this.network.sendQuestComplete(result.questId);
+          }
+        }
+      }
+      if (actions.scrollDelta !== 0) {
+        this.questPanel.handleScroll(actions.scrollDelta);
+      }
+    }
+
+    // Handle shop panel interaction
+    if (this.shopOpen) {
+      this.shopPanel.handleMouseMove(actions.mouseScreenX, actions.mouseScreenY, this.inventory);
+      if (actions.action || actions.screenTap) {
+        const result = this.shopPanel.handleClick(actions.mouseScreenX, actions.mouseScreenY, this.inventory);
+        if (result) {
+          if (result.action === 'close') {
+            this.shopPanel.close();
+            this.shopOpen = false;
+          } else if (result.action === 'buy') {
+            this.network.sendShopBuy(result.itemId, result.count);
+          } else if (result.action === 'sell') {
+            this.network.sendShopSell(result.slotIndex, result.count);
+          }
+        }
+      }
+    }
+
+    // Handle chest panel interaction
+    if (this.chestOpen) {
+      this.chestPanel.handleMouseMove(actions.mouseScreenX, actions.mouseScreenY, this.inventory);
+      if (actions.action || actions.screenTap) {
+        const result = this.chestPanel.handleClick(actions.mouseScreenX, actions.mouseScreenY, this.inventory);
+        if (result) {
+          if (result.action === 'close') {
+            this.network.sendChestClose(this.chestPanel.entityId);
+            this.chestPanel.close();
+            this.chestOpen = false;
+          } else if (result.action === 'deposit') {
+            this.network.sendChestDeposit(result.entityId, result.playerSlot, result.count);
+          } else if (result.action === 'withdraw') {
+            this.network.sendChestWithdraw(result.entityId, result.chestSlot, result.count);
+          }
+        }
+      }
+    }
+
+    // Handle fishing rod panel interaction
+    if (this.fishingRodOpen) {
+      this.fishingRodPanel.handleMouseMove(actions.mouseScreenX, actions.mouseScreenY);
+      if (actions.action || actions.screenTap) {
+        const result = this.fishingRodPanel.handleClick(actions.mouseScreenX, actions.mouseScreenY, this.inventory);
+        if (result) {
+          if (result.action === 'close') {
+            this.fishingRodPanel.close();
+            this.fishingRodOpen = false;
+          } else if (result.action === 'remove') {
+            // Remove part from rod - send to server as unequip rod part
+            this._handleRodPartRemove(result.partSlot);
+          } else if (result.action === 'attach') {
+            // Find a matching part in inventory and attach it
+            this._handleRodPartAttach(result.partSlot);
+          }
+        }
+      }
+    }
+
     // Skill bar tap/click handling
-    if ((actions.action || actions.screenTap) && !this.panelsOpen && !this.craftingOpen && !this.upgradeOpen && !this.skillsOpen && !this.placementMode) {
+    if ((actions.action || actions.screenTap) && !this.panelsOpen && !this.craftingOpen && !this.upgradeOpen && !this.skillsOpen && !this.placementMode && !this.dialogOpen && !this.questPanelOpen && !this.shopOpen && !this.chestOpen && !this.fishingRodOpen) {
       const slot = this.skillBar.handleClick(actions.mouseScreenX, actions.mouseScreenY);
       if (slot >= 0) {
         this.network.sendSkillUse(slot);
@@ -713,11 +1118,26 @@ export default class Game {
             x: entity.x, y: entity.y,
             name: entity.name, color: entity.color, size: entity.size,
             stationId: entity.stationId, stationLevel: entity.stationLevel,
+            altarActive: entity.altarActive || false,
           });
         } else {
           const s = this.stations.get(id);
           s.stationLevel = entity.stationLevel ?? s.stationLevel;
           s.name = entity.name ?? s.name;
+          if (entity.altarActive !== undefined) s.altarActive = entity.altarActive;
+        }
+      } else if (entity.type === 'npc') {
+        if (!this.npcs.has(id)) {
+          this.npcs.set(id, {
+            x: entity.x, y: entity.y,
+            name: entity.name, color: entity.color, size: entity.size,
+            npcType: entity.npcType, npcId: entity.npcId,
+          });
+        } else {
+          const n = this.npcs.get(id);
+          if (entity.x !== undefined) n.x = entity.x;
+          if (entity.y !== undefined) n.y = entity.y;
+          n.name = entity.name ?? n.name;
         }
       } else {
         // Remote player
@@ -777,9 +1197,38 @@ export default class Game {
       }
     }
 
-    // Request chunks around player position
+    // Clean up removed NPCs
+    for (const [id] of this.npcs) {
+      if (!this.network.entities.has(id)) {
+        this.npcs.delete(id);
+      }
+    }
+
+    // Request chunks around player position + track explored chunks
     if (this.localPlayer) {
       this.worldManager.requestChunksAround(this.localPlayer.x, this.localPlayer.y);
+
+      // Record newly loaded chunks as explored
+      let newExplored = false;
+      for (const [key, chunk] of this.worldManager.chunks) {
+        if (!this.exploredChunks.has(key)) {
+          this.exploredChunks.add(key);
+          newExplored = true;
+        }
+        if (!this.biomeCache.has(key)) {
+          this.biomeCache.set(key, chunk.biomeId);
+        }
+      }
+      if (newExplored) {
+        this.exploreSaveTimer = 3; // reset debounce
+      }
+      if (this.exploreSaveTimer > 0) {
+        this.exploreSaveTimer -= dt;
+        if (this.exploreSaveTimer <= 0) {
+          this.exploreSaveTimer = 0;
+          this.saveExploredChunks();
+        }
+      }
     }
 
     // Camera follows local player
@@ -816,15 +1265,18 @@ export default class Game {
     this.renderWorld(r);
     this.renderResources(r);
     this.renderStations(r);
+    this.renderNPCs(r);
     this.renderPlacementGhost(r);
     this.renderEnemies(r);
     this.renderPlayers(r);
+    this.renderFishingBobber(r);
     this.damageNumbers.render(ctx);
     r.endCamera();
 
     // Screen-space UI
     this.touchControls.render(ctx);
     this.renderHUD(r);
+    this.renderPlayerArrows(ctx, r);
 
     // Skill bar (always visible, above health bar)
     this.skillBar.position(r.width, r.height);
@@ -837,6 +1289,53 @@ export default class Game {
     this.craftingPanel.render(ctx, this.inventory);
     this.upgradePanel.render(ctx, this.inventory);
     this.skillsPanel.render(ctx, this.skills, this.playerStats);
+
+    // Dialog panel
+    if (this.dialogOpen) {
+      this.dialogPanel.position(r.width, r.height);
+      this.dialogPanel.render(ctx);
+    }
+
+    // Quest panel
+    if (this.questPanelOpen) {
+      this.questPanel.position(r.width, r.height);
+      this.questPanel.render(ctx);
+    }
+
+    // Shop panel
+    if (this.shopOpen) {
+      this.shopPanel.position(r.width, r.height);
+      this.shopPanel.render(ctx, this.inventory);
+    }
+
+    // Chest panel
+    if (this.chestOpen) {
+      this.chestPanel.position(r.width, r.height);
+      this.chestPanel.render(ctx, this.inventory);
+    }
+
+    // Fishing rod panel
+    if (this.fishingRodOpen) {
+      // Sync rodParts from equipment state (server-authoritative)
+      const rodTool = this.equipment.getEquipped('tool');
+      if (rodTool && rodTool.rodParts) {
+        this.fishingRodPanel.rodParts = { ...rodTool.rodParts };
+      }
+      this.fishingRodPanel.position(r.width, r.height);
+      this.fishingRodPanel.render(ctx);
+    }
+
+    // Fishing state HUD
+    this.renderFishingHUD(ctx, r);
+
+    // Minimap (always visible when not in world map)
+    if (!this.worldMap.visible) {
+      this.minimap.position(r.width);
+      this.minimap.render(ctx, this.worldManager, this.exploredChunks, this.localPlayer, this.remotePlayers);
+    }
+
+    // World map (full-screen overlay)
+    this.worldMap.render(ctx, r.width, r.height, this.exploredChunks, this.biomeCache, this.localPlayer, this.remotePlayers);
 
     // Death screen (renders on top of everything)
     this.deathScreen.render(ctx, r.width, r.height);
@@ -873,12 +1372,41 @@ export default class Game {
 
   renderStations(r) {
     for (const [id, station] of this.stations) {
-      EntityRenderer.renderStation(
-        r, station.x, station.y,
-        station.color || '#8B6914',
-        station.size || 40,
-        station.name || 'Station',
-        station.stationLevel || 1
+      if (station.stationId === 'boss_altar') {
+        EntityRenderer.renderAltar(
+          r, station.x, station.y,
+          station.color || '#B87333',
+          station.size || 48,
+          station.name || 'Summoning Shrine',
+          station.altarActive || false
+        );
+      } else if (station.isChest) {
+        EntityRenderer.renderChest(
+          r, station.x, station.y,
+          station.color || '#8B6914',
+          station.size || 32,
+          station.name || 'Chest'
+        );
+      } else {
+        EntityRenderer.renderStation(
+          r, station.x, station.y,
+          station.color || '#8B6914',
+          station.size || 40,
+          station.name || 'Station',
+          station.stationLevel || 1
+        );
+      }
+    }
+  }
+
+  renderNPCs(r) {
+    for (const [id, npc] of this.npcs) {
+      EntityRenderer.renderNPC(
+        r, npc.x, npc.y,
+        npc.color || '#d4a574',
+        npc.size || 26,
+        npc.name || 'NPC',
+        npc.npcType || 'quest_giver'
       );
     }
   }
@@ -1013,6 +1541,34 @@ export default class Game {
       }
     }
 
+    // Town recall channeling bar
+    if (this.recallTimer > 0 && this.localPlayer) {
+      const barWidth = 160;
+      const barHeight = 14;
+      const barX = (r.width - barWidth) / 2;
+      const barY = r.height - 80;
+      const progress = this.recallTimer / this.recallDuration;
+
+      // Background
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.fillRect(barX - 1, barY - 1, barWidth + 2, barHeight + 2);
+
+      // Fill
+      ctx.fillStyle = '#5dade2';
+      ctx.fillRect(barX, barY, barWidth * progress, barHeight);
+
+      // Border
+      ctx.strokeStyle = '#85c1e9';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(barX - 1, barY - 1, barWidth + 2, barHeight + 2);
+
+      // Label
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('Recalling to Town...', r.width / 2, barY - 4);
+    }
+
     // Placement mode hint
     if (this.placementMode) {
       const hint = this.input.activeMethod === 'touch'
@@ -1022,6 +1578,212 @@ export default class Game {
           : 'Click to place | Esc to cancel';
       r.drawText(`Placing: ${this.placementMode.name}`, r.width / 2, 30, '#ffd700', 14, 'center');
       r.drawText(hint, r.width / 2, 48, '#bbb', 11, 'center');
+    }
+  }
+
+  renderPlayerArrows(ctx, r) {
+    if (!this.localPlayer) return;
+
+    const margin = 40;
+    const w = r.width;
+    const h = r.height;
+    const cx = w / 2;
+    const cy = h / 2;
+
+    for (const [id, player] of this.remotePlayers) {
+      const screen = this.camera.worldToScreen(player.x, player.y, w, h);
+
+      // Skip if player is on screen
+      if (screen.x >= -20 && screen.x <= w + 20 &&
+          screen.y >= -20 && screen.y <= h + 20) {
+        continue;
+      }
+
+      // Direction from screen center to player
+      const dx = screen.x - cx;
+      const dy = screen.y - cy;
+      const angle = Math.atan2(dy, dx);
+
+      // Find intersection with screen edge (inset by margin)
+      const halfW = cx - margin;
+      const halfH = cy - margin;
+      const cosA = Math.cos(angle);
+      const sinA = Math.sin(angle);
+      const tX = cosA !== 0 ? halfW / Math.abs(cosA) : Infinity;
+      const tY = sinA !== 0 ? halfH / Math.abs(sinA) : Infinity;
+      const t = Math.min(tX, tY);
+
+      let edgeX = cx + cosA * t;
+      let edgeY = cy + sinA * t;
+      edgeX = Math.max(margin, Math.min(w - margin, edgeX));
+      edgeY = Math.max(margin, Math.min(h - margin, edgeY));
+
+      // Draw arrow triangle
+      const arrowSize = 10;
+      ctx.save();
+      ctx.translate(edgeX, edgeY);
+      ctx.rotate(angle);
+
+      ctx.fillStyle = player.color || '#3498db';
+      ctx.beginPath();
+      ctx.moveTo(arrowSize, 0);
+      ctx.lineTo(-arrowSize, -arrowSize * 0.6);
+      ctx.lineTo(-arrowSize, arrowSize * 0.6);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
+
+      // Player name label
+      ctx.fillStyle = '#fff';
+      ctx.globalAlpha = 0.8;
+      ctx.font = '9px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(player.name, edgeX, edgeY - 14);
+      ctx.globalAlpha = 1.0;
+    }
+  }
+
+  renderFishingHUD(ctx, r) {
+    // Fishing state indicator near center-bottom
+    if (this.fishingState) {
+      const cx = r.width / 2;
+      const baseY = r.height - 140;
+
+      ctx.font = 'bold 16px monospace';
+      ctx.textAlign = 'center';
+
+      if (this.fishingState === 'waiting') {
+        ctx.fillStyle = '#88aacc';
+        ctx.fillText('Fishing...', cx, baseY);
+        // Animate dots
+        const dots = '.'.repeat(1 + Math.floor(Date.now() / 500) % 3);
+        ctx.fillText(dots, cx + 50, baseY);
+      } else if (this.fishingState === 'bite') {
+        ctx.fillStyle = '#ffcc00';
+        ctx.font = 'bold 20px monospace';
+        ctx.fillText('BITE! Click to reel!', cx, baseY);
+      } else if (this.fishingState === 'reeling') {
+        ctx.fillStyle = '#44cc88';
+        ctx.fillText('Reeling...', cx, baseY);
+      }
+    }
+
+    // Fishing message (catch result / error)
+    if (this.fishingMessage && this.fishingMessageTimer > 0) {
+      const cx = r.width / 2;
+      const msgY = r.height / 2 - 60;
+      ctx.font = 'bold 18px monospace';
+      ctx.textAlign = 'center';
+      ctx.globalAlpha = Math.min(1, this.fishingMessageTimer);
+      ctx.fillStyle = '#ffd700';
+      ctx.fillText(this.fishingMessage, cx, msgY);
+      ctx.globalAlpha = 1.0;
+    }
+  }
+
+  renderFishingBobber(r) {
+    if (!this.fishingState || !this.localPlayer) return;
+    const ctx = r.ctx;
+
+    // Bobber at cast position
+    const bobberSize = 4;
+    const bobTime = Date.now() / 300;
+    const bobY = this.fishingCastY + Math.sin(bobTime) * 2;
+
+    // Red/white bobber
+    ctx.beginPath();
+    ctx.arc(this.fishingCastX, bobY, bobberSize, 0, Math.PI * 2);
+    ctx.fillStyle = '#e74c3c';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(this.fishingCastX, bobY - 2, bobberSize * 0.6, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+
+    // Bounce on bite
+    if (this.fishingState === 'bite') {
+      const splash = Math.sin(Date.now() / 100) * 3;
+      ctx.beginPath();
+      ctx.arc(this.fishingCastX, bobY + splash, bobberSize + 2, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255, 255, 100, 0.6)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  }
+
+  _handleRodPartRemove(partSlot) {
+    const equippedTool = this.equipment.getEquipped('tool');
+    if (!equippedTool || !equippedTool.rodParts) return;
+
+    const partId = equippedTool.rodParts[partSlot];
+    if (!partId) return;
+
+    // Send to server — server will update equipment & inventory and send updates back
+    this.network.sendRodPartRemove(partSlot);
+  }
+
+  _handleRodPartAttach(partSlot) {
+    const equippedTool = this.equipment.getEquipped('tool');
+    if (!equippedTool) return;
+
+    // Find first matching part in inventory
+    const slots = this.inventory.slots;
+    for (let i = 0; i < slots.length; i++) {
+      const slot = slots[i];
+      if (!slot || !slot.itemId) continue;
+      const itemDef = ITEM_DB[slot.itemId];
+      if (!itemDef || itemDef.type !== 'fishing_part') continue;
+      if (itemDef.partSlot !== partSlot) continue;
+
+      // Send to server — server will update equipment & inventory and send updates back
+      this.network.sendRodPartAttach(partSlot, slot.itemId, i);
+      return;
+    }
+  }
+
+  loadExploredChunks(playerId) {
+    try {
+      const key = `darkheim_explored_${playerId}`;
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const arr = JSON.parse(raw);
+        for (const k of arr) {
+          this.exploredChunks.add(k);
+        }
+      }
+      // Also load biome cache
+      const biomeKey = `darkheim_biomes_${playerId}`;
+      const biomeRaw = localStorage.getItem(biomeKey);
+      if (biomeRaw) {
+        const obj = JSON.parse(biomeRaw);
+        for (const [k, v] of Object.entries(obj)) {
+          this.biomeCache.set(k, v);
+        }
+      }
+    } catch (e) {
+      // Ignore corrupted data
+    }
+  }
+
+  saveExploredChunks() {
+    try {
+      const playerId = this.localPlayer ? this.localPlayer.id : null;
+      if (!playerId) return;
+      const key = `darkheim_explored_${playerId}`;
+      localStorage.setItem(key, JSON.stringify([...this.exploredChunks]));
+      // Also save biome cache
+      const biomeKey = `darkheim_biomes_${playerId}`;
+      const obj = {};
+      for (const [k, v] of this.biomeCache) {
+        obj[k] = v;
+      }
+      localStorage.setItem(biomeKey, JSON.stringify(obj));
+    } catch (e) {
+      // Ignore quota errors
     }
   }
 }

@@ -72,18 +72,19 @@ export default class Reconciler {
 
     const velX = mx * PLAYER_SPEED;
     const velY = my * PLAYER_SPEED;
-    this.smoothX += velX * dt;
-    this.smoothY += velY * dt;
 
-    // Apply tile collision to match server
     if (this.collision) {
-      const result = this.collision.resolveAABB(
+      const halfSize = PLAYER_SIZE / 2;
+      const result = this.collision.moveAndSlide(
         this.smoothX, this.smoothY,
-        PLAYER_SIZE, PLAYER_SIZE,
-        velX, velY
+        halfSize, halfSize,
+        velX * dt, velY * dt
       );
-      this.smoothX += result.x;
-      this.smoothY += result.y;
+      this.smoothX = result.x;
+      this.smoothY = result.y;
+    } else {
+      this.smoothX += velX * dt;
+      this.smoothY += velY * dt;
     }
   }
 

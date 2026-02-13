@@ -16,6 +16,9 @@ import EquipmentComponent from './components/EquipmentComponent.js';
 import ResourceNodeComponent from './components/ResourceNodeComponent.js';
 import CraftingStationComponent from './components/CraftingStationComponent.js';
 import SkillComponent from './components/SkillComponent.js';
+import NPCComponent from './components/NPCComponent.js';
+import QuestComponent from './components/QuestComponent.js';
+import ChestComponent from './components/ChestComponent.js';
 import { PLAYER_SPEED, PLAYER_SIZE } from '../../shared/Constants.js';
 import { STATION_DB } from '../../shared/StationTypes.js';
 
@@ -60,6 +63,7 @@ export default class EntityFactory {
     entity.addComponent(new StatusEffectComponent());
     entity.addComponent(new AnimationStateComponent());
     entity.addComponent(new SkillComponent());
+    entity.addComponent(new QuestComponent());
 
     entity.addTag('player');
     return entity;
@@ -161,6 +165,106 @@ export default class EntityFactory {
 
     entity.addTag('enemy');
     entity.enemyConfig = config;
+    return entity;
+  }
+
+  static createNPC(npcDef) {
+    const entity = new Entity();
+
+    entity.addComponent(new PositionComponent(npcDef.x, npcDef.y));
+
+    const size = npcDef.size || 26;
+    entity.addComponent(new ColliderComponent('aabb', {
+      width: size,
+      height: size,
+      solid: true,
+      layer: 'npc',
+    }));
+
+    entity.addComponent(new NameComponent(npcDef.name));
+    entity.addComponent(new NPCComponent({
+      npcId: npcDef.id,
+      npcType: npcDef.type,
+      dialogId: npcDef.dialogId || null,
+      shopId: npcDef.shopId || null,
+      questIds: npcDef.questIds || [],
+      interactRange: npcDef.interactRange || 64,
+    }));
+
+    // Citizens get wander AI
+    if (npcDef.type === 'citizen') {
+      const vel = new VelocityComponent();
+      vel.speed = 40;
+      entity.addComponent(vel);
+
+      entity.addComponent(new AIComponent({
+        behavior: 'wander',
+        aggroRange: 0,
+        deaggroRange: 0,
+        attackRange: 0,
+        homeX: npcDef.x,
+        homeY: npcDef.y,
+        leashRange: npcDef.wanderRadius || 800,
+      }));
+
+      entity.addComponent(new AnimationStateComponent());
+    }
+
+    // Guards get combat capabilities
+    if (npcDef.type === 'guard') {
+      const vel = new VelocityComponent();
+      vel.speed = 120;
+      entity.addComponent(vel);
+
+      const health = new HealthComponent(npcDef.health || 500);
+      health.regenRate = 20; // effectively unkillable
+      entity.addComponent(health);
+
+      entity.addComponent(new CombatComponent({
+        damage: npcDef.damage || 50,
+        attackSpeed: 1.5,
+        range: 40,
+        knockback: 12,
+      }));
+
+      entity.addComponent(new AIComponent({
+        behavior: 'guard',
+        aggroRange: npcDef.aggroRange || 256,
+        deaggroRange: (npcDef.aggroRange || 256) + 64,
+        attackRange: 40,
+        homeX: npcDef.x,
+        homeY: npcDef.y,
+        leashRange: npcDef.patrolRadius || 128,
+      }));
+
+      entity.addComponent(new StatusEffectComponent());
+      entity.addComponent(new AnimationStateComponent());
+      entity.addTag('guard');
+    }
+
+    entity.npcData = npcDef;
+    entity.addTag('npc');
+    return entity;
+  }
+
+  static createChest(stationId, x, y) {
+    const def = STATION_DB[stationId];
+    if (!def || !def.isChest) return null;
+
+    const entity = new Entity();
+    entity.addComponent(new PositionComponent(x, y));
+    entity.addComponent(new ColliderComponent('aabb', {
+      width: def.size || 32,
+      height: def.size || 32,
+      solid: true,
+      trigger: false,
+      layer: 'station',
+    }));
+    entity.addComponent(new NameComponent(def.name));
+    entity.addComponent(new CraftingStationComponent(stationId, 1));
+    entity.addComponent(new ChestComponent(stationId, def.chestSlots));
+
+    entity.addTag('station');
     return entity;
   }
 }

@@ -4,11 +4,21 @@ import HealthComponent from '../../ecs/components/HealthComponent.js';
 import InventoryComponent from '../../ecs/components/InventoryComponent.js';
 import PlayerComponent from '../../ecs/components/PlayerComponent.js';
 import CraftingStationComponent from '../../ecs/components/CraftingStationComponent.js';
+import AIComponent from '../../ecs/components/AIComponent.js';
 import NameComponent from '../../ecs/components/NameComponent.js';
 import { RECIPE_DB } from '../../../shared/RecipeTypes.js';
 import { STATION_DB } from '../../../shared/StationTypes.js';
 import { ITEM_DB } from '../../../shared/ItemTypes.js';
 import EntityFactory from '../../ecs/EntityFactory.js';
+
+const SUMMON_TIERS = [
+  null, // index 0 unused
+  { ingredients: [{ itemId: 'greyling_hide', count: 3 }],  hpMult: 1.0,  dmgMult: 1.0,  speedMult: 1.0,  dropMult: 1.0,  bonusDrops: [] },
+  { ingredients: [{ itemId: 'greyling_hide', count: 5 }],  hpMult: 1.5,  dmgMult: 1.25, speedMult: 1.12, dropMult: 1.5,  bonusDrops: [] },
+  { ingredients: [{ itemId: 'greyling_hide', count: 8 }],  hpMult: 2.0,  dmgMult: 1.5,  speedMult: 1.25, dropMult: 2.0,  bonusDrops: [{ item: 'greyling_tear', chance: 0.5, min: 1, max: 1 }] },
+  { ingredients: [{ itemId: 'greyling_hide', count: 12 }], hpMult: 2.75, dmgMult: 1.83, speedMult: 1.37, dropMult: 2.7,  bonusDrops: [{ item: 'greyling_tear', chance: 0.8, min: 1, max: 1 }] },
+  { ingredients: [{ itemId: 'greyling_hide', count: 15 }, { itemId: 'bone_fragment', count: 3 }], hpMult: 3.75, dmgMult: 2.33, speedMult: 1.5, dropMult: 3.5, bonusDrops: [{ item: 'greyling_tear', chance: 1.0, min: 2, max: 2 }, { item: 'meadow_ring', chance: 1.0, min: 1, max: 1 }] },
+];
 
 export default class CraftingHandler {
   constructor(gameServer) {
@@ -34,6 +44,14 @@ export default class CraftingHandler {
     }
 
     const recipeId = data?.recipeId;
+
+    // Intercept boss summoning recipes
+    const summonMatch = recipeId?.match(/^summon_bramblethorn_(\d)$/);
+    if (summonMatch) {
+      this.handleBossSummon(player, entity, parseInt(summonMatch[1]));
+      return;
+    }
+
     const recipe = RECIPE_DB[recipeId];
     if (!recipe) {
       player.emit(MSG.CRAFT_RESULT, { success: false, message: 'Unknown recipe' });
@@ -115,6 +133,13 @@ export default class CraftingHandler {
     // Add results to inventory
     for (const result of recipe.results) {
       inv.addItem(result.itemId, result.count);
+    }
+
+    // Quest craft tracking
+    if (this.gameServer.questTrackingSystem) {
+      this.gameServer.questTrackingSystem.onPlayerCraft(
+        player.id, recipeId, recipe.results, this.gameServer.entityManager
+      );
     }
 
     // Send updates
@@ -264,5 +289,120 @@ export default class CraftingHandler {
         }
       }
     }
+  }
+
+  handleBossSummon(player, entity, tier) {
+    const tierData = SUMMON_TIERS[tier];
+    if (!tierData) {
+      player.emit(MSG.CRAFT_RESULT, { success: false, message: 'Invalid tier' });
+      return;
+    }
+
+    const playerPos = entity.getComponent(PositionComponent);
+    const inv = entity.getComponent(InventoryComponent);
+    if (!playerPos || !inv) return;
+
+    // Find nearest boss altar
+    const altar = this._findNearAltar(playerPos);
+    if (!altar) {
+      player.emit(MSG.CRAFT_RESULT, { success: false, message: 'Not near shrine' });
+      return;
+    }
+
+    if (altar.altarState === 'summoning') {
+      player.emit(MSG.CRAFT_RESULT, { success: false, message: 'Boss already summoned' });
+      return;
+    }
+
+    // Check ingredients for this tier
+    if (!this.hasIngredients(inv, tierData.ingredients)) {
+      player.emit(MSG.CRAFT_RESULT, { success: false, message: 'Missing offerings' });
+      return;
+    }
+
+    // Consume ingredients
+    this.consumeIngredients(inv, tierData.ingredients);
+    player.emit(MSG.INVENTORY_UPDATE, { slots: inv.serialize().slots });
+
+    // Load base boss config and scale by tier
+    const bossConfig = this._getScaledBossConfig(tierData);
+    if (!bossConfig) {
+      player.emit(MSG.CRAFT_RESULT, { success: false, message: 'Boss config error' });
+      return;
+    }
+
+    // Spawn boss near altar
+    const altarPos = altar.getComponent(PositionComponent);
+    const bossEntity = EntityFactory.createEnemy({
+      x: altarPos.x + 64,
+      y: altarPos.y,
+      config: bossConfig,
+    });
+
+    // Set leash home to altar position
+    const ai = bossEntity.getComponent(AIComponent);
+    if (ai) {
+      ai.homeX = altarPos.x;
+      ai.homeY = altarPos.y;
+    }
+
+    this.gameServer.entityManager.add(bossEntity);
+
+    // Track altar state
+    altar.altarState = 'summoning';
+    altar.linkedBossId = bossEntity.id;
+    altar.summonTier = tier;
+
+    // Broadcast boss spawn
+    this.gameServer.io.emit(MSG.BOSS_SPAWN, {
+      bossId: bossEntity.id,
+      name: bossConfig.name,
+      tier,
+      x: altarPos.x + 64,
+      y: altarPos.y,
+    });
+
+    player.emit(MSG.CRAFT_RESULT, { success: true, recipeId: `summon_bramblethorn_${tier}`, results: [] });
+  }
+
+  _findNearAltar(playerPos) {
+    const stations = this.gameServer.entityManager.getByTag('station');
+    for (const station of stations) {
+      const sc = station.getComponent(CraftingStationComponent);
+      if (!sc || sc.stationId !== 'boss_altar') continue;
+      const stationPos = station.getComponent(PositionComponent);
+      if (!stationPos) continue;
+      const dx = stationPos.x - playerPos.x;
+      const dy = stationPos.y - playerPos.y;
+      if (Math.sqrt(dx * dx + dy * dy) <= 100) return station;
+    }
+    return null;
+  }
+
+  _getScaledBossConfig(tierData) {
+    // Load base config from biome data
+    const meadowData = this.gameServer.worldManager?.biomeDataMap?.get('meadow');
+    const baseConfig = meadowData?.enemies?.enemies?.find(e => e.id === 'bramblethorn');
+    if (!baseConfig) return null;
+
+    // Deep clone and scale
+    const config = JSON.parse(JSON.stringify(baseConfig));
+    config.health = Math.round(config.health * tierData.hpMult);
+    config.damage = Math.round(config.damage * tierData.dmgMult);
+    config.speed = Math.round(config.speed * tierData.speedMult);
+    config.xpReward = Math.round(config.xpReward * tierData.dropMult);
+
+    // Scale drop amounts
+    for (const drop of config.drops) {
+      drop.min = Math.round(drop.min * tierData.dropMult);
+      drop.max = Math.round(drop.max * tierData.dropMult);
+    }
+
+    // Add bonus drops (greyling_tear at high tiers, meadow_ring at tier V)
+    for (const bonus of tierData.bonusDrops) {
+      config.drops.push({ ...bonus });
+    }
+
+    return config;
   }
 }

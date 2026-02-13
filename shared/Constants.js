@@ -15,6 +15,10 @@ export const PLAYER_COLORS = [
   '#fab1a0', '#74b9ff', '#55efc4', '#ffeaa7'
 ];
 
+// Town
+export const TOWN_WALL_RADIUS = 2400; // pixels from town center
+export const TOWN_GATE_WIDTH = 96;    // pixels wide per gate opening
+
 export const CAMERA_MIN_ZOOM = 0.5;
 export const CAMERA_MAX_ZOOM = 4.0;
 export const CAMERA_DEFAULT_ZOOM = 2.0;

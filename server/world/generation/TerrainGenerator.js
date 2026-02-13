@@ -14,6 +14,7 @@ export default class TerrainGenerator {
     const baseWorldX = chunkX * CHUNK_SIZE * TILE_SIZE;
     const baseWorldY = chunkY * CHUNK_SIZE * TILE_SIZE;
     const elevScale = biomeData.terrain.elevationScale;
+    const moistScale = biomeData.terrain.moistureScale || 0.03;
 
     for (let ty = 0; ty < CHUNK_SIZE; ty++) {
       for (let tx = 0; tx < CHUNK_SIZE; tx++) {
@@ -21,14 +22,19 @@ export default class TerrainGenerator {
         const worldY = baseWorldY + ty * TILE_SIZE;
 
         const elevation = this.noise.elevation(worldX, worldY, elevScale);
+        const moisture = this.noise.moisture(worldX, worldY, moistScale);
+        const detail = this.noise.detail(worldX, worldY, 0.08);
         const idx = ty * CHUNK_SIZE + tx;
+
+        // Build values map for condition evaluation
+        const values = { elevation, moisture, detail };
 
         // Apply tile rules from biome config
         let tile = tilesConfig.baseTile;
         let solid = false;
 
         for (const rule of tilesConfig.tileRules) {
-          if (this.evaluateCondition(rule.condition, elevation)) {
+          if (this.evaluateCondition(rule.condition, values)) {
             tile = rule.tile;
             solid = rule.solid || false;
             break;
@@ -43,16 +49,29 @@ export default class TerrainGenerator {
     return { tiles, solids };
   }
 
-  evaluateCondition(condition, elevation) {
-    // Simple condition parser: "elevation < 0.3", "elevation >= 0.75"
-    const parts = condition.split(' ');
-    const value = parseFloat(parts[2]);
+  evaluateCondition(condition, values) {
+    // Support compound conditions: "elevation < 0.3 AND moisture > 0.5"
+    if (condition.includes(' AND ')) {
+      const parts = condition.split(' AND ');
+      return parts.every(part => this._evaluateSingle(part.trim(), values));
+    }
+    return this._evaluateSingle(condition, values);
+  }
 
-    switch (parts[1]) {
-      case '<':  return elevation < value;
-      case '<=': return elevation <= value;
-      case '>':  return elevation > value;
-      case '>=': return elevation >= value;
+  _evaluateSingle(condition, values) {
+    const parts = condition.split(' ');
+    const varName = parts[0]; // elevation, moisture, or detail
+    const op = parts[1];
+    const threshold = parseFloat(parts[2]);
+
+    const val = values[varName];
+    if (val === undefined) return false;
+
+    switch (op) {
+      case '<':  return val < threshold;
+      case '<=': return val <= threshold;
+      case '>':  return val > threshold;
+      case '>=': return val >= threshold;
       default:   return false;
     }
   }

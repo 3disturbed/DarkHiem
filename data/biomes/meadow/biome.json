@@ -14,6 +14,14 @@
     "rockChance": 0.03,
     "waterLevel": 0.3
   },
+  "cave": {
+    "caveThreshold": 0.32,
+    "caveMinElevation": 0.55,
+    "caveMaxElevation": 0.85,
+    "caveScale": 0.06,
+    "caveMossChance": 0.3,
+    "caveCrystalChance": 0.0
+  },
   "ambientLight": 1.0,
   "music": "meadow_theme"
 }

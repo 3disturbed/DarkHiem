@@ -8,7 +8,8 @@
       "speed": 60,
       "xpReward": 5,
       "drops": [
-        { "item": "greyling_hide", "chance": 0.5, "min": 1, "max": 1 }
+        { "item": "greyling_hide", "chance": 0.5, "min": 1, "max": 1 },
+        { "item": "greyling_tear", "chance": 0.1, "min": 1, "max": 1 }
       ],
       "minGradient": 0.0,
       "maxGradient": 1.0,
@@ -37,9 +38,9 @@
       "densityAtRight": 0.05,
       "color": "#6d4c41",
       "size": 22,
-      "behavior": "passive",
-      "aggroRange": 64,
-      "deaggroRange": 192
+      "behavior": "aggressive",
+      "aggroRange": 128,
+      "deaggroRange": 224
     },
     {
       "id": "meadow_skeleton",
@@ -77,8 +78,8 @@
       ],
       "minGradient": 0.3,
       "maxGradient": 0.7,
-      "densityAtLeft": 0.0003,
-      "densityAtRight": 0.0003,
+      "densityAtLeft": 0,
+      "densityAtRight": 0,
       "color": "#B87333",
       "size": 40,
       "behavior": "boss",
@@ -86,6 +87,49 @@
       "leashRange": 512,
       "aggroRange": 192,
       "deaggroRange": 384
+    },
+    {
+      "id": "cave_bat",
+      "name": "Cave Bat",
+      "health": 15,
+      "damage": 4,
+      "speed": 90,
+      "xpReward": 6,
+      "drops": [
+        { "item": "raw_meat", "chance": 0.3, "min": 1, "max": 1 }
+      ],
+      "minGradient": 0.0,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.05,
+      "densityAtRight": 0.08,
+      "color": "#4a3a2a",
+      "size": 14,
+      "behavior": "aggressive",
+      "aggroRange": 128,
+      "deaggroRange": 256,
+      "caveOnly": true
+    },
+    {
+      "id": "cave_spider",
+      "name": "Cave Spider",
+      "health": 25,
+      "damage": 8,
+      "speed": 70,
+      "xpReward": 10,
+      "drops": [
+        { "item": "leather_scrap", "chance": 0.4, "min": 1, "max": 2 },
+        { "item": "insect_bait", "chance": 0.25, "min": 1, "max": 2 }
+      ],
+      "minGradient": 0.0,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.03,
+      "densityAtRight": 0.06,
+      "color": "#2a2a2a",
+      "size": 18,
+      "behavior": "aggressive",
+      "aggroRange": 160,
+      "deaggroRange": 288,
+      "caveOnly": true
     }
   ]
 }

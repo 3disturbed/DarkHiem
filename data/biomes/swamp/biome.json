@@ -14,6 +14,14 @@
     "rockChance": 0.04,
     "waterLevel": 0.45
   },
+  "cave": {
+    "caveThreshold": 0.35,
+    "caveMinElevation": 0.55,
+    "caveMaxElevation": 0.85,
+    "caveScale": 0.06,
+    "caveMossChance": 0.6,
+    "caveCrystalChance": 0.0
+  },
   "ambientLight": 0.45,
   "music": "swamp_theme"
 }

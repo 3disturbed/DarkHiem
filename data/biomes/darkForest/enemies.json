@@ -62,6 +62,50 @@
       "behavior": "aggressive",
       "aggroRange": 176,
       "deaggroRange": 320
+    },
+    {
+      "id": "shadow_lurker",
+      "name": "Shadow Lurker",
+      "health": 45,
+      "damage": 15,
+      "speed": 65,
+      "xpReward": 20,
+      "drops": [
+        { "item": "troll_hide", "chance": 0.3, "min": 1, "max": 1 },
+        { "item": "insect_bait", "chance": 0.15, "min": 1, "max": 1 }
+      ],
+      "minGradient": 0.0,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.04,
+      "densityAtRight": 0.07,
+      "color": "#1a1a2a",
+      "size": 22,
+      "behavior": "aggressive",
+      "aggroRange": 192,
+      "deaggroRange": 320,
+      "caveOnly": true
+    },
+    {
+      "id": "deep_troll",
+      "name": "Deep Troll",
+      "health": 80,
+      "damage": 22,
+      "speed": 50,
+      "xpReward": 35,
+      "drops": [
+        { "item": "troll_hide", "chance": 0.6, "min": 1, "max": 2 },
+        { "item": "iron_ore", "chance": 0.3, "min": 1, "max": 2 }
+      ],
+      "minGradient": 0.0,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.02,
+      "densityAtRight": 0.04,
+      "color": "#3a4a3a",
+      "size": 28,
+      "behavior": "aggressive",
+      "aggroRange": 160,
+      "deaggroRange": 288,
+      "caveOnly": true
     }
   ]
 }

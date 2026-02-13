@@ -1,9 +1,12 @@
 import { MSG } from '../../../shared/MessageTypes.js';
 import { ITEM_DB } from '../../../shared/ItemTypes.js';
+import { TILE_SIZE, CHUNK_SIZE, CHUNK_PIXEL_SIZE } from '../../../shared/Constants.js';
+import { MINEABLE_TILES } from './CombatHandler.js';
 import StatsComponent from '../../ecs/components/StatsComponent.js';
 import InventoryComponent from '../../ecs/components/InventoryComponent.js';
 import EquipmentComponent from '../../ecs/components/EquipmentComponent.js';
 import HealthComponent from '../../ecs/components/HealthComponent.js';
+import PositionComponent from '../../ecs/components/PositionComponent.js';
 
 export default class InventoryHandler {
   constructor(gameServer) {
@@ -156,6 +159,75 @@ export default class InventoryHandler {
     let healed = 0;
     if (itemDef.effect.healAmount) {
       healed = health.heal(itemDef.effect.healAmount);
+    }
+
+    // Bomb effect — destroy nearby mineable tiles
+    if (itemDef.effect.bomb) {
+      const pos = entity.getComponent(PositionComponent);
+      if (!pos) return;
+
+      const radius = (itemDef.effect.bombRadius || 2) * TILE_SIZE;
+      const centerX = pos.x;
+      const centerY = pos.y;
+
+      // Sweep tiles in radius
+      for (let offY = -radius; offY <= radius; offY += TILE_SIZE) {
+        for (let offX = -radius; offX <= radius; offX += TILE_SIZE) {
+          const dist = Math.sqrt(offX * offX + offY * offY);
+          if (dist > radius) continue;
+
+          const px = centerX + offX;
+          const py = centerY + offY;
+
+          const chunkX = Math.floor(px / CHUNK_PIXEL_SIZE);
+          const chunkY = Math.floor(py / CHUNK_PIXEL_SIZE);
+          const chunk = this.gameServer.worldManager.chunkManager.getChunk(chunkX, chunkY);
+          if (!chunk || !chunk.generated) continue;
+
+          const localX = Math.floor((px - chunkX * CHUNK_PIXEL_SIZE) / TILE_SIZE);
+          const localY = Math.floor((py - chunkY * CHUNK_PIXEL_SIZE) / TILE_SIZE);
+          if (localX < 0 || localX >= CHUNK_SIZE || localY < 0 || localY >= CHUNK_SIZE) continue;
+
+          const idx = localY * CHUNK_SIZE + localX;
+          const tileId = chunk.tiles[idx];
+          const config = MINEABLE_TILES[tileId];
+          if (!config) continue;
+
+          // Destroy the tile
+          chunk.tiles[idx] = config.resultTile;
+          chunk.modified = true;
+
+          // Clear partial mine health
+          const tileKey = `${chunkX},${chunkY},${localX},${localY}`;
+          if (this.gameServer.combatHandler) this.gameServer.combatHandler.tileHealth.delete(tileKey);
+
+          // Broadcast tile change
+          this.gameServer.io.emit(MSG.TILE_UPDATE, {
+            chunkX, chunkY, localX, localY,
+            newTile: config.resultTile,
+          });
+
+          // Drop items into inventory
+          const inv = entity.getComponent(InventoryComponent);
+          if (inv) {
+            for (const drop of config.drops) {
+              const count = drop.min + Math.floor(Math.random() * (drop.max - drop.min + 1));
+              inv.addItem(drop.item, count);
+            }
+          }
+
+          // Damage number feedback
+          const tileWorldX = chunkX * CHUNK_PIXEL_SIZE + localX * TILE_SIZE + TILE_SIZE / 2;
+          const tileWorldY = chunkY * CHUNK_PIXEL_SIZE + localY * TILE_SIZE + TILE_SIZE / 2;
+          this.gameServer.combatResolver.damageEvents.push({
+            targetId: `tile:${tileKey}`,
+            attackerId: entity.id,
+            damage: config.health, isCrit: false,
+            x: tileWorldX, y: tileWorldY,
+            killed: true, isResource: true,
+          });
+        }
+      }
     }
 
     // Consume 1

@@ -6,12 +6,13 @@ export default class DamageNumber {
     this.numbers = [];
   }
 
-  add(x, y, damage, isCrit = false) {
+  add(x, y, damage, isCrit = false, color = null) {
     this.numbers.push({
       x,
       y,
       damage,
       isCrit,
+      color,
       age: 0,
       offsetX: (Math.random() - 0.5) * 16,
     });
@@ -33,7 +34,7 @@ export default class DamageNumber {
       const alpha = Math.max(0, 1 - n.age / LIFETIME);
       const size = n.isCrit ? 16 : 12;
       ctx.globalAlpha = alpha;
-      ctx.fillStyle = n.isCrit ? '#ff4444' : '#ffcc00';
+      ctx.fillStyle = n.color || (n.isCrit ? '#ff4444' : '#ffcc00');
       ctx.font = `bold ${size}px monospace`;
       ctx.textAlign = 'center';
       ctx.fillText(

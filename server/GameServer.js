@@ -9,6 +9,12 @@ import InteractionHandler from './network/handlers/InteractionHandler.js';
 import CraftingHandler from './network/handlers/CraftingHandler.js';
 import UpgradeHandler from './network/handlers/UpgradeHandler.js';
 import SkillHandler from './network/handlers/SkillHandler.js';
+import DialogHandler from './network/handlers/DialogHandler.js';
+import QuestHandler from './network/handlers/QuestHandler.js';
+import ShopHandler from './network/handlers/ShopHandler.js';
+import ChestHandler from './network/handlers/ChestHandler.js';
+import FishingHandler from './network/handlers/FishingHandler.js';
+import QuestComponent from './ecs/components/QuestComponent.js';
 import EntityManager from './ecs/EntityManager.js';
 import SystemManager from './ecs/SystemManager.js';
 import EntityFactory from './ecs/EntityFactory.js';
@@ -24,6 +30,7 @@ import DespawnSystem from './ecs/systems/DespawnSystem.js';
 import StatSystem from './ecs/systems/StatSystem.js';
 import ResourceSpawnSystem from './ecs/systems/ResourceSpawnSystem.js';
 import SkillSystem from './ecs/systems/SkillSystem.js';
+import QuestTrackingSystem from './ecs/systems/QuestTrackingSystem.js';
 import CombatResolver from './combat/CombatResolver.js';
 import TileCollisionMap from './collision/TileCollisionMap.js';
 import WorldManager from './world/WorldManager.js';
@@ -45,6 +52,8 @@ import { ITEM_DB } from '../shared/ItemTypes.js';
 import { TOWN_STATIONS, STATION_DB } from '../shared/StationTypes.js';
 import { getDefaultHotbar } from '../shared/SkillTypes.js';
 import SkillExecutor from './skills/SkillExecutor.js';
+import TownManager from './town/TownManager.js';
+import NPCComponent from './ecs/components/NPCComponent.js';
 
 export default class GameServer {
   constructor(io) {
@@ -60,6 +69,9 @@ export default class GameServer {
 
     // World
     this.worldManager = new WorldManager();
+
+    // Town
+    this.townManager = new TownManager();
 
     // Persistence
     this.playerRepo = new PlayerRepository();
@@ -93,9 +105,29 @@ export default class GameServer {
     const skillHandler = new SkillHandler(this);
     skillHandler.register(this.messageRouter);
 
+    this.dialogHandler = new DialogHandler(this);
+    this.dialogHandler.register(this.messageRouter);
+
+    this.questHandler = new QuestHandler(this);
+    this.questHandler.register(this.messageRouter);
+
+    const shopHandler = new ShopHandler(this);
+    shopHandler.register(this.messageRouter);
+
+    this.chestHandler = new ChestHandler(this);
+    this.chestHandler.register(this.messageRouter);
+
+    this.fishingHandler = new FishingHandler(this);
+    this.fishingHandler.register(this.messageRouter);
+
     // Respawn handler
     this.messageRouter.register(MSG.PLAYER_RESPAWN, (player) => {
       this.handlePlayerRespawn(player);
+    });
+
+    // Town recall handler (hold H to teleport back to town)
+    this.messageRouter.register(MSG.TOWN_RECALL, (player) => {
+      this.handleTownRecall(player);
     });
 
     // Station placement handlers (ghost placement confirm/cancel)
@@ -141,6 +173,35 @@ export default class GameServer {
     console.log(`[GameServer] Player respawned: ${playerConn.name}`);
   }
 
+  handleTownRecall(playerConn) {
+    const entity = this.entityManager.get(playerConn.id);
+    if (!entity) return;
+
+    const health = entity.getComponent(HealthComponent);
+    if (!health || !health.isAlive()) return; // must be alive
+
+    // Teleport to town spawn
+    const pos = entity.getComponent(PositionComponent);
+    const spawnX = 512 + (Math.random() - 0.5) * 64;
+    const spawnY = 512 + (Math.random() - 0.5) * 64;
+    pos.x = spawnX;
+    pos.y = spawnY;
+
+    // Reset velocity
+    const vel = entity.getComponent(VelocityComponent);
+    if (vel) { vel.dx = 0; vel.dy = 0; }
+
+    // Notify the player (reuse respawn message — client handles teleport + camera snap)
+    playerConn.emit(MSG.PLAYER_RESPAWN, {
+      x: spawnX,
+      y: spawnY,
+      hp: health.current,
+      maxHp: health.max,
+    });
+
+    console.log(`[GameServer] Player recalled to town: ${playerConn.name}`);
+  }
+
   handleStationPlace(playerConn, data) {
     const entity = this.entityManager.get(playerConn.id);
     if (!entity) return;
@@ -168,8 +229,11 @@ export default class GameServer {
       return;
     }
 
-    // Spawn the station
-    const stationEntity = EntityFactory.createCraftingStation(stationId, placeX, placeY, 1);
+    // Spawn the station (chest vs regular)
+    const stationDef = STATION_DB[stationId];
+    const stationEntity = (stationDef && stationDef.isChest)
+      ? EntityFactory.createChest(stationId, placeX, placeY)
+      : EntityFactory.createCraftingStation(stationId, placeX, placeY, 1);
     if (stationEntity) {
       this.entityManager.add(stationEntity);
     }
@@ -207,7 +271,7 @@ export default class GameServer {
 
     // Combat resolver
     this.combatResolver = new CombatResolver(this.io);
-    this.skillExecutor = new SkillExecutor(this.combatResolver);
+    this.skillExecutor = new SkillExecutor(this.combatResolver, this);
 
     // Set up collision
     this.tileCollisionMap = new TileCollisionMap(this.worldManager.chunkManager);
@@ -225,10 +289,15 @@ export default class GameServer {
     const healthSystem = new HealthSystem(this.io);
     const lootSystem = new LootSystem(this.io);
     this.resourceSpawnSystem = new ResourceSpawnSystem();
+    this.questTrackingSystem = new QuestTrackingSystem(this);
 
     // Wire death event: health system -> loot system + resource depletion
     healthSystem.onDeath((entity, entityManager) => {
       lootSystem.onEntityDeath(entity, entityManager);
+      // Quest kill tracking
+      if (entity.hasTag('enemy')) {
+        this.questTrackingSystem.onEnemyKill(entity, entityManager);
+      }
       if (entity.hasTag('resource')) {
         this.resourceSpawnSystem.onResourceDepleted(entity, entityManager);
         // Update chunk data so respawn timer works
@@ -243,6 +312,19 @@ export default class GameServer {
           }
         }
       }
+      // Reset summoning shrine when boss dies
+      if (entity.isBoss) {
+        const altars = entityManager.getByTag('station');
+        for (const altar of altars) {
+          const sc = altar.getComponent(CraftingStationComponent);
+          if (sc?.stationId === 'boss_altar' && altar.linkedBossId === entity.id) {
+            altar.altarState = 'idle';
+            altar.linkedBossId = null;
+            this.io.emit(MSG.BOSS_DEFEAT, { bossId: entity.id });
+            break;
+          }
+        }
+      }
     });
 
     this.systemManager.add(healthSystem);                 // 25: detect deaths
@@ -250,6 +332,7 @@ export default class GameServer {
     this.systemManager.add(this.resourceSpawnSystem);     // 48: spawn resources
     this.systemManager.add(new SpawnSystem());            // 50: spawn enemies
     this.systemManager.add(new DespawnSystem());          // 51: despawn far enemies
+    this.systemManager.add(this.questTrackingSystem);    // 90: quest tracking
 
     // Spawn town crafting stations
     for (const stationDef of TOWN_STATIONS) {
@@ -261,7 +344,11 @@ export default class GameServer {
       }
     }
 
-    console.log('[GameServer] ECS + Combat + AI + Resources + Crafting initialized');
+    // Initialize town NPCs
+    await this.townManager.init();
+    this.townManager.spawnNPCs(this.entityManager);
+
+    console.log('[GameServer] ECS + Combat + AI + Resources + Crafting + Town initialized');
   }
 
   start() {
@@ -383,6 +470,30 @@ export default class GameServer {
       };
     }
 
+    // NPC entities
+    const npcEntities = this.entityManager.getByTag('npc');
+    for (const entity of npcEntities) {
+      const pos = entity.getComponent(PositionComponent);
+      const name = entity.getComponent(NameComponent);
+      const col = entity.getComponent(ColliderComponent);
+      const npc = entity.getComponent(NPCComponent);
+      const health = entity.getComponent(HealthComponent);
+
+      allStates[entity.id] = {
+        id: entity.id,
+        type: 'npc',
+        name: name ? name.name : 'NPC',
+        color: entity.npcData?.color || '#d4a574',
+        size: col ? col.width : 26,
+        x: pos.x,
+        y: pos.y,
+        npcType: npc ? npc.npcType : 'quest_giver',
+        npcId: npc ? npc.npcId : null,
+        hp: health ? health.current : 0,
+        maxHp: health ? health.max : 0,
+      };
+    }
+
     // Station entities
     const stationEntities = this.entityManager.getByTag('station');
     for (const entity of stationEntities) {
@@ -401,6 +512,8 @@ export default class GameServer {
         y: pos.y,
         stationId: sc ? sc.stationId : null,
         stationLevel: sc ? sc.level : 1,
+        isChest: sc && STATION_DB[sc.stationId] ? !!STATION_DB[sc.stationId].isChest : false,
+        altarActive: entity.altarState === 'summoning' || false,
       };
     }
 
@@ -578,6 +691,9 @@ export default class GameServer {
   }
 
   async onPlayerLeave(playerConn) {
+    // Clean up fishing state
+    this.fishingHandler.onPlayerLeave(playerConn.id);
+
     // Save player data before destroying entity
     await this.savePlayer(playerConn);
 
@@ -602,6 +718,7 @@ export default class GameServer {
     const inv = entity.getComponent(InventoryComponent);
     const equip = entity.getComponent(EquipmentComponent);
     const skills = entity.getComponent(SkillComponent);
+    const quests = entity.getComponent(QuestComponent);
 
     const data = {
       version: 1,
@@ -624,6 +741,7 @@ export default class GameServer {
       inventory: inv ? inv.serialize() : null,
       equipment: equip ? equip.serialize() : null,
       skills: skills ? skills.serialize() : null,
+      quests: quests ? quests.serialize() : null,
     };
 
     await this.playerRepo.save(playerConn.id, data);
@@ -674,11 +792,13 @@ export default class GameServer {
           if (typeof data === 'object' && data.id) {
             const itemDef = ITEM_DB[data.id];
             if (itemDef) {
-              equip.equip(itemDef, {
+              const extra = {
                 gems: data.gems || [],
                 upgradeLevel: data.upgradeLevel || 0,
                 upgradeXp: data.upgradeXp || 0,
-              });
+              };
+              if (data.rodParts) extra.rodParts = data.rodParts;
+              equip.equip(itemDef, extra);
             }
           } else if (typeof data === 'string' && ITEM_DB[data]) {
             // Old format: plain item ID string
@@ -702,6 +822,14 @@ export default class GameServer {
             skills.hotbar[i] = saveData.skills.hotbar[i] || null;
           }
         }
+      }
+    }
+
+    // Restore quests
+    if (saveData.quests) {
+      const questComp = entity.getComponent(QuestComponent);
+      if (questComp) {
+        questComp.deserialize(saveData.quests);
       }
     }
   }

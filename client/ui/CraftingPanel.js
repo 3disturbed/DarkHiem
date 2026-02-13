@@ -145,6 +145,7 @@ export default class CraftingPanel {
 
     // Header
     let stationName = this.stationId === 'hand' ? 'Hand Craft'
+      : this.stationId === 'boss_altar' ? 'Summoning Shrine'
       : this.stationId ? this.stationId.replace(/_/g, ' ') : 'Crafting';
     if (this.stationLevel > 1) stationName += ` Lv${this.stationLevel}`;
     ctx.fillStyle = '#ffd700';
@@ -232,7 +233,7 @@ export default class CraftingPanel {
     ctx.fillStyle = canCraftSelected ? '#fff' : '#999';
     ctx.font = 'bold 12px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('CRAFT', this.x + this.width / 2, btnY + 20);
+    ctx.fillText(this.stationId === 'boss_altar' ? 'SUMMON' : 'CRAFT', this.x + this.width / 2, btnY + 20);
 
     // Close hint
     ctx.fillStyle = '#666';
