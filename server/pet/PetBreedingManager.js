@@ -1,5 +1,5 @@
 import { MSG } from '../../shared/MessageTypes.js';
-import { PET_DB, getPetStats, getPetSkills, getXpForLevel, PET_MAX_LEVEL, PET_SKILL_UNLOCK_LEVELS } from '../../shared/PetTypes.js';
+import { PET_DB, getPetStats, getPetSkills, getRandomPetSkills, getRandomNewSkill, getXpForLevel, PET_MAX_LEVEL, PET_SKILL_UNLOCK_LEVELS } from '../../shared/PetTypes.js';
 import { ITEM_DB } from '../../shared/ItemTypes.js';
 import PlayerComponent from '../ecs/components/PlayerComponent.js';
 import InventoryComponent from '../ecs/components/InventoryComponent.js';
@@ -85,12 +85,16 @@ export default class PetBreedingManager {
     inv.removeFromSlot(slot1Idx, 1);
     inv.removeFromSlot(slot2Idx, 1);
 
+    // Merge parent skills (union of both parents' learned skills)
+    const parentSkills = [...new Set([...(pet1.learnedSkills || []), ...(pet2.learnedSkills || [])])];
+
     this.activeBreedings.set(playerConn.id, {
       petId: pet1.petId,
       startTime: Date.now(),
       stationEntityId: penEntity.id,
       parentLevels: (pet1.level || 1) + (pet2.level || 1),
       eitherRare: pet1.isRare || pet2.isRare,
+      parentSkills,
     });
 
     playerConn.emit(MSG.INVENTORY_UPDATE, { slots: inv.serialize().slots });
@@ -126,7 +130,21 @@ export default class PetBreedingManager {
     const bonusStats = Math.floor(breeding.parentLevels / 10);
     const isRare = breeding.eitherRare ? Math.random() < RARE_BREED_CHANCE : false;
     const babyStats = getPetStats(breeding.petId, 1);
-    const babySkills = getPetSkills(breeding.petId, 1);
+
+    // Baby inherits parent skills: pick up to 2 random skills from parent pool
+    const parentSkills = breeding.parentSkills || [];
+    const inheritedSkills = [];
+    const pool = [...parentSkills];
+    const maxInherit = Math.min(2, pool.length);
+    for (let i = 0; i < maxInherit; i++) {
+      const idx = Math.floor(Math.random() * pool.length);
+      inheritedSkills.push(pool.splice(idx, 1)[0]);
+    }
+    // If parents had no skills, give the baby one random level-1 skill
+    if (inheritedSkills.length === 0) {
+      const fallback = getRandomPetSkills(breeding.petId, 1);
+      inheritedSkills.push(...fallback);
+    }
 
     const extraData = {
       petId: breeding.petId,
@@ -135,7 +153,7 @@ export default class PetBreedingManager {
       xp: 0,
       currentHp: babyStats.hp + bonusStats,
       maxHp: babyStats.hp + bonusStats,
-      learnedSkills: babySkills,
+      learnedSkills: inheritedSkills,
       fainted: false,
       isRare,
       bonusStats,
@@ -222,11 +240,13 @@ export default class PetBreedingManager {
         petData.maxHp = newStats.hp + (petData.bonusStats || 0);
         petData.currentHp = petData.maxHp;
 
-        const allSkills = getPetSkills(petData.petId, petData.level);
-        for (const skill of allSkills) {
-          if (!petData.learnedSkills.includes(skill)) {
-            petData.learnedSkills.push(skill);
-            newSkills.push(skill);
+        // Random skill unlock at skill unlock levels
+        if (PET_SKILL_UNLOCK_LEVELS.includes(petData.level)) {
+          const newSkill = getRandomNewSkill(petData.petId, petData.learnedSkills || []);
+          if (newSkill) {
+            if (!petData.learnedSkills) petData.learnedSkills = [];
+            petData.learnedSkills.push(newSkill);
+            newSkills.push(newSkill);
           }
         }
       } else {

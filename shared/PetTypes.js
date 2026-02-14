@@ -179,7 +179,7 @@ export function getPetStats(petId, level) {
   };
 }
 
-// Get skills unlocked at a given level
+// Get skills unlocked at a given level (deterministic — for display/tooltips)
 export function getPetSkills(petId, level) {
   const def = PET_DB[petId];
   if (!def) return [];
@@ -190,6 +190,41 @@ export function getPetSkills(petId, level) {
     }
   }
   return unlocked;
+}
+
+// Get random skills for a pet at a given level (for wild spawns/captures)
+export function getRandomPetSkills(petId, level) {
+  const def = PET_DB[petId];
+  if (!def) return [];
+  let numSlots = 0;
+  for (const ul of PET_SKILL_UNLOCK_LEVELS) {
+    if (level >= ul) numSlots++;
+  }
+  const pool = [...def.skills];
+  const picked = [];
+  for (let i = 0; i < numSlots && pool.length > 0; i++) {
+    const idx = Math.floor(Math.random() * pool.length);
+    picked.push(pool.splice(idx, 1)[0]);
+  }
+  return picked;
+}
+
+// Pick one random unlearned skill for level-up
+export function getRandomNewSkill(petId, learnedSkills) {
+  const def = PET_DB[petId];
+  if (!def) return null;
+  const unlearned = def.skills.filter(s => !learnedSkills.includes(s));
+  if (unlearned.length === 0) return null;
+  return unlearned[Math.floor(Math.random() * unlearned.length)];
+}
+
+// Get random wild pet level based on PET_DB tier (biome index * 5)
+export function getWildPetLevel(petId) {
+  const def = PET_DB[petId];
+  if (!def) return 1;
+  const minLevel = def.tier * 5 + 1;
+  const maxLevel = Math.min((def.tier + 1) * 5, PET_MAX_LEVEL);
+  return minLevel + Math.floor(Math.random() * (maxLevel - minLevel + 1));
 }
 
 // XP needed to reach next level from current level

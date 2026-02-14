@@ -258,6 +258,7 @@ export default class InventoryPanel {
         gems: slot.gems || [],
         upgradeXp: slot.upgradeXp || 0,
         petNickname: def.isPet ? (slot.nickname || PET_DB[slot.petId]?.name || null) : null,
+        petIsRare: def.isPet ? (slot.isRare || false) : false,
       });
     }
     // Sort: equipment first (by slot), then materials, consumables, gems; alphabetical within
@@ -456,7 +457,8 @@ export default class InventoryPanel {
       }
 
       // Rarity color pip (shifted right if icon present)
-      const rarityColor = RARITY_COLORS[item.def.rarity] || '#888';
+      const itemRarity = item.petIsRare ? 'rare' : item.def.rarity;
+      const rarityColor = RARITY_COLORS[itemRarity] || '#888';
       const pipX = icon ? iconX + ICON_SIZE + 2 : listX + 14;
       ctx.fillStyle = rarityColor;
       ctx.fillRect(pipX, rowY + 6, 3, ROW_H - 12);
@@ -533,9 +535,10 @@ export default class InventoryPanel {
     }
 
     // Name (offset right if icon present)
+    const detailRarity = item.petIsRare ? 'rare' : def.rarity;
     let name = item.petNickname || def.name;
     if (item.upgradeLevel > 0) name += ` +${item.upgradeLevel}`;
-    ctx.fillStyle = RARITY_COLORS[def.rarity] || '#fff';
+    ctx.fillStyle = RARITY_COLORS[detailRarity] || '#fff';
     ctx.font = 'bold 12px monospace';
     ctx.textAlign = 'left';
     const nameOffX = detailIcon ? lx + 38 : lx;
@@ -543,10 +546,10 @@ export default class InventoryPanel {
     lineY += detailIcon ? lineH + 12 : lineH + 2;
 
     // Rarity
-    if (def.rarity) {
-      ctx.fillStyle = RARITY_COLORS[def.rarity];
+    if (detailRarity) {
+      ctx.fillStyle = RARITY_COLORS[detailRarity];
       ctx.font = '10px monospace';
-      ctx.fillText(def.rarity.charAt(0).toUpperCase() + def.rarity.slice(1), lx, lineY);
+      ctx.fillText(detailRarity.charAt(0).toUpperCase() + detailRarity.slice(1), lx, lineY);
       lineY += lineH;
     }
 

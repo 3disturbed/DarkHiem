@@ -28,15 +28,8 @@ export default class Equipment {
     if (!entry) return null;
     const itemDef = ITEM_DB[entry.id];
     if (!itemDef) return null;
-    // Return item def merged with per-instance data
-    const result = {
-      ...itemDef,
-      gems: entry.gems || [],
-      upgradeLevel: entry.upgradeLevel || 0,
-      upgradeXp: entry.upgradeXp || 0,
-    };
-    if (entry.rodParts) result.rodParts = entry.rodParts;
-    return result;
+    // Return item def merged with ALL per-instance data (gems, upgrades, pet fields, etc.)
+    return { ...itemDef, ...entry };
   }
 
   getSlotNames() {

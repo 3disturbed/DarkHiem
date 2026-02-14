@@ -1,5 +1,5 @@
 import { MSG } from '../../shared/MessageTypes.js';
-import { PET_DB, getPetStats, getPetSkills, getXpForLevel, PET_MAX_LEVEL, PET_SKILL_UNLOCK_LEVELS, getBattleXpReward } from '../../shared/PetTypes.js';
+import { PET_DB, getPetStats, getPetSkills, getRandomPetSkills, getRandomNewSkill, getWildPetLevel, getXpForLevel, PET_MAX_LEVEL, PET_SKILL_UNLOCK_LEVELS, getBattleXpReward } from '../../shared/PetTypes.js';
 import PetBattle from './PetBattle.js';
 import PlayerComponent from '../ecs/components/PlayerComponent.js';
 import InventoryComponent from '../ecs/components/InventoryComponent.js';
@@ -61,8 +61,8 @@ export default class PetBattleManager {
     const enemyId = enemyConfig?.id;
     if (!enemyId || !PET_DB[enemyId]) return false;
 
-    const enemyHealth = enemyEntity.getComponent(HealthComponent);
-    const wildLevel = this._estimateWildLevel(enemyId, enemyHealth?.max || 50);
+    // Random level based on creature tier (biome index * 5)
+    const wildLevel = getWildPetLevel(enemyId);
 
     // Remove enemy from world
     this.gameServer.entityManager.remove(enemyEntity.id);
@@ -130,12 +130,13 @@ export default class PetBattleManager {
                 petData.maxHp = newStats.hp + (petData.bonusStats || 0);
                 petData.currentHp = petData.maxHp; // Full heal on level up
 
-                // Check for new skill unlocks
-                const allSkills = getPetSkills(petData.petId, petData.level);
-                for (const skill of allSkills) {
-                  if (!petData.learnedSkills.includes(skill)) {
-                    petData.learnedSkills.push(skill);
-                    newSkills.push(skill);
+                // Random skill unlock at skill unlock levels
+                if (PET_SKILL_UNLOCK_LEVELS.includes(petData.level)) {
+                  const newSkill = getRandomNewSkill(petData.petId, petData.learnedSkills || []);
+                  if (newSkill) {
+                    if (!petData.learnedSkills) petData.learnedSkills = [];
+                    petData.learnedSkills.push(newSkill);
+                    newSkills.push(newSkill);
                   }
                 }
               } else {
@@ -183,12 +184,12 @@ export default class PetBattleManager {
               const newStats = getPetStats(weapon.petId, weapon.level);
               weapon.maxHp = newStats.hp + (weapon.bonusStats || 0);
               weapon.currentHp = weapon.maxHp;
-              const allSkills = getPetSkills(weapon.petId, weapon.level);
-              if (!weapon.learnedSkills) weapon.learnedSkills = [];
-              for (const skill of allSkills) {
-                if (!weapon.learnedSkills.includes(skill)) {
-                  weapon.learnedSkills.push(skill);
-                  newSkills.push(skill);
+              if (PET_SKILL_UNLOCK_LEVELS.includes(weapon.level)) {
+                if (!weapon.learnedSkills) weapon.learnedSkills = [];
+                const newSkill = getRandomNewSkill(weapon.petId, weapon.learnedSkills);
+                if (newSkill) {
+                  weapon.learnedSkills.push(newSkill);
+                  newSkills.push(newSkill);
                 }
               }
             } else break;
@@ -205,7 +206,8 @@ export default class PetBattleManager {
       if (petDef && !inventory.isFull()) {
         const wildLevel = battle.wildPet.level;
         const stats = getPetStats(wildId, wildLevel);
-        const capturedSkills = getPetSkills(wildId, wildLevel);
+        // Inherit the wild creature's actual battle skills
+        const capturedSkills = [...battle.wildPet.skills];
         const extraData = {
           petId: wildId,
           nickname: petDef.name,
@@ -264,13 +266,7 @@ export default class PetBattleManager {
     }
   }
 
-  _estimateWildLevel(petId, maxHp) {
-    const def = PET_DB[petId];
-    if (!def) return 1;
-    // Reverse-engineer level from maxHp: hp = base + growth * (level - 1)
-    const level = Math.max(1, Math.round((maxHp - def.baseStats.hp) / def.growthPerLevel.hp) + 1);
-    return Math.min(level, 20);
-  }
+  // Removed _estimateWildLevel — now uses getWildPetLevel(petId) from PetTypes.js
 
   isInBattle(playerId) {
     return this.activeBattles.has(playerId);

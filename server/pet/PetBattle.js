@@ -1,4 +1,4 @@
-import { PET_DB, getPetStats, getPetSkills, PET_FLEE_CHANCE, PET_MAX_TURNS } from '../../shared/PetTypes.js';
+import { PET_DB, getPetStats, getPetSkills, getRandomPetSkills, PET_FLEE_CHANCE, PET_MAX_TURNS } from '../../shared/PetTypes.js';
 import { SKILL_DB } from '../../shared/SkillTypes.js';
 
 const BATTLE_STATE = {
@@ -19,6 +19,7 @@ export default class PetBattle {
       petId: pet.petId,
       nickname: pet.nickname || PET_DB[pet.petId]?.name || pet.petId,
       level: pet.level || 1,
+      xp: pet.xp || 0,
       currentHp: pet.currentHp,
       maxHp: pet.maxHp,
       stats: getPetStats(pet.petId, pet.level || 1),
@@ -31,9 +32,9 @@ export default class PetBattle {
     // Active player pet index
     this.activeIndex = this._findFirstAlive();
 
-    // Wild creature
+    // Wild creature — random skills based on level
     const wildStats = getPetStats(wildPetId, wildLevel);
-    const wildSkills = getPetSkills(wildPetId, wildLevel);
+    const wildSkills = getRandomPetSkills(wildPetId, wildLevel);
     this.wildPet = {
       petId: wildPetId,
       nickname: PET_DB[wildPetId]?.name || wildPetId,
@@ -60,7 +61,7 @@ export default class PetBattle {
       activeIndex: this.activeIndex,
       playerTeam: this.playerTeam.map(p => ({
         petId: p.petId, nickname: p.nickname, level: p.level,
-        currentHp: p.currentHp, maxHp: p.maxHp, fainted: p.fainted,
+        xp: p.xp, currentHp: p.currentHp, maxHp: p.maxHp, fainted: p.fainted,
         skills: p.skills, isRare: p.isRare,
       })),
       wildPet: {

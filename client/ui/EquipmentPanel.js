@@ -1,4 +1,6 @@
 import { EQUIP_SLOT, ITEM_DB, RARITY_COLORS } from '../../shared/ItemTypes.js';
+import { PET_DB, getPetStats } from '../../shared/PetTypes.js';
+import { SKILL_DB } from '../../shared/SkillTypes.js';
 
 const SLOT_SIZE = 48;
 const SLOT_PAD = 6;
@@ -142,20 +144,23 @@ export default class EquipmentPanel {
         ctx.fillStyle = '#3a4a3a';
         ctx.fillRect(sx + 4, sy + 4, SLOT_SIZE - 8, SLOT_SIZE - 8);
 
-        // Rarity border
-        if (itemDef.rarity && RARITY_COLORS[itemDef.rarity]) {
-          ctx.strokeStyle = RARITY_COLORS[itemDef.rarity];
+        // Rarity border (pets use isRare for gold border)
+        const displayRarity = (itemDef.isPet && itemDef.isRare) ? 'rare' : itemDef.rarity;
+        if (displayRarity && RARITY_COLORS[displayRarity]) {
+          ctx.strokeStyle = RARITY_COLORS[displayRarity];
           ctx.lineWidth = 2;
           ctx.strokeRect(sx + 2, sy + 2, SLOT_SIZE - 4, SLOT_SIZE - 4);
         }
 
-        // Item name
-        ctx.fillStyle = RARITY_COLORS[itemDef.rarity] || '#fff';
+        // Item name (pets show nickname instead of generic "Captured Pet")
+        const petName = itemDef.isPet ? (itemDef.nickname || PET_DB[itemDef.petId]?.name || null) : null;
+        const displayName = petName || itemDef.name;
+        ctx.fillStyle = RARITY_COLORS[displayRarity] || '#fff';
         ctx.font = '9px monospace';
         ctx.textAlign = 'center';
-        const shortName = itemDef.name.length > 7
-          ? itemDef.name.slice(0, 6) + '.'
-          : itemDef.name;
+        const shortName = displayName.length > 7
+          ? displayName.slice(0, 6) + '.'
+          : displayName;
         ctx.fillText(shortName, sx + SLOT_SIZE / 2, sy + SLOT_SIZE / 2 + 3);
 
         // Upgrade level
@@ -191,42 +196,73 @@ export default class EquipmentPanel {
     const lines = [];
     const colors = [];
 
-    let name = itemData.name;
-    if (itemData.upgradeLevel > 0) name += ` +${itemData.upgradeLevel}`;
-    lines.push(name);
-    colors.push(RARITY_COLORS[itemData.rarity] || '#fff');
+    // Pet items show nickname + level instead of generic name
+    const isPet = itemData.isPet && itemData.petId;
+    const petDef = isPet ? PET_DB[itemData.petId] : null;
 
-    if (itemData.rarity) {
-      lines.push(itemData.rarity.charAt(0).toUpperCase() + itemData.rarity.slice(1));
-      colors.push(RARITY_COLORS[itemData.rarity]);
-    }
+    if (isPet) {
+      const petName = itemData.nickname || petDef?.name || itemData.name;
+      lines.push(`${itemData.isRare ? '★ ' : ''}${petName}  Lv.${itemData.level || 1}`);
+      colors.push(petDef?.color || '#d2b4de');
 
-    if (itemData.description) { lines.push(itemData.description); colors.push('#999'); }
+      lines.push(itemData.isRare ? 'Rare' : 'Common');
+      colors.push(itemData.isRare ? '#ffd700' : '#888');
 
-    if (itemData.statBonuses) {
-      const stats = Object.entries(itemData.statBonuses)
-        .filter(([, v]) => v !== 0)
-        .map(([k, v]) => `${k}: ${v > 0 ? '+' : ''}${v}`);
-      if (stats.length > 0) { lines.push(stats.join('  ')); colors.push('#8cf'); }
-    }
+      if (petDef?.description) { lines.push(petDef.description); colors.push('#999'); }
 
-    if (itemData.gemSlots > 0) {
-      const gems = itemData.gems || [];
-      const filled = gems.filter(g => g).length;
-      lines.push(`Sockets: ${filled}/${itemData.gemSlots}`);
-      colors.push('#bbb');
-      for (const gemId of gems) {
-        if (gemId) {
-          const gDef = ITEM_DB[gemId];
-          if (gDef) { lines.push(`  ${gDef.name}`); colors.push(gDef.gemColor || '#fff'); }
+      // Pet stats
+      const stats = getPetStats(itemData.petId, itemData.level || 1);
+      lines.push(`HP: ${itemData.currentHp ?? 0}/${itemData.maxHp ?? stats.hp}`);
+      colors.push('#2ecc71');
+      lines.push(`ATK:${stats.attack} DEF:${stats.defense} SPD:${stats.speed} SPC:${stats.special}`);
+      colors.push('#8cf');
+
+      // Skills
+      if (itemData.learnedSkills?.length > 0) {
+        const skillNames = itemData.learnedSkills.map(s => SKILL_DB[s]?.name || s).join(', ');
+        lines.push(skillNames);
+        colors.push('#d2b4de');
+      }
+
+      if (itemData.fainted) { lines.push('FAINTED'); colors.push('#e74c3c'); }
+    } else {
+      let name = itemData.name;
+      if (itemData.upgradeLevel > 0) name += ` +${itemData.upgradeLevel}`;
+      lines.push(name);
+      colors.push(RARITY_COLORS[itemData.rarity] || '#fff');
+
+      if (itemData.rarity) {
+        lines.push(itemData.rarity.charAt(0).toUpperCase() + itemData.rarity.slice(1));
+        colors.push(RARITY_COLORS[itemData.rarity]);
+      }
+
+      if (itemData.description) { lines.push(itemData.description); colors.push('#999'); }
+
+      if (itemData.statBonuses) {
+        const stats = Object.entries(itemData.statBonuses)
+          .filter(([, v]) => v !== 0)
+          .map(([k, v]) => `${k}: ${v > 0 ? '+' : ''}${v}`);
+        if (stats.length > 0) { lines.push(stats.join('  ')); colors.push('#8cf'); }
+      }
+
+      if (itemData.gemSlots > 0) {
+        const gems = itemData.gems || [];
+        const filled = gems.filter(g => g).length;
+        lines.push(`Sockets: ${filled}/${itemData.gemSlots}`);
+        colors.push('#bbb');
+        for (const gemId of gems) {
+          if (gemId) {
+            const gDef = ITEM_DB[gemId];
+            if (gDef) { lines.push(`  ${gDef.name}`); colors.push(gDef.gemColor || '#fff'); }
+          }
         }
       }
-    }
 
-    // Tool info
-    if (itemData.toolType) {
-      lines.push(`Tool: ${itemData.toolType} T${itemData.toolTier}`);
-      colors.push('#9b9');
+      // Tool info
+      if (itemData.toolType) {
+        lines.push(`Tool: ${itemData.toolType} T${itemData.toolTier}`);
+        colors.push('#9b9');
+      }
     }
 
     lines.push('[Click to unequip]');

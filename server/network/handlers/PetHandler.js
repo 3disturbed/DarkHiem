@@ -1,5 +1,5 @@
 import { MSG } from '../../../shared/MessageTypes.js';
-import { PET_DB, PET_CAPTURE_HP_THRESHOLD, PET_SKILL_UNLOCK_LEVELS, getPetStats } from '../../../shared/PetTypes.js';
+import { PET_DB, PET_CAPTURE_HP_THRESHOLD, PET_SKILL_UNLOCK_LEVELS, getPetStats, getRandomPetSkills } from '../../../shared/PetTypes.js';
 import { CAGE_TIERS } from '../../../shared/PetTypes.js';
 import { ITEM_DB } from '../../../shared/ItemTypes.js';
 import PositionComponent from '../../ecs/components/PositionComponent.js';
@@ -105,7 +105,7 @@ export default class PetHandler {
       xp: 0,
       currentHp: stats.hp,
       maxHp: stats.hp,
-      learnedSkills: [petDef.skills[0]],
+      learnedSkills: getRandomPetSkills(enemyId, 1),
       fainted: false,
       isRare,
       bonusStats: 0,

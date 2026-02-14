@@ -256,9 +256,17 @@ export default class PetTeamPanel {
       const xpNeeded = getXpForLevel((petData.level || 1) + 1);
       const xpRatio = xpNeeded < Infinity ? Math.min(1, (petData.xp || 0) / xpNeeded) : 1;
       ctx.fillStyle = '#222';
-      ctx.fillRect(barX, xpY, barW, 6);
+      ctx.fillRect(barX, xpY, barW, 8);
       ctx.fillStyle = '#3498db';
-      ctx.fillRect(barX, xpY, barW * xpRatio, 6);
+      ctx.fillRect(barX, xpY, barW * xpRatio, 8);
+      ctx.fillStyle = '#ccc';
+      ctx.font = '8px monospace';
+      ctx.textAlign = 'center';
+      if (xpNeeded < Infinity) {
+        ctx.fillText(`XP ${petData.xp || 0}/${xpNeeded}`, barX + barW / 2, xpY + 7);
+      } else {
+        ctx.fillText('MAX', barX + barW / 2, xpY + 7);
+      }
 
       // Stats
       const stats = getPetStats(petData.petId, petData.level || 1);

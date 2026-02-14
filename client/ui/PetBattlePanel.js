@@ -1,5 +1,5 @@
 import enemySprites, { getAnimMeta } from '../entities/EnemySprites.js';
-import { PET_DB } from '../../shared/PetTypes.js';
+import { PET_DB, getXpForLevel } from '../../shared/PetTypes.js';
 import { SKILL_DB } from '../../shared/SkillTypes.js';
 
 const MENU_MAIN = 'main';
@@ -171,8 +171,18 @@ export default class PetBattlePanel {
       ctx.textAlign = 'left';
       ctx.fillText(`${playerPet.nickname}  Lv.${playerPet.level}`, 20, height * 0.62 - 6);
 
+      // XP bar below HP
+      const xpBarY = height * 0.62 + 24;
+      const xpBarW = width * 0.5;
+      const xpNeeded = getXpForLevel((playerPet.level || 1) + 1);
+      const xpRatio = xpNeeded < Infinity ? Math.min(1, (playerPet.xp || 0) / xpNeeded) : 1;
+      ctx.fillStyle = '#222';
+      ctx.fillRect(20, xpBarY, xpBarW, 6);
+      ctx.fillStyle = '#3498db';
+      ctx.fillRect(20, xpBarY, xpBarW * xpRatio, 6);
+
       // Team dots
-      const dotY = height * 0.62 + 30;
+      const dotY = height * 0.62 + 36;
       for (let i = 0; i < bs.playerTeam.length; i++) {
         const pet = bs.playerTeam[i];
         ctx.beginPath();
@@ -450,6 +460,12 @@ export default class PetBattlePanel {
       infoY += 16;
       if (this.battleEndData.leveledUp) {
         ctx.fillText('Level Up!', width / 2, infoY);
+        infoY += 16;
+      }
+      if (this.battleEndData.newSkills?.length > 0) {
+        ctx.fillStyle = '#9b59b6';
+        const skillNames = this.battleEndData.newSkills.map(s => SKILL_DB[s]?.name || s).join(', ');
+        ctx.fillText(`Learned: ${skillNames}`, width / 2, infoY);
         infoY += 16;
       }
       if (this.battleEndData.captured) {

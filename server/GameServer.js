@@ -462,8 +462,50 @@ export default class GameServer {
     // Destroy marked entities
     this.entityManager.flushDestroyed();
 
+    // Passive pet healing: every 5 seconds (100 ticks at 20 TPS), heal 2% max HP
+    if (this.tickCount % 100 === 0) {
+      this._tickPetHealing();
+    }
+
     // Broadcast state to all players
     this.broadcastState();
+  }
+
+  _tickPetHealing() {
+    for (const [, playerConn] of this.players) {
+      const entity = this.getPlayerEntity(playerConn.id);
+      if (!entity) continue;
+      const inv = entity.getComponent(InventoryComponent);
+      if (!inv) continue;
+
+      let healed = false;
+      for (let i = 0; i < inv.slotCount; i++) {
+        const slot = inv.slots[i];
+        if (!slot || slot.itemId !== 'pet_item') continue;
+        const petData = slot.extraData || slot;
+        if (!petData.petId || petData.fainted) continue;
+        if (petData.currentHp >= petData.maxHp) continue;
+
+        const healAmt = Math.max(1, Math.floor(petData.maxHp * 0.02));
+        petData.currentHp = Math.min(petData.maxHp, petData.currentHp + healAmt);
+        healed = true;
+      }
+
+      // Also heal equipped pet weapon
+      const equip = entity.getComponent(EquipmentComponent);
+      const weapon = equip?.getEquipped('weapon');
+      if (weapon?.isPet && weapon?.petId && !weapon.fainted) {
+        if (weapon.currentHp < weapon.maxHp) {
+          const healAmt = Math.max(1, Math.floor(weapon.maxHp * 0.02));
+          weapon.currentHp = Math.min(weapon.maxHp, weapon.currentHp + healAmt);
+          healed = true;
+        }
+      }
+
+      if (healed) {
+        playerConn.emit(MSG.INVENTORY_UPDATE, { slots: inv.serialize().slots });
+      }
+    }
   }
 
   broadcastState() {
@@ -941,16 +983,16 @@ export default class GameServer {
       if (equip) {
         for (const [slot, data] of Object.entries(saveData.equipment)) {
           if (!data) continue;
-          // New format: { id, gems, upgradeLevel, upgradeXp }
+          // New format: { id, gems, upgradeLevel, upgradeXp, pet fields, etc. }
           if (typeof data === 'object' && data.id) {
             const itemDef = ITEM_DB[data.id];
             if (itemDef) {
-              const extra = {
-                gems: data.gems || [],
-                upgradeLevel: data.upgradeLevel || 0,
-                upgradeXp: data.upgradeXp || 0,
-              };
-              if (data.rodParts) extra.rodParts = data.rodParts;
+              // Restore ALL saved extra data (gems, upgrades, pet fields, rod parts, etc.)
+              const extra = {};
+              for (const key of Object.keys(data)) {
+                if (key === 'id') continue;
+                extra[key] = data[key];
+              }
               equip.equip(itemDef, extra);
             }
           } else if (typeof data === 'string' && ITEM_DB[data]) {
