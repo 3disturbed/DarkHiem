@@ -117,7 +117,7 @@ export const SKILL_DB = {
     type: 'buff_self',
     scaleStat: 'dex',
     scaleBase: 0.03,
-    scalePerPoint: 0.1,
+    scalePerPoint: 0.01,
     poisonDuration: 8,
     duration: 10,
     color: '#16a085',
