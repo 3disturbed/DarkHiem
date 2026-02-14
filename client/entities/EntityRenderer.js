@@ -1,6 +1,6 @@
 import { PLAYER_SIZE } from '../../shared/Constants.js';
 import stationSprites from './StationSprites.js';
-import enemySprites from './EnemySprites.js';
+import enemySprites, { ANIMATED_SPRITES } from './EnemySprites.js';
 import npcSprites from './NPCSprites.js';
 import playerSprites from './PlayerSprites.js';
 
@@ -60,7 +60,17 @@ export default class EntityRenderer {
     // Try sprite first
     const sprite = enemyId ? enemySprites.get(enemyId) : null;
     if (sprite) {
-      ctx.drawImage(sprite, Math.round(x - half), Math.round(y - half), size, size);
+      const animMeta = enemyId ? ANIMATED_SPRITES[enemyId] : null;
+      if (animMeta) {
+        // Animated sprite: pick frame based on movement state
+        const isMoving = aiState === 'patrol' || aiState === 'chase' || aiState === 'flee';
+        const frame = isMoving ? Math.floor((Date.now() / 150) % animMeta.frames) : 0;
+        const sx = frame * animMeta.frameWidth;
+        ctx.drawImage(sprite, sx, 0, animMeta.frameWidth, animMeta.frameHeight,
+          Math.round(x - half), Math.round(y - half), size, size);
+      } else {
+        ctx.drawImage(sprite, Math.round(x - half), Math.round(y - half), size, size);
+      }
     } else {
       // Fallback: colored rectangle
       r.drawRect(x - half, y - half, size, size, color);

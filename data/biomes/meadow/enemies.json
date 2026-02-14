@@ -149,6 +149,28 @@
       "aggroRange": 160,
       "deaggroRange": 320,
       "isHorse": true
+    },
+    {
+      "id": "rabbit",
+      "name": "Rabbit",
+      "health": 12,
+      "damage": 0,
+      "speed": 90,
+      "xpReward": 3,
+      "drops": [
+        { "item": "rabbit_meat", "chance": 0.8, "min": 1, "max": 2 },
+        { "item": "rabbit_pelt", "chance": 0.5, "min": 1, "max": 1 },
+        { "item": "rabbit_foot", "chance": 0.08, "min": 1, "max": 1 }
+      ],
+      "minGradient": 0.0,
+      "maxGradient": 0.8,
+      "densityAtLeft": 0.04,
+      "densityAtRight": 0.02,
+      "color": "#8B7355",
+      "size": 16,
+      "behavior": "horse",
+      "aggroRange": 80,
+      "deaggroRange": 192
     }
   ]
 }

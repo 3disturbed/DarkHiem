@@ -1198,6 +1198,18 @@ export const RECIPE_DB = {
     ingredients: [{ itemId: 'mushroom', count: 3 }, { itemId: 'raw_meat', count: 1 }],
     results: [{ itemId: 'mushroom_soup', count: 1 }],
   },
+  cooked_rabbit: {
+    id: 'cooked_rabbit', name: 'Cooked Rabbit',
+    station: 'cooking_fire', stationLevel: 1,
+    ingredients: [{ itemId: 'rabbit_meat', count: 1 }],
+    results: [{ itemId: 'cooked_rabbit', count: 1 }],
+  },
+  rabbit_stew: {
+    id: 'rabbit_stew', name: 'Rabbit Stew',
+    station: 'cooking_fire', stationLevel: 1,
+    ingredients: [{ itemId: 'rabbit_meat', count: 2 }, { itemId: 'mushroom', count: 1 }],
+    results: [{ itemId: 'rabbit_stew', count: 1 }],
+  },
 
   // ============================================================
   //  FISHING ROD recipes
@@ -1530,6 +1542,75 @@ export const RECIPE_DB = {
       { itemId: 'crystal_lens', count: 1 },
     ],
     results: [{ itemId: 'mage_sandals', count: 1 }],
+  },
+
+  // ============================================================
+  //  WITCH DOCTOR GEAR (workbench Lv2)
+  // ============================================================
+  witchdoctor_staff: {
+    id: 'witchdoctor_staff', name: 'Witch Doctor Staff',
+    station: 'workbench', stationLevel: 2,
+    ingredients: [
+      { itemId: 'stick', count: 4 },
+      { itemId: 'rabbit_pelt', count: 3 },
+      { itemId: 'bone_fragment', count: 2 },
+    ],
+    results: [{ itemId: 'witchdoctor_staff', count: 1 }],
+  },
+  venom_dagger: {
+    id: 'venom_dagger', name: 'Venom Dagger',
+    station: 'workbench', stationLevel: 2,
+    ingredients: [
+      { itemId: 'bronze_ingot', count: 2 },
+      { itemId: 'rabbit_foot', count: 1 },
+      { itemId: 'resin', count: 2 },
+    ],
+    results: [{ itemId: 'venom_dagger', count: 1 }],
+  },
+  witchdoctor_mask: {
+    id: 'witchdoctor_mask', name: 'Witch Doctor Mask',
+    station: 'workbench', stationLevel: 2,
+    ingredients: [
+      { itemId: 'rabbit_pelt', count: 3 },
+      { itemId: 'bone_fragment', count: 2 },
+    ],
+    results: [{ itemId: 'witchdoctor_mask', count: 1 }],
+  },
+  witchdoctor_vest: {
+    id: 'witchdoctor_vest', name: 'Witch Doctor Vest',
+    station: 'workbench', stationLevel: 2,
+    ingredients: [
+      { itemId: 'rabbit_pelt', count: 5 },
+      { itemId: 'leather_scrap', count: 2 },
+    ],
+    results: [{ itemId: 'witchdoctor_vest', count: 1 }],
+  },
+  witchdoctor_kilt: {
+    id: 'witchdoctor_kilt', name: 'Witch Doctor Kilt',
+    station: 'workbench', stationLevel: 2,
+    ingredients: [
+      { itemId: 'rabbit_pelt', count: 4 },
+      { itemId: 'leather_scrap', count: 1 },
+    ],
+    results: [{ itemId: 'witchdoctor_kilt', count: 1 }],
+  },
+  witchdoctor_sandals: {
+    id: 'witchdoctor_sandals', name: 'Witch Doctor Sandals',
+    station: 'workbench', stationLevel: 2,
+    ingredients: [
+      { itemId: 'rabbit_pelt', count: 2 },
+      { itemId: 'leather_scrap', count: 1 },
+    ],
+    results: [{ itemId: 'witchdoctor_sandals', count: 1 }],
+  },
+  lucky_charm: {
+    id: 'lucky_charm', name: 'Lucky Charm',
+    station: 'workbench', stationLevel: 2,
+    ingredients: [
+      { itemId: 'rabbit_foot', count: 2 },
+      { itemId: 'bronze_ingot', count: 1 },
+    ],
+    results: [{ itemId: 'lucky_charm', count: 1 }],
   },
 };
 

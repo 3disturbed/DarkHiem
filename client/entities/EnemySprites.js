@@ -1,6 +1,11 @@
+// Animated sprite metadata: id -> { frames, frameWidth, frameHeight }
+export const ANIMATED_SPRITES = {
+  rabbit: { frames: 3, frameWidth: 32, frameHeight: 32 },
+};
+
 const ENEMY_IDS = [
   // Meadow
-  'greyling', 'boar', 'meadow_skeleton', 'bramblethorn', 'cave_bat', 'cave_spider',
+  'greyling', 'boar', 'meadow_skeleton', 'bramblethorn', 'cave_bat', 'cave_spider', 'rabbit',
   // Dark Forest
   'greydwarf', 'troll', 'forest_ghost', 'shadow_lurker', 'deep_troll', 'forest_guardian',
   // Swamp

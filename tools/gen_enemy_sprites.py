@@ -1910,6 +1910,126 @@ def gen_magma_worm():
 
 
 # ========================================================================
+# ANIMATED SPRITE SHEETS
+# ========================================================================
+
+# --- RABBIT: 96x32 (3 frames: idle, hop mid, hop land) ---
+def gen_rabbit():
+    W, H = 96, 32
+    px = new_canvas(W, H)
+
+    body = hex_to_rgba('#8B7355')
+    body_lt = lighten(body, 1.3)
+    body_dk = darken(body, 0.7)
+    belly = hex_to_rgba('#D4C5A9')
+    eye = hex_to_rgba('#1a1a1a')
+    nose = hex_to_rgba('#cc8899')
+    ear_in = hex_to_rgba('#cc9999')
+    tail = hex_to_rgba('#E8DCC8')
+
+    # === FRAME 0 (x offset 0): Idle / sitting ===
+    ox = 0
+    # Body (oval, sitting compact)
+    fill_circle(px, ox+16, 21, 7, body)
+    fill_circle(px, ox+16, 22, 6, body)
+    # Belly highlight
+    fill_circle(px, ox+16, 23, 4, belly)
+    # Head
+    fill_circle(px, ox+14, 13, 5, body)
+    fill_circle(px, ox+14, 14, 4, body_lt)
+    # Left ear
+    fill_rect(px, ox+10, 3, 2, 8, body)
+    fill_rect(px, ox+11, 4, 1, 6, ear_in)
+    # Right ear
+    fill_rect(px, ox+16, 3, 2, 8, body)
+    fill_rect(px, ox+17, 4, 1, 6, ear_in)
+    # Eye
+    set_px(px, ox+12, 12, eye)
+    set_px(px, ox+11, 12, eye)
+    # Nose
+    set_px(px, ox+10, 14, nose)
+    # Front legs (tucked)
+    fill_rect(px, ox+11, 26, 2, 4, body_dk)
+    fill_rect(px, ox+15, 26, 2, 4, body_dk)
+    # Back legs (hidden, sitting)
+    fill_rect(px, ox+19, 25, 3, 4, body_dk)
+    # Tail
+    fill_circle(px, ox+22, 19, 2, tail)
+    # Feet
+    fill_rect(px, ox+11, 29, 3, 1, body_dk)
+    fill_rect(px, ox+15, 29, 3, 1, body_dk)
+
+    # === FRAME 1 (x offset 32): Hop mid / stretched out ===
+    ox = 32
+    # Body (stretched horizontal, mid-air)
+    fill_rect(px, ox+8, 16, 16, 8, body)
+    fill_circle(px, ox+14, 18, 5, body)
+    fill_circle(px, ox+20, 18, 4, body)
+    # Belly
+    fill_rect(px, ox+10, 21, 12, 3, belly)
+    # Head (forward, stretched)
+    fill_circle(px, ox+8, 14, 5, body)
+    fill_circle(px, ox+8, 15, 4, body_lt)
+    # Left ear (swept back)
+    fill_rect(px, ox+6, 5, 2, 7, body)
+    fill_rect(px, ox+7, 6, 1, 5, ear_in)
+    # Right ear (swept back)
+    fill_rect(px, ox+10, 5, 2, 7, body)
+    fill_rect(px, ox+11, 6, 1, 5, ear_in)
+    # Eye
+    set_px(px, ox+5, 13, eye)
+    set_px(px, ox+6, 13, eye)
+    # Nose
+    set_px(px, ox+4, 15, nose)
+    # Front legs (extended forward)
+    fill_rect(px, ox+6, 22, 2, 5, body_dk)
+    fill_rect(px, ox+9, 23, 2, 4, body_dk)
+    # Back legs (extended backward)
+    fill_rect(px, ox+22, 21, 2, 5, body_dk)
+    fill_rect(px, ox+25, 22, 2, 4, body_dk)
+    # Tail (up)
+    fill_circle(px, ox+26, 15, 2, tail)
+    # Feet
+    fill_rect(px, ox+5, 27, 3, 1, body_dk)
+    fill_rect(px, ox+22, 26, 3, 1, body_dk)
+
+    # === FRAME 2 (x offset 64): Hop land / legs tucked ===
+    ox = 64
+    # Body (compact, landing)
+    fill_circle(px, ox+16, 19, 6, body)
+    fill_circle(px, ox+15, 18, 5, body)
+    # Belly
+    fill_circle(px, ox+16, 21, 3, belly)
+    # Head (slightly down)
+    fill_circle(px, ox+12, 14, 5, body)
+    fill_circle(px, ox+12, 15, 4, body_lt)
+    # Left ear (slightly forward)
+    fill_rect(px, ox+9, 4, 2, 8, body)
+    fill_rect(px, ox+10, 5, 1, 6, ear_in)
+    # Right ear
+    fill_rect(px, ox+14, 5, 2, 7, body)
+    fill_rect(px, ox+15, 6, 1, 5, ear_in)
+    # Eye
+    set_px(px, ox+10, 13, eye)
+    set_px(px, ox+9, 13, eye)
+    # Nose
+    set_px(px, ox+8, 15, nose)
+    # Front legs (bent, landing)
+    fill_rect(px, ox+11, 24, 2, 5, body_dk)
+    fill_rect(px, ox+14, 24, 2, 5, body_dk)
+    # Back legs (tucked under body)
+    fill_rect(px, ox+19, 23, 3, 5, body_dk)
+    # Tail
+    fill_circle(px, ox+22, 17, 2, tail)
+    # Feet
+    fill_rect(px, ox+10, 28, 3, 1, body_dk)
+    fill_rect(px, ox+14, 28, 3, 1, body_dk)
+    fill_rect(px, ox+19, 27, 3, 1, body_dk)
+
+    return px, W, H
+
+
+# ========================================================================
 # REGISTRY AND MAIN
 # ========================================================================
 
@@ -1943,8 +2063,14 @@ GENERATORS = {
     'magma_worm': gen_magma_worm,
 }
 
+# Animated sprite generators return (pixels, width, height)
+ANIMATED_GENERATORS = {
+    'rabbit': gen_rabbit,
+}
+
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
+    total = 0
     for name, gen in GENERATORS.items():
         pixels = gen()
         png_data = make_png(pixels, SIZE, SIZE)
@@ -1952,7 +2078,16 @@ def main():
         with open(path, 'wb') as f:
             f.write(png_data)
         print(f'  {name}.png ({len(png_data)} bytes)')
-    print(f'Generated {len(GENERATORS)} enemy sprites in {os.path.abspath(OUT_DIR)}')
+        total += 1
+    for name, gen in ANIMATED_GENERATORS.items():
+        pixels, w, h = gen()
+        png_data = make_png(pixels, w, h)
+        path = os.path.join(OUT_DIR, f'{name}.png')
+        with open(path, 'wb') as f:
+            f.write(png_data)
+        print(f'  {name}.png ({w}x{h}, {len(png_data)} bytes)')
+        total += 1
+    print(f'Generated {total} enemy sprites in {os.path.abspath(OUT_DIR)}')
 
 if __name__ == '__main__':
     main()

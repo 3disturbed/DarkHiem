@@ -502,6 +502,41 @@ export const ITEM_DB = {
     description: 'Bronze-plated boots.',
   },
 
+  // --- Witch Doctor Set (Meadow tier 1 alternative) ---
+  witchdoctor_staff: {
+    id: 'witchdoctor_staff', name: 'Witch Doctor Staff', type: 'equipment', slot: 'weapon',
+    statBonuses: { baseDamage: 14, int: 3, lck: 2 }, tier: 1, rarity: 'uncommon', gemSlots: 1,
+    range: 80, attackSpeed: 1.3,
+    weaponType: 'staff', projectileType: 'nature_bolt',
+    description: 'A gnarled staff adorned with bones and feathers.',
+  },
+  venom_dagger: {
+    id: 'venom_dagger', name: 'Venom Dagger', type: 'equipment', slot: 'weapon',
+    statBonuses: { baseDamage: 10, dex: 3, lck: 2 }, tier: 1, rarity: 'uncommon', gemSlots: 1,
+    attackSpeed: 2.2,
+    description: 'A small blade coated in noxious venom.',
+  },
+  witchdoctor_mask: {
+    id: 'witchdoctor_mask', name: 'Witch Doctor Mask', type: 'equipment', slot: 'head',
+    statBonuses: { lck: 3, int: 1 }, tier: 1, rarity: 'uncommon', gemSlots: 1,
+    description: 'A painted mask of bone and hide.',
+  },
+  witchdoctor_vest: {
+    id: 'witchdoctor_vest', name: 'Witch Doctor Vest', type: 'equipment', slot: 'body',
+    statBonuses: { armor: 3, vit: 2, lck: 2 }, tier: 1, rarity: 'uncommon', gemSlots: 1,
+    description: 'A hide vest decorated with charms.',
+  },
+  witchdoctor_kilt: {
+    id: 'witchdoctor_kilt', name: 'Witch Doctor Kilt', type: 'equipment', slot: 'legs',
+    statBonuses: { armor: 2, dex: 2, lck: 1 }, tier: 1, rarity: 'uncommon', gemSlots: 1,
+    description: 'A tattered kilt woven with rabbit pelts.',
+  },
+  witchdoctor_sandals: {
+    id: 'witchdoctor_sandals', name: 'Witch Doctor Sandals', type: 'equipment', slot: 'feet',
+    statBonuses: { armor: 1, dex: 1, lck: 2 }, tier: 1, rarity: 'uncommon', gemSlots: 1,
+    description: 'Light sandals strung with bone beads.',
+  },
+
   // --- Iron/Steel Armor ---
   iron_helmet: {
     id: 'iron_helmet', name: 'Iron Helmet', type: 'equipment', slot: 'head',
@@ -664,6 +699,11 @@ export const ITEM_DB = {
     statBonuses: { lck: 3 }, tier: 1, rarity: 'rare', gemSlots: 1,
     specialEffect: 'meadow_bounty',
     description: 'Mining yields 2x ore and improved gem drops.',
+  },
+  lucky_charm: {
+    id: 'lucky_charm', name: 'Lucky Charm', type: 'equipment', slot: 'ring1',
+    statBonuses: { lck: 4, dex: 1 }, tier: 1, rarity: 'rare', gemSlots: 0,
+    description: 'A charm made from rabbit feet. Fortune favors the bold.',
   },
   iron_ring: {
     id: 'iron_ring', name: 'Iron Ring', type: 'equipment', slot: 'ring1',
@@ -913,6 +953,20 @@ export const ITEM_DB = {
     description: 'Sticky tree sap.',
   },
 
+  // --- Rabbit drops ---
+  rabbit_meat: {
+    id: 'rabbit_meat', name: 'Rabbit Meat', type: 'material', stackable: true, maxStack: 20,
+    description: 'Raw rabbit meat. Cook it before eating.',
+  },
+  rabbit_pelt: {
+    id: 'rabbit_pelt', name: 'Rabbit Pelt', type: 'material', stackable: true, maxStack: 20,
+    description: 'Soft rabbit fur.',
+  },
+  rabbit_foot: {
+    id: 'rabbit_foot', name: 'Rabbit Foot', type: 'material', rarity: 'uncommon', stackable: true, maxStack: 10,
+    description: 'A lucky rabbit foot.',
+  },
+
   // --- Swamp raw ---
   silver_ore: {
     id: 'silver_ore', name: 'Silver Ore', type: 'material', stackable: true, maxStack: 50,
@@ -1121,6 +1175,16 @@ export const ITEM_DB = {
     id: 'mushroom_soup', name: 'Mushroom Soup', type: 'consumable', stackable: true, maxStack: 20,
     effect: { healAmount: 50 },
     description: 'Hearty soup. Restores 50 HP.',
+  },
+  cooked_rabbit: {
+    id: 'cooked_rabbit', name: 'Cooked Rabbit', type: 'consumable', stackable: true, maxStack: 20,
+    effect: { healAmount: 25 },
+    description: 'Restores 25 HP.',
+  },
+  rabbit_stew: {
+    id: 'rabbit_stew', name: 'Rabbit Stew', type: 'consumable', stackable: true, maxStack: 10,
+    effect: { healAmount: 45 },
+    description: 'Rich rabbit stew. Restores 45 HP.',
   },
 
   // --- Bombs ---
