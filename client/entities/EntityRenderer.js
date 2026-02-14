@@ -373,6 +373,85 @@ export default class EntityRenderer {
     r.drawText(name, x, y - half - 10, nameColor, 9 * r.uiScale, 'center');
   }
 
+  // Render a projectile entity (arrow or magic bolt)
+  static renderProjectile(r, x, y, vx, vy, projectileType) {
+    const ctx = r.ctx;
+
+    // Calculate rotation angle from velocity
+    const angle = Math.atan2(vy, vx);
+
+    if (projectileType === 'arrow') {
+      // Arrow: rotated elongated triangle + shaft line
+      ctx.save();
+      ctx.translate(Math.round(x), Math.round(y));
+      ctx.rotate(angle);
+
+      // Shaft
+      ctx.strokeStyle = '#8B6914';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-10, 0);
+      ctx.lineTo(4, 0);
+      ctx.stroke();
+
+      // Arrowhead
+      ctx.fillStyle = '#aaa';
+      ctx.beginPath();
+      ctx.moveTo(8, 0);
+      ctx.lineTo(2, -3);
+      ctx.lineTo(2, 3);
+      ctx.closePath();
+      ctx.fill();
+
+      // Fletching
+      ctx.fillStyle = '#c0392b';
+      ctx.beginPath();
+      ctx.moveTo(-10, 0);
+      ctx.lineTo(-7, -3);
+      ctx.lineTo(-7, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-10, 0);
+      ctx.lineTo(-7, 3);
+      ctx.lineTo(-7, 0);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
+    } else {
+      // Magic bolt: colored circle with glow aura
+      const colors = {
+        fire_bolt: '#e74c3c',
+        ice_bolt: '#3498db',
+        lightning_bolt: '#f1c40f',
+        nature_bolt: '#2ecc71',
+      };
+      const color = colors[projectileType] || '#9b59b6';
+
+      // Glow aura
+      ctx.save();
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(Math.round(x), Math.round(y), 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Core
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(Math.round(x), Math.round(y), 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Bright center
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(Math.round(x), Math.round(y), 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
   static renderHealthBar(r, cx, y, width, height, current, max, color) {
     const x = cx - width / 2;
     const pct = Math.max(0, current / max);

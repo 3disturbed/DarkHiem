@@ -123,6 +123,12 @@ export const ITEM_DB = {
     statBonuses: { baseDamage: 5, str: 1, dex: 1 }, tier: 0, rarity: 'common', gemSlots: 0,
     description: 'Crude stone fist wraps.',
   },
+  wooden_bow: {
+    id: 'wooden_bow', name: 'Wooden Bow', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.1, range: 96, weaponType: 'bow', projectileType: 'arrow',
+    statBonuses: { baseDamage: 7, dex: 1 }, tier: 0, rarity: 'common', gemSlots: 0,
+    description: 'A simple bow carved from wood.',
+  },
 
   // --- Bronze (new) ---
   bronze_axe: {
@@ -151,7 +157,7 @@ export const ITEM_DB = {
   },
   bronze_bow: {
     id: 'bronze_bow', name: 'Bronze Bow', type: 'equipment', slot: 'weapon',
-    attackSpeed: 1.0, range: 96,
+    attackSpeed: 1.0, range: 96, weaponType: 'bow', projectileType: 'arrow',
     statBonuses: { baseDamage: 16, dex: 3 }, tier: 1, rarity: 'uncommon', gemSlots: 1,
     description: 'A bronze-tipped bow.',
   },
@@ -207,7 +213,7 @@ export const ITEM_DB = {
   },
   iron_bow: {
     id: 'iron_bow', name: 'Iron Bow', type: 'equipment', slot: 'weapon',
-    attackSpeed: 1.0, range: 96,
+    attackSpeed: 1.0, range: 96, weaponType: 'bow', projectileType: 'arrow',
     statBonuses: { baseDamage: 26, dex: 4 }, tier: 2, rarity: 'rare', gemSlots: 2,
     description: 'An iron-reinforced bow.',
   },
@@ -216,6 +222,18 @@ export const ITEM_DB = {
     attackSpeed: 2.8, range: 24,
     statBonuses: { baseDamage: 18, str: 3, dex: 2 }, tier: 2, rarity: 'rare', gemSlots: 2,
     description: 'Iron fist wraps.',
+  },
+  dark_oak_bow: {
+    id: 'dark_oak_bow', name: 'Dark Oak Bow', type: 'equipment', slot: 'weapon',
+    attackSpeed: 0.9, range: 96, weaponType: 'bow', projectileType: 'arrow',
+    statBonuses: { baseDamage: 20, dex: 3 }, tier: 2, rarity: 'rare', gemSlots: 2,
+    description: 'A heavy bow of dark oak.',
+  },
+  pine_bow: {
+    id: 'pine_bow', name: 'Pine Bow', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.2, range: 100, weaponType: 'bow', projectileType: 'arrow',
+    statBonuses: { baseDamage: 18, dex: 4 }, tier: 2, rarity: 'rare', gemSlots: 2,
+    description: 'A light and fast pine bow.',
   },
 
   // --- Silver (new) ---
@@ -257,7 +275,7 @@ export const ITEM_DB = {
   },
   silver_bow: {
     id: 'silver_bow', name: 'Silver Bow', type: 'equipment', slot: 'weapon',
-    attackSpeed: 1.0, range: 96,
+    attackSpeed: 1.0, range: 96, weaponType: 'bow', projectileType: 'arrow',
     statBonuses: { baseDamage: 38, dex: 5 }, tier: 3, rarity: 'epic', gemSlots: 2,
     description: 'A silver-stringed bow.',
   },
@@ -272,6 +290,12 @@ export const ITEM_DB = {
     attackSpeed: 0.7, range: 44,
     statBonuses: { baseDamage: 62, str: 5, dex: -2 }, tier: 3, rarity: 'epic', gemSlots: 2,
     description: 'A massive silver greatsword.',
+  },
+  fine_wood_bow: {
+    id: 'fine_wood_bow', name: 'Fine Wood Bow', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.1, range: 100, weaponType: 'bow', projectileType: 'arrow',
+    statBonuses: { baseDamage: 30, dex: 5 }, tier: 3, rarity: 'epic', gemSlots: 2,
+    description: 'An elegantly crafted fine wood bow.',
   },
 
   // --- Obsidian (new) ---
@@ -313,7 +337,7 @@ export const ITEM_DB = {
   },
   obsidian_bow: {
     id: 'obsidian_bow', name: 'Obsidian Bow', type: 'equipment', slot: 'weapon',
-    attackSpeed: 1.0, range: 96,
+    attackSpeed: 1.0, range: 96, weaponType: 'bow', projectileType: 'arrow',
     statBonuses: { baseDamage: 52, dex: 7 }, tier: 4, rarity: 'epic', gemSlots: 3,
     description: 'An obsidian-limbed bow.',
   },
@@ -328,6 +352,12 @@ export const ITEM_DB = {
     attackSpeed: 0.7, range: 44,
     statBonuses: { baseDamage: 82, str: 7, dex: -2 }, tier: 4, rarity: 'epic', gemSlots: 3,
     description: 'A titanic obsidian greatsword.',
+  },
+  frost_bow: {
+    id: 'frost_bow', name: 'Frost Bow', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.0, range: 96, weaponType: 'bow', projectileType: 'arrow',
+    statBonuses: { baseDamage: 42, dex: 6 }, tier: 4, rarity: 'epic', gemSlots: 3,
+    description: 'A bow carved from frost wood, cold to the touch.',
   },
 
   // --- Flametal (new) ---
@@ -369,7 +399,7 @@ export const ITEM_DB = {
   },
   flametal_bow: {
     id: 'flametal_bow', name: 'Flametal Bow', type: 'equipment', slot: 'weapon',
-    attackSpeed: 1.0, range: 96,
+    attackSpeed: 1.0, range: 96, weaponType: 'bow', projectileType: 'arrow',
     statBonuses: { baseDamage: 68, dex: 10 }, tier: 5, rarity: 'epic', gemSlots: 3,
     description: 'A flametal bow of eternal fire.',
   },
@@ -385,29 +415,35 @@ export const ITEM_DB = {
     statBonuses: { baseDamage: 106, str: 10, dex: -2 }, tier: 5, rarity: 'epic', gemSlots: 3,
     description: 'An apocalyptic flametal greatsword.',
   },
+  ashwood_bow: {
+    id: 'ashwood_bow', name: 'Ashwood Bow', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.1, range: 100, weaponType: 'bow', projectileType: 'arrow',
+    statBonuses: { baseDamage: 54, dex: 8 }, tier: 5, rarity: 'epic', gemSlots: 3,
+    description: 'A powerful bow forged from volcanic ashwood.',
+  },
 
   // --- Magic Weapons ---
   fire_staff: {
     id: 'fire_staff', name: 'Fire Staff', type: 'equipment', slot: 'weapon',
-    attackSpeed: 1.2, range: 80,
+    attackSpeed: 1.2, range: 80, weaponType: 'staff', projectileType: 'fire_bolt',
     statBonuses: { baseDamage: 38, vit: 5, str: 3 }, tier: 3, rarity: 'rare', gemSlots: 2,
     description: 'A staff crackling with flame.',
   },
   ice_staff: {
     id: 'ice_staff', name: 'Ice Staff', type: 'equipment', slot: 'weapon',
-    attackSpeed: 1.2, range: 80,
+    attackSpeed: 1.2, range: 80, weaponType: 'staff', projectileType: 'ice_bolt',
     statBonuses: { baseDamage: 32, vit: 5, dex: 4 }, tier: 3, rarity: 'rare', gemSlots: 2,
     description: 'A staff of frozen power.',
   },
   lightning_staff: {
     id: 'lightning_staff', name: 'Lightning Staff', type: 'equipment', slot: 'weapon',
-    attackSpeed: 1.2, range: 80,
+    attackSpeed: 1.2, range: 80, weaponType: 'staff', projectileType: 'lightning_bolt',
     statBonuses: { baseDamage: 48, vit: 3, lck: 5 }, tier: 3, rarity: 'rare', gemSlots: 2,
     description: 'A staff surging with lightning.',
   },
   nature_staff: {
     id: 'nature_staff', name: 'Nature Staff', type: 'equipment', slot: 'weapon',
-    attackSpeed: 1.2, range: 80,
+    attackSpeed: 1.2, range: 80, weaponType: 'staff', projectileType: 'nature_bolt',
     statBonuses: { baseDamage: 22, vit: 8 }, tier: 3, rarity: 'rare', gemSlots: 2,
     description: 'A staff of living wood.',
   },
@@ -781,6 +817,10 @@ export const ITEM_DB = {
 
   //  RAW MATERIALS (from gathering)
   // ============================================================
+  arrow: {
+    id: 'arrow', name: 'Arrow', type: 'material', stackable: true, maxStack: 99,
+    description: 'Ammunition for bows.',
+  },
   stick: {
     id: 'stick', name: 'Stick', type: 'material', stackable: true, maxStack: 50,
     description: 'A sturdy stick picked up from the ground.',

@@ -104,6 +104,14 @@ export default class CombatHandler {
     const aimX = typeof data?.aimX === 'number' ? data.aimX : 0;
     const aimY = typeof data?.aimY === 'number' ? data.aimY : 0;
 
+    // Bow ammo consumption: check and consume an arrow before firing
+    if (combat.isRanged && combat.projectileType === 'arrow') {
+      const inv = entity.getComponent(InventoryComponent);
+      if (!inv || inv.countItem('arrow') <= 0) return;
+      inv.removeItem('arrow', 1);
+      player.emit(MSG.INVENTORY_UPDATE, { slots: inv.serialize().slots });
+    }
+
     // Track damage events to detect if an entity was hit
     const beforeCount = this.gameServer.combatResolver.damageEvents.length;
 

@@ -8,6 +8,7 @@ import EquipmentComponent from '../ecs/components/EquipmentComponent.js';
 import ResourceNodeComponent from '../ecs/components/ResourceNodeComponent.js';
 import StatusEffectComponent from '../ecs/components/StatusEffectComponent.js';
 import SkillComponent from '../ecs/components/SkillComponent.js';
+import EntityFactory from '../ecs/EntityFactory.js';
 import { findBestTool } from '../network/handlers/CombatHandler.js';
 
 export default class CombatResolver {
@@ -25,6 +26,13 @@ export default class CombatResolver {
 
     combat.startAttack();
 
+    // Ranged weapons spawn a projectile entity instead of instant hit
+    if (combat.isRanged) {
+      this.spawnProjectile(attacker, aimX, aimY, entityManager);
+      return;
+    }
+
+    // --- Melee instant hit ---
     // Try enemies first
     const enemies = HitDetector.queryArea(
       entityManager, pos.x, pos.y, combat.range,
@@ -44,6 +52,134 @@ export default class CombatResolver {
 
     if (resources.length > 0) {
       this.applyResourceDamage(attacker, resources[0], combat.damage);
+    }
+  }
+
+  // Spawn a projectile entity that travels toward the nearest enemy in range
+  spawnProjectile(attacker, aimX, aimY, entityManager) {
+    const pos = attacker.getComponent(PositionComponent);
+    const combat = attacker.getComponent(CombatComponent);
+
+    // Auto-aim: find nearest enemy within weapon range
+    let targetX = aimX;
+    let targetY = aimY;
+    const nearest = HitDetector.findNearest(
+      entityManager, pos.x, pos.y, combat.range,
+      attacker.id, 'enemy'
+    );
+    if (nearest) {
+      const tp = nearest.getComponent(PositionComponent);
+      targetX = tp.x;
+      targetY = tp.y;
+    }
+
+    // Direction from attacker to target
+    const dx = targetX - pos.x;
+    const dy = targetY - pos.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist === 0) return;
+
+    const dirX = dx / dist;
+    const dirY = dy / dist;
+
+    // Arrows travel at 500 px/s, magic bolts at 600 px/s
+    const isArrow = combat.projectileType === 'arrow';
+    const speed = isArrow ? 500 : 600;
+
+    const vx = dirX * speed;
+    const vy = dirY * speed;
+
+    const projectile = EntityFactory.createProjectile(
+      attacker.id,
+      pos.x, pos.y,
+      vx, vy,
+      combat.damage,
+      combat.projectileType,
+      combat.critChance,
+      combat.critMultiplier,
+      combat.knockback
+    );
+
+    entityManager.add(projectile);
+  }
+
+  // Apply damage from a projectile hitting a target
+  applyProjectileDamage(proj, projPos, target) {
+    const health = target.getComponent(HealthComponent);
+    if (!health || !health.isAlive()) return;
+
+    const targetPos = target.getComponent(PositionComponent);
+
+    // Dodge check
+    const targetSE = target.getComponent(StatusEffectComponent);
+    if (targetSE) {
+      const dodgeChance = targetSE.getDodgeChance();
+      if (dodgeChance > 0 && Math.random() < dodgeChance) {
+        this.damageEvents.push({
+          targetId: target.id,
+          attackerId: proj.ownerId,
+          damage: 0,
+          isCrit: false,
+          dodged: true,
+          x: targetPos.x,
+          y: targetPos.y,
+          killed: false,
+        });
+        return;
+      }
+    }
+
+    // Crit calculation using projectile stats
+    const critMod = DamageCalculator.rollCrit(proj.critChance, proj.critMultiplier);
+    const targetCombat = target.getComponent(CombatComponent);
+    const targetArmor = targetCombat ? targetCombat.armor : 0;
+    const result = DamageCalculator.calculate(proj.damage, targetArmor, critMod);
+
+    let finalDamage = result.damage;
+
+    // Shield absorption
+    if (targetSE) {
+      const absorbed = targetSE.consumeShield(finalDamage);
+      if (absorbed > 0) {
+        finalDamage -= absorbed;
+        if (finalDamage <= 0) {
+          this.damageEvents.push({
+            targetId: target.id,
+            attackerId: proj.ownerId,
+            damage: 0,
+            isCrit: result.isCrit,
+            shielded: true,
+            x: targetPos.x,
+            y: targetPos.y,
+            killed: false,
+          });
+          return;
+        }
+      }
+    }
+
+    const actualDamage = health.damage(finalDamage);
+
+    this.damageEvents.push({
+      targetId: target.id,
+      attackerId: proj.ownerId,
+      damage: actualDamage,
+      isCrit: result.isCrit,
+      x: targetPos.x,
+      y: targetPos.y,
+      killed: !health.isAlive(),
+    });
+
+    // Knockback from projectile
+    if (proj.knockback > 0 && targetPos) {
+      const dx = projPos.x - targetPos.x;
+      const dy = projPos.y - targetPos.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > 0) {
+        // Push target away from projectile's incoming direction
+        targetPos.x -= (dx / dist) * proj.knockback;
+        targetPos.y -= (dy / dist) * proj.knockback;
+      }
     }
   }
 

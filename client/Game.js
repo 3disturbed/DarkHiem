@@ -58,6 +58,7 @@ export default class Game {
     this.stations = new Map(); // id -> station entity state
     this.npcs = new Map();     // id -> npc entity state
     this.wildHorses = new Map(); // id -> wild horse entity state
+    this.projectiles = new Map(); // id -> projectile entity state
     // Mount state (horse is stored as player flag, not a world entity)
     this.hasHorse = false;
     this.mounted = false;
@@ -1330,6 +1331,21 @@ export default class Game {
             name: entity.name, color: entity.color, size: entity.size,
           });
         }
+      } else if (entity.type === 'projectile') {
+        if (!this.projectiles.has(id)) {
+          this.projectiles.set(id, {
+            x: entity.x, y: entity.y,
+            velocityX: entity.velocityX || 0,
+            velocityY: entity.velocityY || 0,
+            projectileType: entity.projectileType || 'arrow',
+          });
+        } else {
+          const p = this.projectiles.get(id);
+          p.x = entity.x;
+          p.y = entity.y;
+          if (entity.velocityX !== undefined) p.velocityX = entity.velocityX;
+          if (entity.velocityY !== undefined) p.velocityY = entity.velocityY;
+        }
       } else if (entity.type === 'player') {
         // Remote player
         this.interpolator.pushState(id, entity);
@@ -1388,6 +1404,17 @@ export default class Game {
         horse.x = interp.x;
         horse.y = interp.y;
       }
+    }
+
+    // Client-side projectile motion + clean up removed projectiles
+    for (const [id, p] of this.projectiles) {
+      if (!this.network.entities.has(id)) {
+        this.projectiles.delete(id);
+        continue;
+      }
+      // Advance position by velocity for smooth 60fps flight
+      p.x += p.velocityX * dt;
+      p.y += p.velocityY * dt;
     }
 
     // Clean up removed resources
@@ -1477,6 +1504,7 @@ export default class Game {
     this.renderWildHorses(r);
     this.renderPlacementGhost(r);
     this.renderEnemies(r);
+    this.renderProjectiles(r);
     this.renderPlayers(r);
     this.renderFishingBobber(r);
     this.damageNumbers.render(ctx, r.uiScale);
@@ -1707,6 +1735,16 @@ export default class Game {
         enemy.aiState || 'idle',
         enemy.isBoss || false,
         enemy.enemyId
+      );
+    }
+  }
+
+  renderProjectiles(r) {
+    for (const [id, p] of this.projectiles) {
+      EntityRenderer.renderProjectile(
+        r, p.x, p.y,
+        p.velocityX, p.velocityY,
+        p.projectileType
       );
     }
   }

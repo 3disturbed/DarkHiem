@@ -16,6 +16,10 @@ export default class CombatComponent extends Component {
     this.attackDuration = 0.2; // seconds the attack hitbox is active
     this.targetId = null;
     this.lastAttackTime = 0;
+
+    // Ranged weapon flags (set by StatSystem each tick)
+    this.isRanged = false;
+    this.projectileType = null;
   }
 
   canAttack() {

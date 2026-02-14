@@ -20,6 +20,7 @@ import NPCComponent from './components/NPCComponent.js';
 import QuestComponent from './components/QuestComponent.js';
 import ChestComponent from './components/ChestComponent.js';
 import HorseComponent from './components/HorseComponent.js';
+import ProjectileComponent from './components/ProjectileComponent.js';
 import { PLAYER_SPEED, PLAYER_SIZE } from '../../shared/Constants.js';
 import { STATION_DB } from '../../shared/StationTypes.js';
 
@@ -284,6 +285,25 @@ export default class EntityFactory {
 
     entity.addTag('horse');
     entity.horseConfig = config;
+    return entity;
+  }
+
+  static createProjectile(ownerId, x, y, vx, vy, damage, projectileType, critChance, critMult, knockback) {
+    const entity = new Entity();
+    entity.addComponent(new PositionComponent(x, y));
+    const vel = new VelocityComponent();
+    vel.dx = vx;
+    vel.dy = vy;
+    entity.addComponent(vel);
+    entity.addComponent(new ProjectileComponent({
+      ownerId,
+      damage,
+      projectileType,
+      critChance,
+      critMultiplier: critMult,
+      knockback,
+    }));
+    entity.addTag('projectile');
     return entity;
   }
 

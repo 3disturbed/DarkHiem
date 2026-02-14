@@ -21,6 +21,9 @@ export default class StatsComponent extends Component {
 
     // Recalculated from equipment each tick by StatSystem
     this.equipBonuses = { str: 0, dex: 0, vit: 0, end: 0, lck: 0, armor: 0, baseDamage: 0 };
+
+    // Weapon-specific info (extracted from equipped weapon each recalc)
+    this.weaponInfo = { range: 40, attackSpeed: 1.5, weaponType: 'melee', projectileType: null };
   }
 
   getTotal(stat) {
@@ -75,6 +78,16 @@ export default class StatsComponent extends Component {
           }
         }
       }
+    }
+
+    // Extract weapon-specific properties
+    this.weaponInfo = { range: 40, attackSpeed: 1.5, weaponType: 'melee', projectileType: null };
+    const weapon = equipmentSlots.weapon;
+    if (weapon) {
+      if (weapon.range) this.weaponInfo.range = weapon.range;
+      if (weapon.attackSpeed) this.weaponInfo.attackSpeed = weapon.attackSpeed;
+      if (weapon.weaponType) this.weaponInfo.weaponType = weapon.weaponType;
+      if (weapon.projectileType) this.weaponInfo.projectileType = weapon.projectileType;
     }
   }
 

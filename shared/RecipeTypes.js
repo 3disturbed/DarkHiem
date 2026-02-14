@@ -70,6 +70,50 @@ export const RECIPE_DB = {
     results: [{ itemId: 'bone_dagger', count: 1 }],
   },
 
+  // --- Arrows & wooden bows ---
+  arrow: {
+    id: 'arrow', name: 'Arrows (10)',
+    station: 'workbench', stationLevel: 1,
+    ingredients: [{ itemId: 'stick', count: 2 }, { itemId: 'stone', count: 1 }],
+    results: [{ itemId: 'arrow', count: 10 }],
+  },
+  wooden_bow: {
+    id: 'wooden_bow', name: 'Wooden Bow',
+    station: 'workbench', stationLevel: 1,
+    ingredients: [{ itemId: 'wood', count: 6 }, { itemId: 'leather_scrap', count: 2 }],
+    results: [{ itemId: 'wooden_bow', count: 1 }],
+  },
+  dark_oak_bow: {
+    id: 'dark_oak_bow', name: 'Dark Oak Bow',
+    station: 'workbench', stationLevel: 3,
+    ingredients: [{ itemId: 'dark_oak_log', count: 6 }, { itemId: 'leather_scrap', count: 3 }],
+    results: [{ itemId: 'dark_oak_bow', count: 1 }],
+  },
+  pine_bow: {
+    id: 'pine_bow', name: 'Pine Bow',
+    station: 'workbench', stationLevel: 3,
+    ingredients: [{ itemId: 'pine_wood', count: 6 }, { itemId: 'resin', count: 2 }],
+    results: [{ itemId: 'pine_bow', count: 1 }],
+  },
+  fine_wood_bow: {
+    id: 'fine_wood_bow', name: 'Fine Wood Bow',
+    station: 'workbench', stationLevel: 4,
+    ingredients: [{ itemId: 'fine_wood', count: 8 }, { itemId: 'leather_scrap', count: 4 }],
+    results: [{ itemId: 'fine_wood_bow', count: 1 }],
+  },
+  frost_bow: {
+    id: 'frost_bow', name: 'Frost Bow',
+    station: 'workbench', stationLevel: 5,
+    ingredients: [{ itemId: 'frost_wood', count: 8 }, { itemId: 'frost_core', count: 1 }],
+    results: [{ itemId: 'frost_bow', count: 1 }],
+  },
+  ashwood_bow: {
+    id: 'ashwood_bow', name: 'Ashwood Bow',
+    station: 'forge', stationLevel: 5,
+    ingredients: [{ itemId: 'ashwood_log', count: 8 }, { itemId: 'sulfite', count: 2 }],
+    results: [{ itemId: 'ashwood_bow', count: 1 }],
+  },
+
   // --- Leather armor ---
   leather_cap: {
     id: 'leather_cap', name: 'Leather Cap',

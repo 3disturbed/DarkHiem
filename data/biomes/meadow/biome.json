@@ -15,7 +15,7 @@
     "waterLevel": 0.3,
     "zones": {
       "enabled": true,
-      "scale": 0.008,
+      "scale": 0.08,
       "threshold": 0.65
     }
   },
@@ -23,7 +23,7 @@
     "caveThreshold": 0.32,
     "caveMinElevation": 0.55,
     "caveMaxElevation": 0.85,
-    "caveScale": 0.6,
+    "caveScale": 0.5,
     "caveMossChance": 0.3,
     "caveCrystalChance": 0.1
   },

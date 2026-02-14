@@ -46,7 +46,10 @@ export default class StatSystem extends System {
 
       const weaponBase = stats.getWeaponBaseDamage();
       combat.damage = Math.round(weaponBase + deriveDamageBonus(totalStr));
-      combat.attackSpeed = Math.max(0.5, 1.5 * deriveAttackSpeedMod(totalDex));
+      combat.range = stats.weaponInfo.range;
+      combat.attackSpeed = Math.max(0.3, stats.weaponInfo.attackSpeed * deriveAttackSpeedMod(totalDex));
+      combat.isRanged = (stats.weaponInfo.weaponType === 'bow' || stats.weaponInfo.weaponType === 'staff');
+      combat.projectileType = stats.weaponInfo.projectileType || null;
       combat.armor = Math.round(deriveArmor(totalEnd) + stats.getTotalArmor());
       combat.critChance = Math.min(0.5, deriveCritChance(totalDex, totalLck));
       combat.critMultiplier = deriveCritMultiplier(totalLck);
