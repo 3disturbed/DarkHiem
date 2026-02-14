@@ -1387,6 +1387,8 @@ export default class Game {
       }
       const interp = this.interpolator.getInterpolatedState(id);
       if (interp) {
+        const dx = interp.x - enemy.x;
+        if (Math.abs(dx) > 0.5) enemy.facingRight = dx > 0;
         enemy.x = interp.x;
         enemy.y = interp.y;
       }
@@ -1734,7 +1736,8 @@ export default class Game {
         enemy.maxHp ?? 0,
         enemy.aiState || 'idle',
         enemy.isBoss || false,
-        enemy.enemyId
+        enemy.enemyId,
+        enemy.facingRight || false
       );
     }
   }
