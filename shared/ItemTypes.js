@@ -125,7 +125,7 @@ export const ITEM_DB = {
   },
   wooden_bow: {
     id: 'wooden_bow', name: 'Wooden Bow', type: 'equipment', slot: 'weapon',
-    attackSpeed: 1.1, range: 96, weaponType: 'bow', projectileType: 'arrow',
+    attackSpeed: 1.1, range: 996, weaponType: 'bow', projectileType: 'arrow',
     statBonuses: { baseDamage: 7, dex: 1 }, tier: 0, rarity: 'common', gemSlots: 0,
     description: 'A simple bow carved from wood.',
   },

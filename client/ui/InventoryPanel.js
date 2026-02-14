@@ -1,4 +1,5 @@
 import { ITEM_DB, RARITY_COLORS } from '../../shared/ItemTypes.js';
+import itemSprites from '../entities/ItemSprites.js';
 
 // Layout constants
 const PANEL_W = 520;
@@ -8,8 +9,9 @@ const TAB_H = 22;
 const TAB_PAD = 2;
 const LIST_W = 210;
 const DETAIL_W = PANEL_W - LIST_W - PANEL_PAD * 3;
-const ROW_H = 22;
-const VISIBLE_ROWS = 14;
+const ROW_H = 24;
+const ICON_SIZE = 18;
+const VISIBLE_ROWS = 13;
 const BTN_W = 90;
 const BTN_H = 22;
 const BTN_GAP = 6;
@@ -442,20 +444,30 @@ export default class InventoryPanel {
         ctx.fillText('>', listX + 4, rowY + ROW_H - 6);
       }
 
-      // Rarity color pip
-      const rarityColor = RARITY_COLORS[item.def.rarity] || '#888';
-      ctx.fillStyle = rarityColor;
-      ctx.fillRect(listX + 14, rowY + 6, 3, ROW_H - 12);
+      // Item icon
+      const icon = itemSprites.get(item.itemId);
+      const iconX = listX + 14;
+      const iconY = rowY + Math.floor((ROW_H - ICON_SIZE) / 2);
+      if (icon) {
+        ctx.drawImage(icon, iconX, iconY, ICON_SIZE, ICON_SIZE);
+      }
 
-      // Item name
+      // Rarity color pip (shifted right if icon present)
+      const rarityColor = RARITY_COLORS[item.def.rarity] || '#888';
+      const pipX = icon ? iconX + ICON_SIZE + 2 : listX + 14;
+      ctx.fillStyle = rarityColor;
+      ctx.fillRect(pipX, rowY + 6, 3, ROW_H - 12);
+
+      // Item name (shifted right to accommodate icon)
+      const nameX = pipX + 6;
       let displayName = item.def.name;
       if (item.upgradeLevel > 0) displayName += ` +${item.upgradeLevel}`;
       ctx.fillStyle = rarityColor;
       ctx.font = '10px monospace';
       ctx.textAlign = 'left';
-      // Truncate long names
-      if (displayName.length > 18) displayName = displayName.slice(0, 17) + '.';
-      ctx.fillText(displayName, listX + 22, rowY + ROW_H - 6);
+      const maxNameLen = icon ? 14 : 18;
+      if (displayName.length > maxNameLen) displayName = displayName.slice(0, maxNameLen - 1) + '.';
+      ctx.fillText(displayName, nameX, rowY + ROW_H - 6);
 
       // Count (right-aligned)
       if (item.count > 1) {
@@ -511,14 +523,21 @@ export default class InventoryPanel {
     const lx = detailX + 8;
     const lineH = 14;
 
-    // Name
+    // Item icon in detail panel
+    const detailIcon = itemSprites.get(item.itemId);
+    if (detailIcon) {
+      ctx.drawImage(detailIcon, lx, lineY - 10, 32, 32);
+    }
+
+    // Name (offset right if icon present)
     let name = def.name;
     if (item.upgradeLevel > 0) name += ` +${item.upgradeLevel}`;
     ctx.fillStyle = RARITY_COLORS[def.rarity] || '#fff';
     ctx.font = 'bold 12px monospace';
     ctx.textAlign = 'left';
-    ctx.fillText(name, lx, lineY);
-    lineY += lineH + 2;
+    const nameOffX = detailIcon ? lx + 38 : lx;
+    ctx.fillText(name, nameOffX, lineY);
+    lineY += detailIcon ? lineH + 12 : lineH + 2;
 
     // Rarity
     if (def.rarity) {

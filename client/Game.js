@@ -715,6 +715,7 @@ export default class Game {
         const dy = this.localPlayer.y - fh.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         const followDist = 48; // desired trailing distance
+        const prevX = fh.x;
         if (dist > followDist) {
           // Smoothly move toward player, maintaining follow distance
           const speed = Math.min(PLAYER_SPEED * 1.2, (dist - followDist) * 4 + 60);
@@ -733,6 +734,9 @@ export default class Game {
           fh.x = this.localPlayer.x;
           fh.y = this.localPlayer.y + 40;
         }
+        const movedX = fh.x - prevX;
+        fh.isMoving = dist > followDist + 2;
+        if (Math.abs(movedX) > 0.3) fh.facingRight = movedX > 0;
       }
     }
 
@@ -1386,6 +1390,9 @@ export default class Game {
     for (const [id, player] of this.remotePlayers) {
       const interp = this.interpolator.getInterpolatedState(id);
       if (interp) {
+        const dx = interp.x - player.x;
+        player.isMoving = Math.abs(dx) > 0.3 || Math.abs(interp.y - player.y) > 0.3;
+        if (Math.abs(dx) > 0.5) player.facingRight = dx > 0;
         player.x = interp.x;
         player.y = interp.y;
       }
@@ -1416,6 +1423,10 @@ export default class Game {
       }
       const interp = this.interpolator.getInterpolatedState(id);
       if (interp) {
+        const dx = interp.x - horse.x;
+        const dy = interp.y - horse.y;
+        horse.isMoving = Math.abs(dx) > 0.3 || Math.abs(dy) > 0.3;
+        if (Math.abs(dx) > 0.5) horse.facingRight = dx > 0;
         horse.x = interp.x;
         horse.y = interp.y;
       }
@@ -1450,6 +1461,13 @@ export default class Game {
     for (const [id] of this.npcs) {
       if (!this.network.entities.has(id)) {
         this.npcs.delete(id);
+      }
+    }
+
+    // Clean up removed damage zones
+    for (const [id] of this.damageZones) {
+      if (!this.network.entities.has(id)) {
+        this.damageZones.delete(id);
       }
     }
 
@@ -1518,6 +1536,7 @@ export default class Game {
     this.renderNPCs(r);
     this.renderWildHorses(r);
     this.renderPlacementGhost(r);
+    this.renderDamageZones(r);
     this.renderEnemies(r);
     this.renderProjectiles(r);
     this.renderPlayers(r);
@@ -1683,7 +1702,8 @@ export default class Game {
         horse.color || '#8B6C42',
         horse.size || 30,
         horse.name || 'Wild Horse',
-        false, null
+        false, null,
+        horse.isMoving || false, horse.facingRight || false
       );
 
       // Show capture hint if close to player
@@ -1755,6 +1775,44 @@ export default class Game {
     }
   }
 
+  renderDamageZones(r) {
+    const ctx = r.ctx;
+    for (const [id, zone] of this.damageZones) {
+      const sx = (zone.x - r.cameraX) * r.uiScale;
+      const sy = (zone.y - r.cameraY) * r.uiScale;
+      const sr = zone.radius * r.uiScale;
+
+      // Pulsing alpha
+      const pulse = 0.15 + 0.08 * Math.sin(Date.now() / 300);
+
+      // Zone color by type
+      let color;
+      switch (zone.zoneType) {
+        case 'fire': color = `rgba(231, 76, 60, ${pulse})`; break;
+        case 'ice': color = `rgba(52, 152, 219, ${pulse})`; break;
+        case 'lightning': color = `rgba(241, 196, 15, ${pulse})`; break;
+        default: color = `rgba(200, 200, 200, ${pulse})`;
+      }
+
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+
+      // Border ring
+      let borderColor;
+      switch (zone.zoneType) {
+        case 'fire': borderColor = 'rgba(231, 76, 60, 0.5)'; break;
+        case 'ice': borderColor = 'rgba(52, 152, 219, 0.5)'; break;
+        case 'lightning': borderColor = 'rgba(241, 196, 15, 0.5)'; break;
+        default: borderColor = 'rgba(200, 200, 200, 0.5)';
+      }
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  }
+
   renderProjectiles(r) {
     for (const [id, p] of this.projectiles) {
       EntityRenderer.renderProjectile(
@@ -1772,7 +1830,8 @@ export default class Game {
     for (const [id, player] of this.remotePlayers) {
       // Draw horse underneath if mounted
       if (player.mounted) {
-        EntityRenderer.renderHorse(r, player.x, player.y + 6, '#8B6C42', 30, '', true, null);
+        EntityRenderer.renderHorse(r, player.x, player.y + 6, '#8B6C42', 30, '', true, null,
+          player.isMoving || false, player.facingRight || false);
       }
       EntityRenderer.renderPlayer(
         r, player.x, player.y - (player.mounted ? 8 : 0),
@@ -1785,7 +1844,8 @@ export default class Game {
     // Render follow horse (when owned but not mounted)
     if (this.hasHorse && !this.mounted && this.followHorse.initialized && this.localPlayer) {
       const fh = this.followHorse;
-      EntityRenderer.renderHorse(r, fh.x, fh.y, '#8B6C42', 30, 'Horse', true, null);
+      EntityRenderer.renderHorse(r, fh.x, fh.y, '#8B6C42', 30, 'Horse', true, null,
+        fh.isMoving || false, fh.facingRight || false);
       r.drawText('Press Q to ride', fh.x, fh.y + 26, '#90ee90', 8 * r.uiScale, 'center');
     }
 
@@ -1794,7 +1854,9 @@ export default class Game {
       const p = this.localPlayer;
       // Draw horse underneath if mounted
       if (this.mounted) {
-        EntityRenderer.renderHorse(r, p.x, p.y + 6, '#8B6C42', 30, '', true, null);
+        const localMoving = facing.x !== 0 || facing.y !== 0;
+        EntityRenderer.renderHorse(r, p.x, p.y + 6, '#8B6C42', 30, '', true, null,
+          localMoving, facing.x > 0);
       }
       const yOffset = this.mounted ? 8 : 0;
       EntityRenderer.renderPlayer(

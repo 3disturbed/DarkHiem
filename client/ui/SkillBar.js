@@ -1,4 +1,5 @@
 import { SKILL_DB, DASH_CONFIG } from '../../shared/SkillTypes.js';
+import skillSprites from '../entities/SkillSprites.js';
 
 export default class SkillBar {
   constructor() {
@@ -59,10 +60,16 @@ export default class SkillBar {
         const cdPercent = skills.getCooldownPercent(def.id);
         const isFlashing = this.flashTimers[def.id] > 0;
 
-        // Skill color fill
-        ctx.fillStyle = cdPercent > 0 ? '#333' : (def.color || '#555');
-        ctx.globalAlpha = cdPercent > 0 ? 0.4 : (isFlashing ? 1.0 : 0.8);
-        ctx.fillRect(sx + 2, sy + 2, this.slotSize - 4, this.slotSize - 4);
+        // Skill icon or color fill
+        const icon = skillSprites.get(def.id);
+        if (icon) {
+          ctx.globalAlpha = cdPercent > 0 ? 0.4 : (isFlashing ? 1.0 : 0.9);
+          ctx.drawImage(icon, sx + 2, sy + 2, this.slotSize - 4, this.slotSize - 4);
+        } else {
+          ctx.fillStyle = cdPercent > 0 ? '#333' : (def.color || '#555');
+          ctx.globalAlpha = cdPercent > 0 ? 0.4 : (isFlashing ? 1.0 : 0.8);
+          ctx.fillRect(sx + 2, sy + 2, this.slotSize - 4, this.slotSize - 4);
+        }
 
         // Cooldown overlay (top-down sweep)
         if (cdPercent > 0) {
@@ -127,10 +134,16 @@ export default class SkillBar {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     ctx.fillRect(dx, dy, ds, ds);
 
-    // Fill color
-    ctx.fillStyle = cdPercent > 0 ? '#333' : (DASH_CONFIG.color || '#3498db');
-    ctx.globalAlpha = cdPercent > 0 ? 0.4 : 0.8;
-    ctx.fillRect(dx + 2, dy + 2, ds - 4, ds - 4);
+    // Dash icon or fill color
+    const dashIcon = skillSprites.get('dash');
+    if (dashIcon) {
+      ctx.globalAlpha = cdPercent > 0 ? 0.4 : 0.9;
+      ctx.drawImage(dashIcon, dx + 2, dy + 2, ds - 4, ds - 4);
+    } else {
+      ctx.fillStyle = cdPercent > 0 ? '#333' : (DASH_CONFIG.color || '#3498db');
+      ctx.globalAlpha = cdPercent > 0 ? 0.4 : 0.8;
+      ctx.fillRect(dx + 2, dy + 2, ds - 4, ds - 4);
+    }
 
     // Cooldown overlay
     if (cdPercent > 0) {

@@ -1,6 +1,7 @@
 // Animated sprite metadata: id -> { frames, frameWidth, frameHeight }
 export const ANIMATED_SPRITES = {
   rabbit: { frames: 3, frameWidth: 32, frameHeight: 32 },
+  wild_horse: { frames: 3, frameWidth: 32, frameHeight: 32 },
 };
 
 const ENEMY_IDS = [
@@ -14,6 +15,8 @@ const ENEMY_IDS = [
   'wolf', 'drake', 'stone_golem', 'crystal_beetle', 'ice_golem',
   // Volcanic
   'surtling', 'lava_golem', 'ash_wraith', 'fire_bat', 'magma_worm',
+  // Mounts
+  'wild_horse',
 ];
 
 class EnemySprites {

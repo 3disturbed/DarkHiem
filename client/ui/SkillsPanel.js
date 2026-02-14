@@ -1,4 +1,5 @@
 import { SKILL_DB, SKILL_UNLOCK_ORDER } from '../../shared/SkillTypes.js';
+import skillSprites from '../entities/SkillSprites.js';
 
 export default class SkillsPanel {
   constructor() {
@@ -148,27 +149,35 @@ export default class SkillsPanel {
         ctx.fillRect(this.x + 2, rowY, this.width - 4, this.rowHeight);
       }
 
-      // Color pip
-      ctx.fillStyle = def.color || '#fff';
-      ctx.fillRect(this.x + 8, rowY + 8, 8, 8);
+      // Skill icon or color pip
+      const icon = skillSprites.get(def.id);
+      const iconSize = 24;
+      const iconX = this.x + 8;
+      const iconY = rowY + Math.floor((this.rowHeight - iconSize) / 2);
+      if (icon) {
+        ctx.drawImage(icon, iconX, iconY, iconSize, iconSize);
+      } else {
+        ctx.fillStyle = def.color || '#fff';
+        ctx.fillRect(iconX, iconY, iconSize, iconSize);
+      }
 
       // Skill name
       ctx.fillStyle = '#fff';
       ctx.font = 'bold 12px monospace';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
-      ctx.fillText(def.name, this.x + 22, rowY + 6);
+      ctx.fillText(def.name, this.x + 38, rowY + 6);
 
       // Cooldown
       ctx.fillStyle = '#aaa';
       ctx.font = '10px monospace';
-      ctx.fillText(`CD: ${def.cooldown}s`, this.x + 22, rowY + 22);
+      ctx.fillText(`CD: ${def.cooldown}s`, this.x + 38, rowY + 22);
 
       // Description
       ctx.fillStyle = '#888';
       ctx.font = '9px monospace';
-      const desc = def.description.length > 38 ? def.description.slice(0, 36) + '..' : def.description;
-      ctx.fillText(desc, this.x + 22, rowY + 36);
+      const desc = def.description.length > 34 ? def.description.slice(0, 32) + '..' : def.description;
+      ctx.fillText(desc, this.x + 38, rowY + 36);
 
       // Hotbar bind buttons
       const bindStartX = this.x + this.width - 112;

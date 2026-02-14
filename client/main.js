@@ -4,6 +4,8 @@ import stationSprites from './entities/StationSprites.js';
 import enemySprites from './entities/EnemySprites.js';
 import npcSprites from './entities/NPCSprites.js';
 import playerSprites from './entities/PlayerSprites.js';
+import skillSprites from './entities/SkillSprites.js';
+import itemSprites from './entities/ItemSprites.js';
 
 // Check for valid session before loading game
 const token = localStorage.getItem('darkheim_token');
@@ -48,6 +50,8 @@ function startGame() {
     enemySprites.load(),
     npcSprites.load(),
     playerSprites.load(),
+    skillSprites.load(),
+    itemSprites.load(),
   ]).then(() => {
     const game = new Game(canvas);
     game.start();

@@ -343,14 +343,29 @@ export default class EntityRenderer {
     ctx.restore();
   }
 
-  static renderHorse(r, x, y, color, size, name, tamed, ownerId) {
+  static renderHorse(r, x, y, color, size, name, tamed, ownerId, isMoving, facingRight) {
     const half = size / 2;
     const ctx = r.ctx;
 
     // Try sprite first (reuse enemy sprites loader)
     const sprite = enemySprites.get('wild_horse');
     if (sprite) {
-      ctx.drawImage(sprite, Math.round(x - half), Math.round(y - half), size, size);
+      const animMeta = ANIMATED_SPRITES['wild_horse'];
+      const frame = (isMoving && animMeta) ? Math.floor((Date.now() / 150) % animMeta.frames) : 0;
+      const sx = animMeta ? frame * animMeta.frameWidth : 0;
+      const sw = animMeta ? animMeta.frameWidth : sprite.width;
+      const sh = animMeta ? animMeta.frameHeight : sprite.height;
+      const dx = Math.round(x - half);
+      const dy = Math.round(y - half);
+      if (facingRight) {
+        ctx.save();
+        ctx.translate(Math.round(x), 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(sprite, sx, 0, sw, sh, -half, dy, size, size);
+        ctx.restore();
+      } else {
+        ctx.drawImage(sprite, sx, 0, sw, sh, dx, dy, size, size);
+      }
     } else {
       // Fallback: rounded brown body
       ctx.fillStyle = color || '#8B6C42';
