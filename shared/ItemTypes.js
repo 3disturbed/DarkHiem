@@ -1154,25 +1154,30 @@ export const ITEM_DB = {
     description: 'Explosive powder for crafting bombs.',
   },
   lasso: {
-    id: 'lasso', name: 'Lasso', type: 'material', stackable: true, maxStack: 5,
-    description: 'A rope lasso for capturing wild horses.',
+    id: 'lasso', name: 'Lasso', type: 'equipment', slot: 'weapon',
+    isLasso: true, singleUse: true, stackable: true, maxStack: 5,
+    statBonuses: { baseDamage: 0 }, tier: 0, rarity: 'common', gemSlots: 0,
+    description: 'Equip and attack a wild horse to capture it. Consumed on use.',
   },
 
-  // --- Pet Cages ---
+  // --- Pet Cages (equippable single-use weapons) ---
   wooden_cage: {
-    id: 'wooden_cage', name: 'Wooden Cage', type: 'material', stackable: true, maxStack: 10,
-    cageTier: 0,
-    description: 'A simple cage for capturing meadow creatures.',
+    id: 'wooden_cage', name: 'Wooden Cage', type: 'equipment', slot: 'weapon',
+    isCage: true, cageTier: 0, singleUse: true, stackable: true, maxStack: 10,
+    statBonuses: { baseDamage: 0 }, tier: 0, rarity: 'common', gemSlots: 0,
+    description: 'Equip and attack a weakened meadow creature to capture it. Consumed on use.',
   },
   iron_cage: {
-    id: 'iron_cage', name: 'Iron Cage', type: 'material', stackable: true, maxStack: 10,
-    cageTier: 2,
-    description: 'A sturdy cage for capturing creatures up to swamp tier.',
+    id: 'iron_cage', name: 'Iron Cage', type: 'equipment', slot: 'weapon',
+    isCage: true, cageTier: 2, singleUse: true, stackable: true, maxStack: 10,
+    statBonuses: { baseDamage: 0 }, tier: 2, rarity: 'uncommon', gemSlots: 0,
+    description: 'Equip and attack a weakened creature (up to swamp tier) to capture it. Consumed on use.',
   },
   obsidian_cage: {
-    id: 'obsidian_cage', name: 'Obsidian Cage', type: 'material', stackable: true, maxStack: 10,
-    cageTier: 4,
-    description: 'An indestructible cage for capturing any creature.',
+    id: 'obsidian_cage', name: 'Obsidian Cage', type: 'equipment', slot: 'weapon',
+    isCage: true, cageTier: 4, singleUse: true, stackable: true, maxStack: 10,
+    statBonuses: { baseDamage: 0 }, tier: 4, rarity: 'rare', gemSlots: 0,
+    description: 'Equip and attack any weakened creature to capture it. Consumed on use.',
   },
 
   // --- Pet Equipment ---
@@ -1411,6 +1416,18 @@ export const ITEM_DB = {
   obsidian_vault: {
     id: 'obsidian_vault', name: 'Obsidian Vault', type: 'material', stackable: false,
     description: 'An indestructible obsidian vault. 120 slots.',
+  },
+
+  // ============================================================
+  //  MAIL SYSTEM
+  // ============================================================
+  mail_package: {
+    id: 'mail_package', name: 'Mail Package', type: 'material', stackable: false,
+    description: 'A sealed package for delivery. Check your quest log for the recipient.',
+  },
+  collection_parcel: {
+    id: 'collection_parcel', name: 'Collection Parcel', type: 'material', stackable: false,
+    description: 'A parcel to return to Postmaster Paul.',
   },
 
   // ============================================================

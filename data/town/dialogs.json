@@ -236,6 +236,20 @@
           ]
         }
       }
+    },
+    "postmaster_paul_dialog": {
+      "startNode": "greeting",
+      "nodes": {
+        "greeting": {
+          "text": "Hail, traveler! I'm Postmaster Paul. The mail never stops in Darkheim. Need a job, or want to help sort packages?",
+          "choices": [
+            { "text": "I'd like a delivery job.", "action": "show_mail_jobs" },
+            { "text": "Any packages to collect?", "action": "show_collection_jobs" },
+            { "text": "I'll help sort packages.", "action": "start_sorting" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        }
+      }
     }
   }
 }

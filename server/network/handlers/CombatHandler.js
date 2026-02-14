@@ -7,8 +7,10 @@ import CombatComponent from '../../ecs/components/CombatComponent.js';
 import EquipmentComponent from '../../ecs/components/EquipmentComponent.js';
 import InventoryComponent from '../../ecs/components/InventoryComponent.js';
 import PlayerComponent from '../../ecs/components/PlayerComponent.js';
+import HorseComponent from '../../ecs/components/HorseComponent.js';
 import { ITEM_DB } from '../../../shared/ItemTypes.js';
-import { PET_DB } from '../../../shared/PetTypes.js';
+import { PET_DB, PET_CAPTURE_HP_THRESHOLD, CAGE_TIERS } from '../../../shared/PetTypes.js';
+import HitDetector from '../../combat/HitDetector.js';
 
 // Tiles that can be mined with a pickaxe
 export const MINEABLE_TILES = {
@@ -103,13 +105,26 @@ export default class CombatHandler {
     const pc = entity.getComponent(PlayerComponent);
     if (pc && pc.activeBattle) return;
 
-    // Check if weapon triggers pet battle (pet item or trainer whistle)
+    // Check if weapon triggers special behavior
     const equip = entity.getComponent(EquipmentComponent);
     if (equip) {
       const weapon = equip.getEquipped('weapon');
-      if (weapon && (weapon.isPet || weapon.petBattle)) {
-        this._tryStartPetBattle(player, entity);
-        return;
+      if (weapon) {
+        // Pet battle weapons (trainer whistle or captured pet)
+        if (weapon.isPet || weapon.petBattle) {
+          this._tryStartPetBattle(player, entity);
+          return;
+        }
+        // Lasso — capture wild horse
+        if (weapon.isLasso) {
+          this._tryLassoCapture(player, entity);
+          return;
+        }
+        // Cage — capture weakened creature
+        if (weapon.isCage) {
+          this._tryCageCapture(player, entity, weapon);
+          return;
+        }
       }
     }
 
@@ -248,30 +263,21 @@ export default class CombatHandler {
     const battleManager = this.gameServer.petBattleManager;
     if (!battleManager) return;
 
-    // Find nearest enemy within 120px
-    const enemies = this.gameServer.entityManager.getByTag('enemy');
-    let nearest = null;
-    let nearestDist = 120;
-
-    for (const enemy of enemies) {
-      const enemyId = enemy.enemyConfig?.id;
-      if (!enemyId || !PET_DB[enemyId]) continue;
-
-      const ePos = enemy.getComponent(PositionComponent);
-      if (!ePos) continue;
-
-      const dx = ePos.x - pos.x;
-      const dy = ePos.y - pos.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      if (dist < nearestDist) {
-        nearestDist = dist;
-        nearest = enemy;
-      }
-    }
+    // Use HitDetector to find nearest enemy in melee range (first hit target)
+    const nearest = HitDetector.findNearest(
+      this.gameServer.entityManager, pos.x, pos.y, 80,
+      entity.id, 'enemy'
+    );
 
     if (!nearest) {
       playerConn.emit(MSG.CHAT_RECEIVE, { message: 'No creature nearby to battle.', sender: 'System' });
+      return;
+    }
+
+    // Verify creature is in PET_DB (can be battled)
+    const enemyId = nearest.enemyConfig?.id;
+    if (!enemyId || !PET_DB[enemyId]) {
+      playerConn.emit(MSG.CHAT_RECEIVE, { message: 'This creature cannot be battled.', sender: 'System' });
       return;
     }
 
@@ -279,5 +285,136 @@ export default class CombatHandler {
     if (!started) {
       playerConn.emit(MSG.CHAT_RECEIVE, { message: 'Could not start pet battle.', sender: 'System' });
     }
+  }
+
+  _tryLassoCapture(playerConn, entity) {
+    const pos = entity.getComponent(PositionComponent);
+    if (!pos) return;
+
+    const pc = entity.getComponent(PlayerComponent);
+    if (!pc) return;
+
+    // Already owns a horse
+    if (pc.hasHorse) {
+      playerConn.emit(MSG.CHAT_RECEIVE, { message: 'You already have a horse.', sender: 'System' });
+      return;
+    }
+
+    // Find nearest wild horse within 80px
+    const horses = this.gameServer.entityManager.getByTag('horse');
+    let nearest = null;
+    let nearestDist = 80;
+
+    for (const horse of horses) {
+      const horseComp = horse.getComponent(HorseComponent);
+      if (!horseComp || horseComp.tamed) continue;
+
+      const hPos = horse.getComponent(PositionComponent);
+      if (!hPos) continue;
+
+      const dx = hPos.x - pos.x;
+      const dy = hPos.y - pos.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearest = horse;
+      }
+    }
+
+    if (!nearest) {
+      playerConn.emit(MSG.CHAT_RECEIVE, { message: 'No wild horse nearby.', sender: 'System' });
+      return;
+    }
+
+    // Remove the horse entity from the world
+    this.gameServer.entityManager.remove(nearest.id);
+
+    // Mark player as owning a horse
+    pc.hasHorse = true;
+
+    // Consume the lasso weapon
+    this._consumeSingleUseWeapon(entity, playerConn);
+
+    // Send updates
+    playerConn.emit(MSG.HORSE_UPDATE, { hasHorse: true, mounted: false });
+    playerConn.emit(MSG.CHAT_RECEIVE, { message: 'You captured a wild horse!', sender: 'System' });
+  }
+
+  _tryCageCapture(playerConn, entity, weapon) {
+    const pos = entity.getComponent(PositionComponent);
+    if (!pos) return;
+
+    const pc = entity.getComponent(PlayerComponent);
+    if (!pc) return;
+
+    // Don't capture during battle
+    if (pc.activeBattle) {
+      playerConn.emit(MSG.CHAT_RECEIVE, { message: 'Cannot capture during a pet battle.', sender: 'System' });
+      return;
+    }
+
+    // Find nearest capturable enemy within 80px
+    const nearest = HitDetector.findNearest(
+      this.gameServer.entityManager, pos.x, pos.y, 80,
+      entity.id, 'enemy'
+    );
+
+    if (!nearest) {
+      playerConn.emit(MSG.CHAT_RECEIVE, { message: 'No capturable creature nearby.', sender: 'System' });
+      return;
+    }
+
+    const enemyId = nearest.enemyConfig?.id;
+    const petDef = enemyId ? PET_DB[enemyId] : null;
+    if (!petDef) {
+      playerConn.emit(MSG.CHAT_RECEIVE, { message: 'This creature cannot be captured.', sender: 'System' });
+      return;
+    }
+
+    // Check cage tier vs creature tier
+    const cageTier = weapon.cageTier != null ? weapon.cageTier : (CAGE_TIERS[weapon.id] || 0);
+    if (cageTier < petDef.tier) {
+      playerConn.emit(MSG.CHAT_RECEIVE, { message: 'This cage is too weak for this creature.', sender: 'System' });
+      return;
+    }
+
+    // Check creature HP threshold
+    const enemyHealth = nearest.getComponent(HealthComponent);
+    if (!enemyHealth) return;
+    const hpRatio = enemyHealth.current / enemyHealth.max;
+    if (hpRatio > PET_CAPTURE_HP_THRESHOLD) {
+      playerConn.emit(MSG.CHAT_RECEIVE, {
+        message: `Creature HP too high (${Math.floor(hpRatio * 100)}%). Weaken it below ${Math.floor(PET_CAPTURE_HP_THRESHOLD * 100)}%.`,
+        sender: 'System',
+      });
+      return;
+    }
+
+    // Capture successful — delegate to pet handler for pet creation
+    const petHandler = this.gameServer.petHandler;
+    if (petHandler && petHandler.finalizePetCapture) {
+      petHandler.finalizePetCapture(playerConn, entity, nearest, petDef);
+    } else {
+      // Fallback: remove enemy and give generic pet item
+      this.gameServer.entityManager.remove(nearest.id);
+      const inv = entity.getComponent(InventoryComponent);
+      if (inv) {
+        inv.addItem('pet_item', 1, { petId: enemyId, level: 1, currentHp: petDef.baseHp || 50, maxHp: petDef.baseHp || 50 });
+        playerConn.emit(MSG.INVENTORY_UPDATE, inv.serialize());
+      }
+    }
+
+    // Consume the cage weapon
+    this._consumeSingleUseWeapon(entity, playerConn);
+
+    playerConn.emit(MSG.CHAT_RECEIVE, { message: `Captured ${petDef.name || enemyId}!`, sender: 'System' });
+  }
+
+  _consumeSingleUseWeapon(entity, playerConn) {
+    const equip = entity.getComponent(EquipmentComponent);
+    if (!equip) return;
+    equip.unequip('weapon');
+    playerConn.emit(MSG.EQUIPMENT_UPDATE, equip.serialize());
   }
 }

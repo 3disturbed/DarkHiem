@@ -275,6 +275,18 @@
       "dialogId": "wise_old_man_dialog",
       "questIds": ["quest_stat_reset"],
       "interactRange": 64
+    },
+    {
+      "id": "postmaster_paul",
+      "name": "Postmaster Paul",
+      "type": "quest_giver",
+      "x": 700,
+      "y": -100,
+      "color": "#d4883e",
+      "size": 26,
+      "dialogId": "postmaster_paul_dialog",
+      "questIds": [],
+      "interactRange": 64
     }
   ]
 }

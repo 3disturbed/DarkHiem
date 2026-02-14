@@ -39,6 +39,8 @@ import ContextMenu from './ui/ContextMenu.js';
 import PetBattlePanel from './ui/PetBattlePanel.js';
 import AnimalPenPanel from './ui/AnimalPenPanel.js';
 import PetTeamPanel from './ui/PetTeamPanel.js';
+import MailJobPanel from './ui/MailJobPanel.js';
+import SortingPanel from './ui/SortingPanel.js';
 import { LAND_PLOTS } from '../shared/LandPlotTypes.js';
 
 export default class Game {
@@ -113,6 +115,10 @@ export default class Game {
     this.petTeamPanel = new PetTeamPanel();
     this.petTeamOpen = false;
     this.petTeam = [null, null, null];
+    this.mailJobPanel = new MailJobPanel();
+    this.mailJobOpen = false;
+    this.sortingPanel = new SortingPanel();
+    this.inSorting = false;
 
     // Fishing state
     this.fishingState = null; // null | 'casting' | 'waiting' | 'bite' | 'reeling'
@@ -677,6 +683,38 @@ export default class Game {
         }
       }
     };
+
+    // Mail system callbacks
+    this.network.onMailJobs = (data) => {
+      this.mailJobPanel.position(this.renderer.logicalWidth, this.renderer.logicalHeight);
+      this.mailJobPanel.open(data);
+      this.mailJobOpen = true;
+    };
+    this.network.onMailDeliver = (data) => {
+      if (this.localPlayer) {
+        this.damageNumbers.add(this.localPlayer.x, this.localPlayer.y - 40, `+${data.reward}g Delivered!`, false);
+      }
+    };
+    this.network.onMailCollect = () => {};
+    this.network.onMailTurnIn = (data) => {
+      if (this.localPlayer) {
+        this.damageNumbers.add(this.localPlayer.x, this.localPlayer.y - 40, `+${data.reward}g Collected!`, false);
+      }
+    };
+
+    // Sorting minigame callbacks
+    this.network.onSortStart = (data) => {
+      this.inSorting = true;
+      this.sortingPanel.position(this.renderer.logicalWidth, this.renderer.logicalHeight);
+      this.sortingPanel.start(data);
+    };
+    this.network.onSortState = (data) => {
+      this.sortingPanel.updateState(data);
+    };
+    this.network.onSortEnd = (data) => {
+      this.sortingPanel.end(data);
+      this.inSorting = false;
+    };
   }
 
   start() {
@@ -726,6 +764,37 @@ export default class Game {
           this.petBattlePanel.back();
         }
       }
+      this.input.postUpdate();
+      return;
+    }
+
+    // Sorting minigame takes over input when active
+    if (this.inSorting || this.sortingPanel.visible) {
+      const kb = this.input.keyboard;
+
+      if (this.inSorting) {
+        // WASD → gate inputs
+        if (kb.wasJustPressed('KeyW')) this.network.sendSortInput(1);
+        if (kb.wasJustPressed('KeyA')) this.network.sendSortInput(2);
+        if (kb.wasJustPressed('KeyS')) this.network.sendSortInput(3);
+        if (kb.wasJustPressed('KeyD')) this.network.sendSortInput(4);
+      }
+
+      // Escape → cancel sorting / close results
+      if (actions.cancel || actions.action) {
+        if (this.sortingPanel.results) {
+          this.sortingPanel.close();
+        }
+      }
+
+      // Click to close results
+      if (actions.action && this.sortingPanel.results) {
+        const result = this.sortingPanel.handleClick(uiMX, uiMY);
+        if (result && result.action === 'close') {
+          this.sortingPanel.close();
+        }
+      }
+
       this.input.postUpdate();
       return;
     }
@@ -870,24 +939,14 @@ export default class Game {
       }
     }
 
-    // Handle Q key (pet capture / horse capture / mount / dismount)
+    // Handle Ctrl key (mount / dismount only)
     if (actions.horseAction && !this.placementMode && !this.isDead) {
       if (this.inPetBattle) {
         // no-op during pet battle
       } else if (this.mounted) {
         this.network.sendHorseDismount();
-      } else {
-        // Cage in inventory → pet capture takes priority over horse mount
-        const hasCage = this.inventory.slots.some(s =>
-          s && (s.itemId === 'wooden_cage' || s.itemId === 'iron_cage' || s.itemId === 'obsidian_cage')
-        );
-        if (hasCage) {
-          this.network.sendPetCapture();
-        } else if (this.hasHorse) {
-          this.network.sendHorseMount();
-        } else {
-          this.network.sendHorseCapture();
-        }
+      } else if (this.hasHorse) {
+        this.network.sendHorseMount();
       }
     }
 
@@ -1001,6 +1060,9 @@ export default class Game {
       } else if (this.shopOpen) {
         this.shopPanel.close();
         this.shopOpen = false;
+      } else if (this.mailJobOpen) {
+        this.mailJobPanel.close();
+        this.mailJobOpen = false;
       } else if (this.questPanelOpen) {
         this.questPanel.close();
         this.questPanelOpen = false;
@@ -1246,6 +1308,25 @@ export default class Game {
       }
     }
 
+    // Handle mail job panel interaction
+    if (this.mailJobOpen) {
+      this.mailJobPanel.handleMouseMove(uiMX, uiMY);
+      if (actions.action || actions.screenTap) {
+        const result = this.mailJobPanel.handleClick(uiMX, uiMY);
+        if (result) {
+          if (result.action === 'close') {
+            this.mailJobPanel.close();
+            this.mailJobOpen = false;
+          } else if (result.action === 'accept') {
+            this.network.sendMailAccept(result.type, result.npcId);
+          }
+        }
+      }
+      if (actions.scrollDelta !== 0) {
+        this.mailJobPanel.handleScroll(actions.scrollDelta);
+      }
+    }
+
     // Handle shop panel interaction
     if (this.shopOpen) {
       this.shopPanel.handleMouseMove(uiMX, uiMY, this.inventory);
@@ -1329,7 +1410,7 @@ export default class Game {
     }
 
     // Skill bar tap/click handling
-    if ((actions.action || actions.screenTap) && !this.panelsOpen && !this.craftingOpen && !this.upgradeOpen && !this.skillsOpen && !this.placementMode && !this.dialogOpen && !this.questPanelOpen && !this.shopOpen && !this.chestOpen && !this.fishingRodOpen && !this.animalPenOpen && !this.petTeamOpen) {
+    if ((actions.action || actions.screenTap) && !this.panelsOpen && !this.craftingOpen && !this.upgradeOpen && !this.skillsOpen && !this.placementMode && !this.dialogOpen && !this.questPanelOpen && !this.shopOpen && !this.chestOpen && !this.fishingRodOpen && !this.animalPenOpen && !this.petTeamOpen && !this.mailJobOpen) {
       const slot = this.skillBar.handleClick(uiMX, uiMY);
       if (slot >= 0) {
         this.network.sendSkillUse(slot);
@@ -1753,6 +1834,18 @@ export default class Game {
     if (this.petTeamOpen) {
       this.petTeamPanel.position(r.logicalWidth, r.logicalHeight);
       this.petTeamPanel.render(ctx);
+    }
+
+    // Mail job panel
+    if (this.mailJobOpen) {
+      this.mailJobPanel.position(r.logicalWidth, r.logicalHeight);
+      this.mailJobPanel.render(ctx);
+    }
+
+    // Sorting minigame panel
+    if (this.sortingPanel.visible) {
+      this.sortingPanel.position(r.logicalWidth, r.logicalHeight);
+      this.sortingPanel.render(ctx);
     }
 
     // Context menu (renders on top of all panels)

@@ -18,6 +18,8 @@ import HorseHandler from './network/handlers/HorseHandler.js';
 import PetHandler from './network/handlers/PetHandler.js';
 import PetBattleManager from './pet/PetBattleManager.js';
 import PetBreedingManager from './pet/PetBreedingManager.js';
+import MailHandler from './network/handlers/MailHandler.js';
+import SortingHandler from './network/handlers/SortingHandler.js';
 import QuestComponent from './ecs/components/QuestComponent.js';
 import EntityManager from './ecs/EntityManager.js';
 import SystemManager from './ecs/SystemManager.js';
@@ -135,8 +137,8 @@ export default class GameServer {
     const horseHandler = new HorseHandler(this);
     horseHandler.register(this.messageRouter);
 
-    const petHandler = new PetHandler(this);
-    petHandler.register(this.messageRouter);
+    this.petHandler = new PetHandler(this);
+    this.petHandler.register(this.messageRouter);
 
     this.petBattleManager = new PetBattleManager(this);
     this.petBattleManager.register(this.messageRouter);
@@ -146,6 +148,12 @@ export default class GameServer {
 
     this.landPlotHandler = new LandPlotHandler(this);
     this.landPlotHandler.register(this.messageRouter);
+
+    this.mailHandler = new MailHandler(this);
+    this.mailHandler.register(this.messageRouter);
+
+    this.sortingHandler = new SortingHandler(this);
+    this.sortingHandler.register(this.messageRouter);
 
     // Respawn handler
     this.messageRouter.register(MSG.PLAYER_RESPAWN, (player) => {
@@ -458,6 +466,11 @@ export default class GameServer {
 
     // Run ECS systems
     this.systemManager.update(dt, this.entityManager, { worldManager: this.worldManager, combatResolver: this.combatResolver });
+
+    // Update sorting minigame sessions
+    if (this.sortingHandler) {
+      this.sortingHandler.update(dt);
+    }
 
     // Destroy marked entities
     this.entityManager.flushDestroyed();

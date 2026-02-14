@@ -72,6 +72,33 @@ export default class DialogHandler {
       return;
     }
 
+    if (choice.action === 'show_mail_jobs') {
+      this.dialogStates.delete(player.id);
+      player.emit(MSG.DIALOG_END, { npcId: state.npcId });
+      if (this.gameServer.mailHandler) {
+        this.gameServer.mailHandler.handleShowJobs(player, 'delivery');
+      }
+      return;
+    }
+
+    if (choice.action === 'show_collection_jobs') {
+      this.dialogStates.delete(player.id);
+      player.emit(MSG.DIALOG_END, { npcId: state.npcId });
+      if (this.gameServer.mailHandler) {
+        this.gameServer.mailHandler.handleShowJobs(player, 'collection');
+      }
+      return;
+    }
+
+    if (choice.action === 'start_sorting') {
+      this.dialogStates.delete(player.id);
+      player.emit(MSG.DIALOG_END, { npcId: state.npcId });
+      if (this.gameServer.sortingHandler) {
+        this.gameServer.sortingHandler.handleStart(player);
+      }
+      return;
+    }
+
     if (choice.action === 'heal_pets') {
       this._healAllPets(player, entity);
       // Stay in dialog so player can continue talking

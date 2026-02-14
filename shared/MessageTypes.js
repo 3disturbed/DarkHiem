@@ -160,4 +160,17 @@ export const MSG = {
   PET_BREED_START:    'pet:breed:start',
   PET_BREED_COLLECT:  'pet:breed:collect',
   PET_TRAIN:          'pet:train',
+
+  // Mail system
+  MAIL_JOBS:          'mail:jobs',
+  MAIL_ACCEPT:        'mail:accept',
+  MAIL_DELIVER:       'mail:deliver',
+  MAIL_COLLECT:       'mail:collect',
+  MAIL_TURN_IN:       'mail:turnin',
+
+  // Sorting minigame
+  SORT_START:         'sort:start',
+  SORT_INPUT:         'sort:input',
+  SORT_STATE:         'sort:state',
+  SORT_END:           'sort:end',
 };

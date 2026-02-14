@@ -254,6 +254,12 @@ export default class InteractionHandler {
 
     if (!npcComp || !townManager) return;
 
+    // Check for mail delivery/collection before starting normal dialog
+    if (this.gameServer.mailHandler) {
+      const handled = this.gameServer.mailHandler.tryMailInteraction(player, playerEntity, npcComp.npcId);
+      if (handled) return;
+    }
+
     const npcName = npcEntity.getComponent(NameComponent)?.name || 'NPC';
 
     // Get dialog tree for this NPC

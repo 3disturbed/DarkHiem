@@ -206,6 +206,60 @@ export default class PetHandler {
     });
   }
 
+  // Called by CombatHandler when a cage weapon successfully captures a creature
+  finalizePetCapture(playerConn, entity, targetEnemy, petDef) {
+    const pc = entity.getComponent(PlayerComponent);
+    const inventory = entity.getComponent(InventoryComponent);
+    if (!pc || !inventory) return;
+
+    // Check inventory space
+    if (inventory.isFull()) {
+      playerConn.emit(MSG.CHAT_RECEIVE, { message: 'Inventory is full.', sender: 'System' });
+      return;
+    }
+
+    const enemyId = targetEnemy.enemyConfig?.id;
+
+    // Remove enemy entity
+    this.gameServer.entityManager.remove(targetEnemy.id);
+
+    // Determine if this is a rare variant
+    const isRare = targetEnemy.isPassiveVariant || false;
+
+    // Generate pet item with extraData
+    const stats = getPetStats(enemyId, 1);
+    const extraData = {
+      petId: enemyId,
+      nickname: isRare ? `★ ${petDef.name}` : petDef.name,
+      level: 1,
+      xp: 0,
+      currentHp: stats.hp,
+      maxHp: stats.hp,
+      learnedSkills: getRandomPetSkills(enemyId, 1),
+      fainted: false,
+      isRare,
+      bonusStats: 0,
+    };
+
+    inventory.addItem('pet_item', 1, extraData);
+
+    // Auto-assign to first empty team slot
+    const addedSlotIdx = inventory.slots.findIndex(s =>
+      s && s.itemId === 'pet_item' && s.petId === enemyId && s.xp === 0 && s.level === 1
+    );
+    if (addedSlotIdx !== -1) {
+      const emptyTeamSlot = pc.petTeam.indexOf(null);
+      if (emptyTeamSlot !== -1) {
+        pc.petTeam[emptyTeamSlot] = addedSlotIdx;
+        playerConn.emit(MSG.PET_TEAM_UPDATE, { petTeam: pc.petTeam });
+      }
+    }
+
+    // Send updates
+    playerConn.emit(MSG.INVENTORY_UPDATE, { slots: inventory.serialize().slots });
+    playerConn.emit(MSG.PET_CAPTURE_RESULT, { success: true, petId: enemyId, isRare });
+  }
+
   _findBestCage(inventory) {
     // Prefer highest tier cage
     const cageTypes = ['obsidian_cage', 'iron_cage', 'wooden_cage'];

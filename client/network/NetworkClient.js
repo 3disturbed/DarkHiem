@@ -64,6 +64,17 @@ export default class NetworkClient {
 
     // Land plot callbacks
     this.onLandPurchase = null;
+
+    // Mail system callbacks
+    this.onMailJobs = null;
+    this.onMailDeliver = null;
+    this.onMailCollect = null;
+    this.onMailTurnIn = null;
+
+    // Sorting minigame callbacks
+    this.onSortStart = null;
+    this.onSortState = null;
+    this.onSortEnd = null;
   }
 
   connect() {
@@ -285,6 +296,31 @@ export default class NetworkClient {
     // Land plots
     this.socket.on(MSG.LAND_PURCHASE, (data) => {
       if (this.onLandPurchase) this.onLandPurchase(data);
+    });
+
+    // Mail system
+    this.socket.on(MSG.MAIL_JOBS, (data) => {
+      if (this.onMailJobs) this.onMailJobs(data);
+    });
+    this.socket.on(MSG.MAIL_DELIVER, (data) => {
+      if (this.onMailDeliver) this.onMailDeliver(data);
+    });
+    this.socket.on(MSG.MAIL_COLLECT, (data) => {
+      if (this.onMailCollect) this.onMailCollect(data);
+    });
+    this.socket.on(MSG.MAIL_TURN_IN, (data) => {
+      if (this.onMailTurnIn) this.onMailTurnIn(data);
+    });
+
+    // Sorting minigame
+    this.socket.on(MSG.SORT_START, (data) => {
+      if (this.onSortStart) this.onSortStart(data);
+    });
+    this.socket.on(MSG.SORT_STATE, (data) => {
+      if (this.onSortState) this.onSortState(data);
+    });
+    this.socket.on(MSG.SORT_END, (data) => {
+      if (this.onSortEnd) this.onSortEnd(data);
     });
   }
 
@@ -546,6 +582,16 @@ export default class NetworkClient {
   sendPetTrain(petSlot) {
     if (!this.connected) return;
     this.socket.emit(MSG.PET_TRAIN, { petSlot });
+  }
+
+  sendMailAccept(type, npcId) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.MAIL_ACCEPT, { type, npcId });
+  }
+
+  sendSortInput(gate) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.SORT_INPUT, { gate });
   }
 
   getLocalPlayerState() {
