@@ -12,5 +12,7 @@ export default class ProjectileComponent extends Component {
     this.critMultiplier = options.critMultiplier || 1.5;
     this.knockback = options.knockback || 4;
     this.hit = false;
+    this.slowOnHit = options.slowOnHit || null;
+    this.poisonOnHit = options.poisonOnHit || null;
   }
 }

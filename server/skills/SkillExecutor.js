@@ -11,6 +11,8 @@ import StatsComponent from '../ecs/components/StatsComponent.js';
 import PlayerComponent from '../ecs/components/PlayerComponent.js';
 import InventoryComponent from '../ecs/components/InventoryComponent.js';
 import HitDetector from '../combat/HitDetector.js';
+import EntityFactory from '../ecs/EntityFactory.js';
+import VelocityComponent from '../ecs/components/VelocityComponent.js';
 
 export default class SkillExecutor {
   constructor(combatResolver, gameServer) {
@@ -115,6 +117,46 @@ export default class SkillExecutor {
         break;
       case SKILL.BLOOD_RITUAL:
         result = this.executeBloodRitual(entity, def, entityManager);
+        break;
+      // Elemental: Fire
+      case SKILL.FIREBOLT:
+        result = this.executeProjectileSkill(entity, def, entityManager, 'fire_bolt', 550);
+        break;
+      case SKILL.IGNITE:
+        result = this.executeIgnite(entity, def, entityManager);
+        break;
+      case SKILL.FLAME_WAVE:
+        result = this.executeFlameWave(entity, def, entityManager);
+        break;
+      case SKILL.METEOR:
+        result = this.executeMeteor(entity, def, entityManager);
+        break;
+      // Elemental: Ice
+      case SKILL.FROSTBOLT:
+        result = this.executeProjectileSkill(entity, def, entityManager, 'ice_bolt', 500,
+          { slowOnHit: { speedMod: 0.6, duration: 3 } });
+        break;
+      case SKILL.ICE_NOVA:
+        result = this.executeIceNova(entity, def, entityManager);
+        break;
+      case SKILL.FROZEN_PRISON:
+        result = this.executeFrozenPrison(entity, def, entityManager);
+        break;
+      case SKILL.BLIZZARD:
+        result = this.executeBlizzard(entity, def, entityManager);
+        break;
+      // Elemental: Lightning
+      case SKILL.LIGHTNING_STRIKE:
+        result = this.executeLightningStrike(entity, def, entityManager);
+        break;
+      case SKILL.CHAIN_LIGHTNING:
+        result = this.executeChainLightning(entity, def, entityManager);
+        break;
+      case SKILL.STATIC_FIELD:
+        result = this.executeStaticField(entity, def, entityManager);
+        break;
+      case SKILL.STORM_CALL:
+        result = this.executeStormCall(entity, def, entityManager);
         break;
       default:
         return { success: false, message: 'Unknown skill' };
@@ -863,5 +905,404 @@ export default class SkillExecutor {
     }
 
     return { success: true, skillId: def.id, type: 'blood_ritual', healed: totalHealed };
+  }
+
+  // --- Elemental Skill Methods ---
+
+  executeProjectileSkill(entity, def, entityManager, projType, speed, extraEffects) {
+    const pos = entity.getComponent(PositionComponent);
+    const combat = entity.getComponent(CombatComponent);
+    if (!pos || !combat) return { success: false, message: 'Cannot cast' };
+
+    const mult = this.getScaleMult(entity, def);
+    const damage = Math.round(combat.damage * mult);
+    const range = def.range || 160;
+
+    // Auto-aim: find nearest enemy
+    const nearest = HitDetector.findNearest(
+      entityManager, pos.x, pos.y, range, entity.id, 'enemy'
+    );
+
+    let dirX, dirY;
+    if (nearest) {
+      const tp = nearest.getComponent(PositionComponent);
+      const dx = tp.x - pos.x;
+      const dy = tp.y - pos.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > 0) { dirX = dx / dist; dirY = dy / dist; }
+      else { dirX = 1; dirY = 0; }
+    } else {
+      // Use player facing or velocity direction
+      const vel = entity.getComponent(VelocityComponent);
+      if (vel && (vel.dx !== 0 || vel.dy !== 0)) {
+        const dist = Math.sqrt(vel.dx * vel.dx + vel.dy * vel.dy);
+        dirX = vel.dx / dist;
+        dirY = vel.dy / dist;
+      } else {
+        const pc = entity.getComponent(PlayerComponent);
+        if (pc) {
+          switch (pc.facing) {
+            case 'up': dirX = 0; dirY = -1; break;
+            case 'down': dirX = 0; dirY = 1; break;
+            case 'left': dirX = -1; dirY = 0; break;
+            case 'right': dirX = 1; dirY = 0; break;
+            default: dirX = 1; dirY = 0;
+          }
+        } else {
+          dirX = 1; dirY = 0;
+        }
+      }
+    }
+
+    const vx = dirX * speed;
+    const vy = dirY * speed;
+    const critChance = combat.critChance || 0.05;
+    const critMult = combat.critMultiplier || 1.5;
+    const knockback = def.knockback || 4;
+
+    const projectile = EntityFactory.createProjectile(
+      entity.id, pos.x, pos.y, vx, vy,
+      damage, projType, critChance, critMult, knockback, extraEffects
+    );
+    entityManager.add(projectile);
+
+    return { success: true, skillId: def.id, type: 'projectile' };
+  }
+
+  executeIgnite(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    if (!pos) return { success: false, message: 'Cannot cast' };
+
+    const target = HitDetector.findNearest(
+      entityManager, pos.x, pos.y, def.range || 120, entity.id, 'enemy'
+    );
+    if (!target) return { success: false, message: 'No target in range' };
+
+    const targetHealth = target.getComponent(HealthComponent);
+    const targetSE = target.getComponent(StatusEffectComponent);
+    if (!targetHealth || !targetHealth.isAlive() || !targetSE) {
+      return { success: false, message: 'No valid target' };
+    }
+
+    const tickDmg = targetHealth.max * (def.dotPercent || 0.06);
+    targetSE.addEffect({
+      type: 'fire_dot',
+      duration: def.dotDuration || 6,
+      tickDamage: tickDmg,
+    });
+
+    return { success: true, skillId: def.id, type: 'dot' };
+  }
+
+  executeFlameWave(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    const combat = entity.getComponent(CombatComponent);
+    if (!pos || !combat) return { success: false, message: 'Cannot cast' };
+
+    const range = def.range || 120;
+    const targets = HitDetector.queryArea(
+      entityManager, pos.x, pos.y, range, entity.id, 'enemy'
+    );
+
+    if (targets.length === 0) {
+      return { success: true, skillId: def.id, type: 'aoe', hits: 0 };
+    }
+
+    const mult = this.getScaleMult(entity, def);
+    const baseDamage = Math.round(combat.damage * mult);
+
+    for (const target of targets) {
+      this.combatResolver.applyDamage(entity, target, baseDamage);
+    }
+
+    return { success: true, skillId: def.id, type: 'aoe', hits: targets.length };
+  }
+
+  executeMeteor(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    const combat = entity.getComponent(CombatComponent);
+    if (!pos || !combat) return { success: false, message: 'Cannot cast' };
+
+    const range = def.range || 160;
+    const zoneRadius = def.zoneRadius || 80;
+
+    // Find impact point (nearest enemy or ahead of player)
+    let impactX = pos.x, impactY = pos.y;
+    const nearest = HitDetector.findNearest(
+      entityManager, pos.x, pos.y, range, entity.id, 'enemy'
+    );
+    if (nearest) {
+      const tp = nearest.getComponent(PositionComponent);
+      impactX = tp.x;
+      impactY = tp.y;
+    } else {
+      const pc = entity.getComponent(PlayerComponent);
+      if (pc) {
+        switch (pc.facing) {
+          case 'up': impactY -= 80; break;
+          case 'down': impactY += 80; break;
+          case 'left': impactX -= 80; break;
+          case 'right': impactX += 80; break;
+        }
+      }
+    }
+
+    // Instant AoE impact damage at impact point
+    const mult = this.getScaleMult(entity, def);
+    const impactDamage = Math.round(combat.damage * mult);
+    const impactTargets = HitDetector.queryArea(
+      entityManager, impactX, impactY, zoneRadius, entity.id, 'enemy'
+    );
+    for (const target of impactTargets) {
+      this.combatResolver.applyDamage(entity, target, impactDamage);
+    }
+
+    // Spawn fire damage zone
+    const zone = EntityFactory.createDamageZone(
+      entity.id, impactX, impactY, zoneRadius,
+      def.zoneTickDmg || 0.05, def.zoneDuration || 6, def.zoneType || 'fire'
+    );
+    entityManager.add(zone);
+
+    return { success: true, skillId: def.id, type: 'area_zone', hits: impactTargets.length };
+  }
+
+  executeIceNova(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    const combat = entity.getComponent(CombatComponent);
+    if (!pos || !combat) return { success: false, message: 'Cannot cast' };
+
+    const range = def.range || 100;
+    const targets = HitDetector.queryArea(
+      entityManager, pos.x, pos.y, range, entity.id, 'enemy'
+    );
+
+    if (targets.length === 0) {
+      return { success: true, skillId: def.id, type: 'aoe_control', hits: 0 };
+    }
+
+    const mult = this.getScaleMult(entity, def);
+    const baseDamage = Math.round(combat.damage * mult);
+
+    for (const target of targets) {
+      this.combatResolver.applyDamage(entity, target, baseDamage);
+      // Apply freeze
+      const se = target.getComponent(StatusEffectComponent);
+      if (se) {
+        se.addEffect({
+          type: 'freeze',
+          duration: def.freezeDuration || 1.5,
+          speedMod: 0,
+        });
+      }
+    }
+
+    return { success: true, skillId: def.id, type: 'aoe_control', hits: targets.length };
+  }
+
+  executeFrozenPrison(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    if (!pos) return { success: false, message: 'Cannot cast' };
+
+    const target = HitDetector.findNearest(
+      entityManager, pos.x, pos.y, def.range || 120, entity.id, 'enemy'
+    );
+    if (!target) return { success: false, message: 'No target in range' };
+
+    const targetSE = target.getComponent(StatusEffectComponent);
+    if (!targetSE) return { success: false, message: 'No valid target' };
+
+    targetSE.addEffect({
+      type: 'root',
+      duration: def.rootDuration || 4,
+      speedMod: 0,
+      damageTakenMod: def.damageTakenMod || 1.2,
+    });
+
+    return { success: true, skillId: def.id, type: 'debuff' };
+  }
+
+  executeBlizzard(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    if (!pos) return { success: false, message: 'Cannot cast' };
+
+    // Find impact point
+    let impactX = pos.x, impactY = pos.y;
+    const nearest = HitDetector.findNearest(
+      entityManager, pos.x, pos.y, def.range || 160, entity.id, 'enemy'
+    );
+    if (nearest) {
+      const tp = nearest.getComponent(PositionComponent);
+      impactX = tp.x;
+      impactY = tp.y;
+    } else {
+      const pc = entity.getComponent(PlayerComponent);
+      if (pc) {
+        switch (pc.facing) {
+          case 'up': impactY -= 80; break;
+          case 'down': impactY += 80; break;
+          case 'left': impactX -= 80; break;
+          case 'right': impactX += 80; break;
+        }
+      }
+    }
+
+    const zone = EntityFactory.createDamageZone(
+      entity.id, impactX, impactY,
+      def.zoneRadius || 80, def.zoneTickDmg || 0.05,
+      def.zoneDuration || 10, def.zoneType || 'ice',
+      def.zoneSlowPct || 0.3
+    );
+    entityManager.add(zone);
+
+    return { success: true, skillId: def.id, type: 'area_zone' };
+  }
+
+  executeLightningStrike(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    const combat = entity.getComponent(CombatComponent);
+    if (!pos || !combat) return { success: false, message: 'Cannot cast' };
+
+    const target = HitDetector.findNearest(
+      entityManager, pos.x, pos.y, def.range || 140, entity.id, 'enemy'
+    );
+    if (!target) return { success: false, message: 'No target in range' };
+
+    const targetHealth = target.getComponent(HealthComponent);
+    if (!targetHealth || !targetHealth.isAlive()) {
+      return { success: false, message: 'No valid target' };
+    }
+
+    const mult = this.getScaleMult(entity, def);
+    const baseDamage = Math.round(combat.damage * mult);
+    this.combatResolver.applyDamage(entity, target, baseDamage);
+
+    return { success: true, skillId: def.id, type: 'instant_target', hits: 1 };
+  }
+
+  executeChainLightning(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    const combat = entity.getComponent(CombatComponent);
+    if (!pos || !combat) return { success: false, message: 'Cannot cast' };
+
+    const range = def.range || 140;
+    const jumps = def.jumps || 4;
+    const falloff = def.falloff || 0.15;
+
+    const mult = this.getScaleMult(entity, def);
+    let currentDamage = Math.round(combat.damage * mult);
+
+    // First target: nearest enemy
+    const hitIds = new Set();
+    let currentX = pos.x;
+    let currentY = pos.y;
+    let totalHits = 0;
+
+    for (let i = 0; i < jumps; i++) {
+      const candidates = HitDetector.queryArea(
+        entityManager, currentX, currentY, range, entity.id, 'enemy'
+      );
+
+      // Find nearest candidate not already hit
+      let best = null;
+      let bestDist = Infinity;
+      for (const c of candidates) {
+        if (hitIds.has(c.id)) continue;
+        const ch = c.getComponent(HealthComponent);
+        if (!ch || !ch.isAlive()) continue;
+        const cp = c.getComponent(PositionComponent);
+        const dx = cp.x - currentX;
+        const dy = cp.y - currentY;
+        const d = dx * dx + dy * dy;
+        if (d < bestDist) { bestDist = d; best = c; }
+      }
+
+      if (!best) break;
+
+      hitIds.add(best.id);
+      this.combatResolver.applyDamage(entity, best, currentDamage);
+      totalHits++;
+
+      const bestPos = best.getComponent(PositionComponent);
+      currentX = bestPos.x;
+      currentY = bestPos.y;
+
+      // Reduce damage for next jump
+      currentDamage = Math.round(currentDamage * (1 - falloff));
+    }
+
+    if (totalHits === 0) return { success: false, message: 'No target in range' };
+    return { success: true, skillId: def.id, type: 'chain', hits: totalHits };
+  }
+
+  executeStaticField(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    if (!pos) return { success: false, message: 'Cannot cast' };
+
+    const range = def.range || 120;
+    const targets = HitDetector.queryArea(
+      entityManager, pos.x, pos.y, range, entity.id, 'enemy'
+    );
+
+    if (targets.length === 0) {
+      return { success: true, skillId: def.id, type: 'percent_burst', hits: 0 };
+    }
+
+    const pct = def.percentDamage || 0.20;
+    for (const target of targets) {
+      const health = target.getComponent(HealthComponent);
+      if (!health || !health.isAlive()) continue;
+      const dmg = Math.round(health.current * pct);
+      if (dmg > 0) {
+        const actual = health.damage(dmg);
+        const tp = target.getComponent(PositionComponent);
+        this.combatResolver.damageEvents.push({
+          targetId: target.id,
+          attackerId: entity.id,
+          damage: actual,
+          isCrit: false,
+          x: tp ? tp.x : pos.x,
+          y: tp ? tp.y : pos.y,
+          killed: !health.isAlive(),
+        });
+      }
+    }
+
+    return { success: true, skillId: def.id, type: 'percent_burst', hits: targets.length };
+  }
+
+  executeStormCall(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    if (!pos) return { success: false, message: 'Cannot cast' };
+
+    // Find impact point
+    let impactX = pos.x, impactY = pos.y;
+    const nearest = HitDetector.findNearest(
+      entityManager, pos.x, pos.y, def.range || 160, entity.id, 'enemy'
+    );
+    if (nearest) {
+      const tp = nearest.getComponent(PositionComponent);
+      impactX = tp.x;
+      impactY = tp.y;
+    } else {
+      const pc = entity.getComponent(PlayerComponent);
+      if (pc) {
+        switch (pc.facing) {
+          case 'up': impactY -= 80; break;
+          case 'down': impactY += 80; break;
+          case 'left': impactX -= 80; break;
+          case 'right': impactX += 80; break;
+        }
+      }
+    }
+
+    const zone = EntityFactory.createDamageZone(
+      entity.id, impactX, impactY,
+      def.zoneRadius || 80, def.zoneTickDmg || 0.08,
+      def.zoneDuration || 8, def.zoneType || 'lightning'
+    );
+    entityManager.add(zone);
+
+    return { success: true, skillId: def.id, type: 'area_zone' };
   }
 }

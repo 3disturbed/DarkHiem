@@ -137,6 +137,12 @@ export default class CombatResolver {
 
     let finalDamage = result.damage;
 
+    // Damage taken modifier (debuffs on target)
+    if (targetSE) {
+      const takenMod = targetSE.getDamageTakenMod();
+      if (takenMod !== 1.0) finalDamage = Math.round(finalDamage * takenMod);
+    }
+
     // Shield absorption
     if (targetSE) {
       const absorbed = targetSE.consumeShield(finalDamage);
@@ -179,6 +185,28 @@ export default class CombatResolver {
         // Push target away from projectile's incoming direction
         targetPos.x -= (dx / dist) * proj.knockback;
         targetPos.y -= (dy / dist) * proj.knockback;
+      }
+    }
+
+    // Slow on hit (e.g. Frostbolt)
+    if (proj.slowOnHit && targetSE) {
+      targetSE.addEffect({
+        type: 'slow_frost',
+        duration: proj.slowOnHit.duration,
+        speedMod: proj.slowOnHit.speedMod,
+      });
+    }
+
+    // Poison on hit (e.g. Poison Dart)
+    if (proj.poisonOnHit && targetSE) {
+      const targetHealth = target.getComponent(HealthComponent);
+      const poisonDmg = targetHealth ? targetHealth.max * proj.poisonOnHit.percent : 0;
+      if (poisonDmg > 0) {
+        targetSE.addEffect({
+          type: 'poison_proj',
+          duration: proj.poisonOnHit.duration,
+          tickDamage: poisonDmg,
+        });
       }
     }
   }
@@ -264,6 +292,12 @@ export default class CombatResolver {
     const result = DamageCalculator.calculate(baseDamage, targetArmor, critMod);
 
     let finalDamage = result.damage;
+
+    // --- Damage taken modifier (target side debuffs) ---
+    if (targetSE) {
+      const takenMod = targetSE.getDamageTakenMod();
+      if (takenMod !== 1.0) finalDamage = Math.round(finalDamage * takenMod);
+    }
 
     // --- Shield/Fortify (target side) ---
     if (targetSE) {

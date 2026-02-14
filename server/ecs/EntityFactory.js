@@ -21,6 +21,7 @@ import QuestComponent from './components/QuestComponent.js';
 import ChestComponent from './components/ChestComponent.js';
 import HorseComponent from './components/HorseComponent.js';
 import ProjectileComponent from './components/ProjectileComponent.js';
+import DamageZoneComponent from './components/DamageZoneComponent.js';
 import { PLAYER_SPEED, PLAYER_SIZE } from '../../shared/Constants.js';
 import { STATION_DB } from '../../shared/StationTypes.js';
 
@@ -288,22 +289,40 @@ export default class EntityFactory {
     return entity;
   }
 
-  static createProjectile(ownerId, x, y, vx, vy, damage, projectileType, critChance, critMult, knockback) {
+  static createProjectile(ownerId, x, y, vx, vy, damage, projectileType, critChance, critMult, knockback, extraEffects) {
     const entity = new Entity();
     entity.addComponent(new PositionComponent(x, y));
     const vel = new VelocityComponent();
     vel.dx = vx;
     vel.dy = vy;
     entity.addComponent(vel);
-    entity.addComponent(new ProjectileComponent({
+    const proj = new ProjectileComponent({
       ownerId,
       damage,
       projectileType,
       critChance,
       critMultiplier: critMult,
       knockback,
-    }));
+    });
+    if (extraEffects) {
+      if (extraEffects.slowOnHit) proj.slowOnHit = extraEffects.slowOnHit;
+      if (extraEffects.poisonOnHit) proj.poisonOnHit = extraEffects.poisonOnHit;
+    }
+    entity.addComponent(proj);
     entity.addTag('projectile');
+    return entity;
+  }
+
+  static createDamageZone(ownerId, x, y, radius, tickDmgPct, duration, zoneType, slowPct = 0) {
+    const entity = new Entity();
+    entity.addComponent(new PositionComponent(x, y));
+    entity.addComponent(new DamageZoneComponent({
+      ownerId, radius,
+      tickDamagePercent: tickDmgPct,
+      duration, zoneType,
+      slowPercent: slowPct,
+    }));
+    entity.addTag('damage_zone');
     return entity;
   }
 

@@ -34,6 +34,7 @@ import StructureSpawnSystem from './ecs/systems/StructureSpawnSystem.js';
 import SkillSystem from './ecs/systems/SkillSystem.js';
 import QuestTrackingSystem from './ecs/systems/QuestTrackingSystem.js';
 import ProjectileSystem from './ecs/systems/ProjectileSystem.js';
+import DamageZoneSystem from './ecs/systems/DamageZoneSystem.js';
 import CombatResolver from './combat/CombatResolver.js';
 import TileCollisionMap from './collision/TileCollisionMap.js';
 import WorldManager from './world/WorldManager.js';
@@ -59,6 +60,7 @@ import TownManager from './town/TownManager.js';
 import NPCComponent from './ecs/components/NPCComponent.js';
 import HorseComponent from './ecs/components/HorseComponent.js';
 import ProjectileComponent from './ecs/components/ProjectileComponent.js';
+import DamageZoneComponent from './ecs/components/DamageZoneComponent.js';
 import LandPlotHandler from './network/handlers/LandPlotHandler.js';
 import { LAND_PLOTS } from '../shared/LandPlotTypes.js';
 
@@ -342,6 +344,7 @@ export default class GameServer {
     this.systemManager.add(new ProjectileSystem());       // 11: projectile flight + hit detection
     this.systemManager.add(new StatusEffectSystem());     // 12: tick status effects
     this.systemManager.add(new SkillSystem());             // 13: tick skill cooldowns
+    this.systemManager.add(new DamageZoneSystem());        // 14: tick damage zones
     this.systemManager.add(new CombatSystem(this.combatResolver)); // 15: process attacks
     this.systemManager.add(new CollisionSystem(tileCollisionMap)); // 20: resolve collisions
 
@@ -622,6 +625,22 @@ export default class GameServer {
         y: pos.y,
         velocityX: vel ? vel.dx : 0,
         velocityY: vel ? vel.dy : 0,
+      };
+    }
+
+    // Damage zone entities
+    const zoneEntities = this.entityManager.getByTag('damage_zone');
+    for (const entity of zoneEntities) {
+      const pos = entity.getComponent(PositionComponent);
+      const zone = entity.getComponent(DamageZoneComponent);
+
+      allStates[entity.id] = {
+        id: entity.id,
+        type: 'damage_zone',
+        zoneType: zone.zoneType,
+        x: pos.x,
+        y: pos.y,
+        radius: zone.radius,
       };
     }
 

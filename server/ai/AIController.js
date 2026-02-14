@@ -1,4 +1,5 @@
 import { AI_STATE } from '../ecs/components/AIComponent.js';
+import StatusEffectComponent from '../ecs/components/StatusEffectComponent.js';
 import PatrolBehavior from './PatrolBehavior.js';
 import ChaseBehavior from './ChaseBehavior.js';
 import AttackBehavior from './AttackBehavior.js';
@@ -15,15 +16,25 @@ export default class AIController {
   update(entity, ai, pos, vel, combat, entityManager, dt) {
     ai.stateTimer += dt;
 
+    // Stun/freeze/root: skip all AI and zero velocity
+    const se = entity.getComponent(StatusEffectComponent);
+    if (se && (se.hasEffect('stun') || se.hasEffect('freeze') || se.hasEffect('root'))) {
+      vel.dx = 0;
+      vel.dy = 0;
+      return;
+    }
+
     // Horses: flee from players when wild, follow owner when tamed
     if (ai.behavior === 'horse') {
       this._updateHorse(entity, ai, pos, vel, entityManager, dt);
+      this._applySlowEffect(se, vel);
       return;
     }
 
     // Guards target enemies instead of players
     if (ai.behavior === 'guard') {
       this._updateGuard(entity, ai, pos, vel, combat, entityManager, dt);
+      this._applySlowEffect(se, vel);
       return;
     }
 
@@ -60,6 +71,19 @@ export default class AIController {
       case AI_STATE.RETURN:
         this._handleReturn(ai, pos, vel, distToHome, dt);
         break;
+    }
+
+    // Apply slow effects after behavior sets velocity
+    this._applySlowEffect(se, vel);
+  }
+
+  _applySlowEffect(se, vel) {
+    if (se) {
+      const speedMod = se.getSpeedModifier();
+      if (speedMod < 1.0) {
+        vel.dx *= speedMod;
+        vel.dy *= speedMod;
+      }
     }
   }
 

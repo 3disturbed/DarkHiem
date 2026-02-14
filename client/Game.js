@@ -59,6 +59,7 @@ export default class Game {
     this.npcs = new Map();     // id -> npc entity state
     this.wildHorses = new Map(); // id -> wild horse entity state
     this.projectiles = new Map(); // id -> projectile entity state
+    this.damageZones = new Map(); // id -> damage zone entity state
     // Mount state (horse is stored as player flag, not a world entity)
     this.hasHorse = false;
     this.mounted = false;
@@ -1330,6 +1331,18 @@ export default class Game {
             x: entity.x, y: entity.y,
             name: entity.name, color: entity.color, size: entity.size,
           });
+        }
+      } else if (entity.type === 'damage_zone') {
+        if (!this.damageZones.has(id)) {
+          this.damageZones.set(id, {
+            x: entity.x, y: entity.y,
+            radius: entity.radius || 80,
+            zoneType: entity.zoneType || 'fire',
+          });
+        } else {
+          const z = this.damageZones.get(id);
+          z.x = entity.x;
+          z.y = entity.y;
         }
       } else if (entity.type === 'projectile') {
         if (!this.projectiles.has(id)) {

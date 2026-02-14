@@ -25,6 +25,7 @@ export default class StatusEffectComponent extends Component {
       existing.poisonOnHit = effect.poisonOnHit ?? existing.poisonOnHit;
       existing.lifeSteal = effect.lifeSteal ?? existing.lifeSteal;
       existing.thornsReflect = effect.thornsReflect ?? existing.thornsReflect;
+      existing.damageTakenMod = effect.damageTakenMod ?? existing.damageTakenMod;
       return;
     }
     this.effects.push({
@@ -45,6 +46,7 @@ export default class StatusEffectComponent extends Component {
       poisonOnHit: effect.poisonOnHit ?? null,
       lifeSteal: effect.lifeSteal ?? null,
       thornsReflect: effect.thornsReflect ?? null,
+      damageTakenMod: effect.damageTakenMod ?? null,
     });
   }
 
@@ -148,5 +150,13 @@ export default class StatusEffectComponent extends Component {
       if (e.thornsReflect != null) total += e.thornsReflect;
     }
     return Math.min(total, 0.5); // cap at 50%
+  }
+
+  getDamageTakenMod() {
+    let mod = 1.0;
+    for (const e of this.effects) {
+      if (e.damageTakenMod != null) mod *= e.damageTakenMod;
+    }
+    return mod;
   }
 }
