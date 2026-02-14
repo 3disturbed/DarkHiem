@@ -262,6 +262,26 @@ export default class NetworkClient {
       if (this.onHorseUpdate) this.onHorseUpdate(data);
     });
 
+    // Pet system
+    this.socket.on(MSG.PET_CAPTURE_RESULT, (data) => {
+      if (this.onPetCaptureResult) this.onPetCaptureResult(data);
+    });
+    this.socket.on(MSG.PET_TEAM_UPDATE, (data) => {
+      if (this.onPetTeamUpdate) this.onPetTeamUpdate(data);
+    });
+    this.socket.on(MSG.PET_BATTLE_START, (data) => {
+      if (this.onPetBattleStart) this.onPetBattleStart(data);
+    });
+    this.socket.on(MSG.PET_BATTLE_STATE, (data) => {
+      if (this.onPetBattleState) this.onPetBattleState(data);
+    });
+    this.socket.on(MSG.PET_BATTLE_RESULT, (data) => {
+      if (this.onPetBattleResult) this.onPetBattleResult(data);
+    });
+    this.socket.on(MSG.PET_BATTLE_END, (data) => {
+      if (this.onPetBattleEnd) this.onPetBattleEnd(data);
+    });
+
     // Land plots
     this.socket.on(MSG.LAND_PURCHASE, (data) => {
       if (this.onLandPurchase) this.onLandPurchase(data);
@@ -490,6 +510,42 @@ export default class NetworkClient {
   sendHorseDismount() {
     if (!this.connected) return;
     this.socket.emit(MSG.HORSE_DISMOUNT);
+  }
+
+  // Pet system
+  sendPetCapture() {
+    if (!this.connected) return;
+    this.socket.emit(MSG.PET_CAPTURE);
+  }
+
+  sendPetTeamSet(slotIndex, teamIndex) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.PET_TEAM_SET, { slotIndex, teamIndex });
+  }
+
+  sendPetHeal(healItemId, petSlotIndex) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.PET_HEAL, { healItemId, petSlotIndex });
+  }
+
+  sendPetBattleAction(action) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.PET_BATTLE_ACTION, action);
+  }
+
+  sendPetBreedStart(pet1Slot, pet2Slot) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.PET_BREED_START, { pet1Slot, pet2Slot });
+  }
+
+  sendPetBreedCollect() {
+    if (!this.connected) return;
+    this.socket.emit(MSG.PET_BREED_COLLECT, {});
+  }
+
+  sendPetTrain(petSlot) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.PET_TRAIN, { petSlot });
   }
 
   getLocalPlayerState() {

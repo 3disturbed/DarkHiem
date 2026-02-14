@@ -6,7 +6,9 @@ import PositionComponent from '../../ecs/components/PositionComponent.js';
 import CombatComponent from '../../ecs/components/CombatComponent.js';
 import EquipmentComponent from '../../ecs/components/EquipmentComponent.js';
 import InventoryComponent from '../../ecs/components/InventoryComponent.js';
+import PlayerComponent from '../../ecs/components/PlayerComponent.js';
 import { ITEM_DB } from '../../../shared/ItemTypes.js';
+import { PET_DB } from '../../../shared/PetTypes.js';
 
 // Tiles that can be mined with a pickaxe
 export const MINEABLE_TILES = {
@@ -96,6 +98,20 @@ export default class CombatHandler {
     // Block attacks while dead
     const health = entity.getComponent(HealthComponent);
     if (health && !health.isAlive()) return;
+
+    // Block if in pet battle
+    const pc = entity.getComponent(PlayerComponent);
+    if (pc && pc.activeBattle) return;
+
+    // Check if weapon is a pet item → start pet battle instead
+    const equip = entity.getComponent(EquipmentComponent);
+    if (equip) {
+      const weapon = equip.getEquipped('weapon');
+      if (weapon && weapon.isPet) {
+        this._tryStartPetBattle(player, entity);
+        return;
+      }
+    }
 
     // Block if on attack cooldown (prevents tile mining bypass)
     const combat = entity.getComponent(CombatComponent);
@@ -222,6 +238,46 @@ export default class CombatHandler {
         x: tileWorldX, y: tileWorldY,
         killed: false, isResource: true,
       });
+    }
+  }
+
+  _tryStartPetBattle(playerConn, entity) {
+    const pos = entity.getComponent(PositionComponent);
+    if (!pos) return;
+
+    const battleManager = this.gameServer.petBattleManager;
+    if (!battleManager) return;
+
+    // Find nearest enemy within 120px
+    const enemies = this.gameServer.entityManager.getByTag('enemy');
+    let nearest = null;
+    let nearestDist = 120;
+
+    for (const enemy of enemies) {
+      const enemyId = enemy.enemyConfig?.id;
+      if (!enemyId || !PET_DB[enemyId]) continue;
+
+      const ePos = enemy.getComponent(PositionComponent);
+      if (!ePos) continue;
+
+      const dx = ePos.x - pos.x;
+      const dy = ePos.y - pos.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearest = enemy;
+      }
+    }
+
+    if (!nearest) {
+      playerConn.emit(MSG.CHAT_RECEIVE, { message: 'No creature nearby to battle.', sender: 'System' });
+      return;
+    }
+
+    const started = battleManager.startBattle(playerConn, nearest);
+    if (!started) {
+      playerConn.emit(MSG.CHAT_RECEIVE, { message: 'Could not start pet battle.', sender: 'System' });
     }
   }
 }

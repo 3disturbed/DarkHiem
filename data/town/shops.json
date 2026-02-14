@@ -44,7 +44,12 @@
         { "itemId": "berry", "price": 2, "stock": -1 },
         { "itemId": "raw_meat", "price": 5, "stock": -1 },
         { "itemId": "leather", "price": 8, "stock": -1 },
-        { "itemId": "leather_scrap", "price": 4, "stock": -1 }
+        { "itemId": "leather_scrap", "price": 4, "stock": -1 },
+        { "itemId": "wooden_cage", "price": 25, "stock": -1 },
+        { "itemId": "iron_cage", "price": 100, "stock": -1 },
+        { "itemId": "obsidian_cage", "price": 300, "stock": -1 },
+        { "itemId": "pet_salve", "price": 15, "stock": -1 },
+        { "itemId": "pet_feast", "price": 40, "stock": -1 }
       ]
     },
     "innkeeper_shop": {

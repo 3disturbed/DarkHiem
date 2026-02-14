@@ -11,6 +11,7 @@ import ClientTileCollision from './network/ClientTileCollision.js';
 import ClientWorldManager from './world/ClientWorldManager.js';
 import EntityRenderer from './entities/EntityRenderer.js';
 import DamageNumber from './effects/DamageNumber.js';
+import ParticleSystem from './effects/ParticleSystem.js';
 import HealthBar from './ui/HealthBar.js';
 import XpBar from './ui/XpBar.js';
 import InventoryPanel from './ui/InventoryPanel.js';
@@ -35,6 +36,9 @@ import WorldMap from './ui/WorldMap.js';
 import ChestPanel from './ui/ChestPanel.js';
 import FishingRodPanel from './ui/FishingRodPanel.js';
 import ContextMenu from './ui/ContextMenu.js';
+import PetBattlePanel from './ui/PetBattlePanel.js';
+import AnimalPenPanel from './ui/AnimalPenPanel.js';
+import PetTeamPanel from './ui/PetTeamPanel.js';
 import { LAND_PLOTS } from '../shared/LandPlotTypes.js';
 
 export default class Game {
@@ -68,6 +72,7 @@ export default class Game {
 
     // Combat effects
     this.damageNumbers = new DamageNumber();
+    this.particles = new ParticleSystem();
     this.healthBar = new HealthBar();
     this.xpBar = new XpBar();
     this.attackCooldown = 0;
@@ -101,6 +106,13 @@ export default class Game {
     this.fishingRodPanel = new FishingRodPanel();
     this.fishingRodOpen = false;
     this.contextMenu = new ContextMenu();
+    this.petBattlePanel = new PetBattlePanel();
+    this.inPetBattle = false;
+    this.animalPenPanel = new AnimalPenPanel();
+    this.animalPenOpen = false;
+    this.petTeamPanel = new PetTeamPanel();
+    this.petTeamOpen = false;
+    this.petTeam = [null, null, null];
 
     // Fishing state
     this.fishingState = null; // null | 'casting' | 'waiting' | 'bite' | 'reeling'
@@ -166,6 +178,8 @@ export default class Game {
       this.followHorse.initialized = false;
       // Restore land plot ownership
       this.ownedPlots = data.ownedPlots || [];
+      // Restore pet team
+      this.petTeam = data.petTeam || [null, null, null];
       console.log(`[Game] Joined as ${data.name}`);
     };
 
@@ -216,6 +230,7 @@ export default class Game {
         } else {
           this.damageNumbers.add(evt.x, evt.y, evt.damage, evt.isCrit);
         }
+        this.particles.emitHitEffect(evt.x, evt.y, evt);
       }
     };
 
@@ -246,6 +261,18 @@ export default class Game {
         this.fishingRodPanel.close();
         this.fishingRodOpen = false;
         this.contextMenu.close();
+        if (this.inPetBattle) {
+          this.petBattlePanel.close();
+          this.inPetBattle = false;
+        }
+        if (this.animalPenOpen) {
+          this.animalPenPanel.close();
+          this.animalPenOpen = false;
+        }
+        if (this.petTeamOpen) {
+          this.petTeamPanel.close();
+          this.petTeamOpen = false;
+        }
         if (this.mounted) {
           this.network.sendHorseDismount();
           this.mounted = false;
@@ -285,6 +312,8 @@ export default class Game {
     // Inventory/equipment/stats callbacks
     this.network.onInventoryUpdate = (data) => {
       this.inventory.update(data);
+      if (this.animalPenOpen) this.animalPenPanel.refresh(this.inventory);
+      if (this.petTeamOpen) this.petTeamPanel.refresh(this.inventory, this.petTeam);
     };
 
     this.network.onEquipmentUpdate = (data) => {
@@ -322,9 +351,15 @@ export default class Game {
     // Crafting callbacks
     this.network.onInteractResult = (data) => {
       if (data.success && data.type === 'station') {
-        this.craftingPanel.position(this.renderer.logicalWidth, this.renderer.logicalHeight);
-        this.craftingPanel.open(data.stationId, data.stationLevel, data.recipes);
-        this.craftingOpen = true;
+        if (data.stationId === 'animal_pen') {
+          this.animalPenPanel.position(this.renderer.logicalWidth, this.renderer.logicalHeight);
+          this.animalPenPanel.open(this.inventory);
+          this.animalPenOpen = true;
+        } else {
+          this.craftingPanel.position(this.renderer.logicalWidth, this.renderer.logicalHeight);
+          this.craftingPanel.open(data.stationId, data.stationLevel, data.recipes);
+          this.craftingOpen = true;
+        }
       }
     };
 
@@ -394,6 +429,9 @@ export default class Game {
       const def = data.skillId ? SKILL_DB[data.skillId] : null;
       if (def) {
         this.skillBar.flashSkill(def.id);
+      }
+      if (this.localPlayer && data.skillId) {
+        this.particles.emitSkillCast(this.localPlayer.x, this.localPlayer.y, data.skillId);
       }
       if (data.type === 'heal' && data.amount > 0 && this.localPlayer) {
         this.damageNumbers.add(this.localPlayer.x, this.localPlayer.y - 30, 0, false, '#2ecc71', `+${data.amount} HP`);
@@ -590,6 +628,27 @@ export default class Game {
       }
     };
 
+    // Pet team update
+    this.network.onPetTeamUpdate = (data) => {
+      if (data.petTeam) {
+        this.petTeam = [...data.petTeam];
+        if (this.petTeamOpen) this.petTeamPanel.refresh(this.inventory, this.petTeam);
+      }
+    };
+
+    // Pet battle callbacks
+    this.network.onPetBattleStart = (data) => {
+      this.inPetBattle = true;
+      this.petBattlePanel.open(data);
+    };
+    this.network.onPetBattleResult = (data) => {
+      this.petBattlePanel.updateState(data);
+    };
+    this.network.onPetBattleEnd = (data) => {
+      // Keep panel open to show result, close on next Escape
+      this.petBattlePanel.battleEndData = data;
+    };
+
     // Land plot purchase (full registry on join OR individual purchase update)
     this.network.onLandPurchase = (data) => {
       if (data.registry) {
@@ -640,6 +699,37 @@ export default class Game {
     const uiMX = actions.mouseScreenX / s;
     const uiMY = actions.mouseScreenY / s;
 
+    // Pet battle takes over all input when active
+    if (this.inPetBattle) {
+      this.petBattlePanel.update(dt);
+      const kb = this.input.keyboard;
+      // Menu navigation via WASD/arrows (justPressed for discrete taps)
+      if (kb.wasAnyJustPressed(['ArrowLeft', 'KeyA']) || actions.dpadLeft) this.petBattlePanel.selectDir(-1, 0);
+      if (kb.wasAnyJustPressed(['ArrowRight', 'KeyD']) || actions.dpadRight) this.petBattlePanel.selectDir(1, 0);
+      if (kb.wasAnyJustPressed(['ArrowUp', 'KeyW']) || actions.dpadUp) this.petBattlePanel.selectDir(0, -1);
+      if (kb.wasAnyJustPressed(['ArrowDown', 'KeyS']) || actions.dpadDown) this.petBattlePanel.selectDir(0, 1);
+      // Confirm with action (Space/F/click/Enter)
+      if (actions.action || kb.wasJustPressed('Enter')) {
+        if (this.petBattlePanel.battleState?.state === 'ended') {
+          this._closePetBattle();
+        } else {
+          this.petBattlePanel.confirm((action) => {
+            this.network.sendPetBattleAction(action);
+          });
+        }
+      }
+      // Back/close with cancel (Escape)
+      if (actions.cancel) {
+        if (this.petBattlePanel.battleState?.state === 'ended') {
+          this._closePetBattle();
+        } else {
+          this.petBattlePanel.back();
+        }
+      }
+      this.input.postUpdate();
+      return;
+    }
+
     // Death screen
     this.deathScreen.update(dt);
     if (this.isDead) {
@@ -656,6 +746,7 @@ export default class Game {
       // Still update camera/effects but skip gameplay input
       this.camera.update(dt);
       this.damageNumbers.update(dt);
+      this.particles.update(dt);
       this.healthBar.update(dt);
       this.xpBar.update(dt);
       this.input.postUpdate();
@@ -779,14 +870,24 @@ export default class Game {
       }
     }
 
-    // Handle Q key (horse capture / mount / dismount)
+    // Handle Q key (pet capture / horse capture / mount / dismount)
     if (actions.horseAction && !this.placementMode && !this.isDead) {
-      if (this.mounted) {
+      if (this.inPetBattle) {
+        // no-op during pet battle
+      } else if (this.mounted) {
         this.network.sendHorseDismount();
-      } else if (this.hasHorse) {
-        this.network.sendHorseMount();
       } else {
-        this.network.sendHorseCapture();
+        // Cage in inventory → pet capture takes priority over horse mount
+        const hasCage = this.inventory.slots.some(s =>
+          s && (s.itemId === 'wooden_cage' || s.itemId === 'iron_cage' || s.itemId === 'obsidian_cage')
+        );
+        if (hasCage) {
+          this.network.sendPetCapture();
+        } else if (this.hasHorse) {
+          this.network.sendHorseMount();
+        } else {
+          this.network.sendHorseCapture();
+        }
       }
     }
 
@@ -837,6 +938,18 @@ export default class Game {
       }
     }
 
+    // Handle P key (toggle pet team panel)
+    if (actions.petTeam && !this.placementMode) {
+      if (this.petTeamOpen) {
+        this.petTeamPanel.close();
+        this.petTeamOpen = false;
+      } else {
+        this.petTeamPanel.position(r.logicalWidth, r.logicalHeight);
+        this.petTeamPanel.open(this.inventory, this.petTeam);
+        this.petTeamOpen = true;
+      }
+    }
+
     // Toggle world map with M key
     if (actions.map && !this.placementMode) {
       this.worldMap.toggle(this.localPlayer);
@@ -879,6 +992,12 @@ export default class Game {
         this.network.sendDialogEnd(this.dialogPanel.npcId);
         this.dialogPanel.close();
         this.dialogOpen = false;
+      } else if (this.petTeamOpen) {
+        this.petTeamPanel.close();
+        this.petTeamOpen = false;
+      } else if (this.animalPenOpen) {
+        this.animalPenPanel.close();
+        this.animalPenOpen = false;
       } else if (this.shopOpen) {
         this.shopPanel.close();
         this.shopOpen = false;
@@ -1185,8 +1304,32 @@ export default class Game {
       }
     }
 
+    // Handle animal pen panel interaction
+    if (this.animalPenOpen) {
+      this.animalPenPanel.handleMouseMove(uiMX, uiMY);
+      if (actions.action || actions.screenTap) {
+        this.animalPenPanel.handleClick(
+          uiMX, uiMY, this.inventory,
+          (s1, s2) => this.network.sendPetBreedStart(s1, s2),
+          () => this.network.sendPetBreedCollect(),
+          (slot) => this.network.sendPetTrain(slot),
+        );
+      }
+    }
+
+    // Handle pet team panel interaction
+    if (this.petTeamOpen) {
+      this.petTeamPanel.handleMouseMove(uiMX, uiMY);
+      if (actions.action || actions.screenTap) {
+        this.petTeamPanel.handleClick(
+          uiMX, uiMY, this.inventory,
+          (slotIdx, teamIdx) => this.network.sendPetTeamSet(slotIdx, teamIdx),
+        );
+      }
+    }
+
     // Skill bar tap/click handling
-    if ((actions.action || actions.screenTap) && !this.panelsOpen && !this.craftingOpen && !this.upgradeOpen && !this.skillsOpen && !this.placementMode && !this.dialogOpen && !this.questPanelOpen && !this.shopOpen && !this.chestOpen && !this.fishingRodOpen) {
+    if ((actions.action || actions.screenTap) && !this.panelsOpen && !this.craftingOpen && !this.upgradeOpen && !this.skillsOpen && !this.placementMode && !this.dialogOpen && !this.questPanelOpen && !this.shopOpen && !this.chestOpen && !this.fishingRodOpen && !this.animalPenOpen && !this.petTeamOpen) {
       const slot = this.skillBar.handleClick(uiMX, uiMY);
       if (slot >= 0) {
         this.network.sendSkillUse(slot);
@@ -1506,6 +1649,7 @@ export default class Game {
 
     // Update effects
     this.damageNumbers.update(dt);
+    this.particles.update(dt);
     if (this.localPlayer) {
       this.healthBar.setValues(this.localPlayer.hp, this.localPlayer.maxHp);
     }
@@ -1539,6 +1683,7 @@ export default class Game {
     this.renderDamageZones(r);
     this.renderEnemies(r);
     this.renderProjectiles(r);
+    this.particles.render(ctx);
     this.renderPlayers(r);
     this.renderFishingBobber(r);
     this.damageNumbers.render(ctx, r.uiScale);
@@ -1598,6 +1743,18 @@ export default class Game {
       this.fishingRodPanel.render(ctx);
     }
 
+    // Animal pen panel
+    if (this.animalPenOpen) {
+      this.animalPenPanel.position(r.logicalWidth, r.logicalHeight);
+      this.animalPenPanel.render(ctx, this.inventory);
+    }
+
+    // Pet team panel
+    if (this.petTeamOpen) {
+      this.petTeamPanel.position(r.logicalWidth, r.logicalHeight);
+      this.petTeamPanel.render(ctx);
+    }
+
     // Context menu (renders on top of all panels)
     this.contextMenu.render(ctx);
 
@@ -1613,9 +1770,29 @@ export default class Game {
     // World map (full-screen overlay)
     this.worldMap.render(ctx, r.logicalWidth, r.logicalHeight, this.exploredChunks, this.biomeCache, this.localPlayer, this.remotePlayers);
 
+    // Pet battle overlay (renders on top of everything except death screen)
+    if (this.inPetBattle) {
+      this.petBattlePanel.render(ctx, r.logicalWidth, r.logicalHeight);
+    }
+
     // Death screen (renders on top of everything)
     this.deathScreen.render(ctx, r.logicalWidth, r.logicalHeight);
     r.endUI();
+  }
+
+  _closePetBattle() {
+    this.inPetBattle = false;
+    const endData = this.petBattlePanel.battleEndData;
+    this.petBattlePanel.close();
+    // Show result as damage number above player
+    if (endData && this.localPlayer) {
+      if (endData.result === 'win') {
+        this.damageNumbers.add(this.localPlayer.x, this.localPlayer.y - 30, `+${endData.xpGained} Pet XP`, false, '#2ecc71');
+        if (endData.leveledUp) {
+          this.damageNumbers.add(this.localPlayer.x, this.localPlayer.y - 50, 'Pet Level Up!', false, '#f1c40f');
+        }
+      }
+    }
   }
 
   renderWorld(r) {
@@ -1810,11 +1987,17 @@ export default class Game {
       ctx.strokeStyle = borderColor;
       ctx.lineWidth = 2;
       ctx.stroke();
+
+      // Ambient zone particles (world-space coordinates)
+      const zoneColors = { fire: '#e74c3c', ice: '#3498db', lightning: '#f1c40f' };
+      this.particles.zoneAmbient(zone.x, zone.y, zone.radius,
+        zoneColors[zone.zoneType] || '#cccccc', zone.zoneType);
     }
   }
 
   renderProjectiles(r) {
     for (const [id, p] of this.projectiles) {
+      this.particles.emitProjectileTrail(p.x, p.y, p.projectileType);
       EntityRenderer.renderProjectile(
         r, p.x, p.y,
         p.velocityX, p.velocityY,
@@ -1854,7 +2037,8 @@ export default class Game {
       const p = this.localPlayer;
       // Draw horse underneath if mounted
       if (this.mounted) {
-        const localMoving = facing.x !== 0 || facing.y !== 0;
+        const actions = this.input.actions;
+        const localMoving = actions.moveX !== 0 || actions.moveY !== 0;
         EntityRenderer.renderHorse(r, p.x, p.y + 6, '#8B6C42', 30, '', true, null,
           localMoving, facing.x > 0);
       }

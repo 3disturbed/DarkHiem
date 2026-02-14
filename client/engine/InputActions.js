@@ -32,6 +32,7 @@ export default class InputActions {
     this.secondaryAction = false; // right-click / gamepad Y (drop, etc.)
     this.fishingRod = false;
     this.horseAction = false;
+    this.petTeam = false;
     this.dash = false;
 
     // D-pad (for UI navigation)

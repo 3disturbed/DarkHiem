@@ -1,6 +1,16 @@
-// Animated sprite metadata: id -> { frames, frameWidth, frameHeight }
+// Auto-detect animation frames from sprite sheet width (all sprites are 32x32 frames)
+const FRAME_SIZE = 32;
+
+// Returns animation metadata for a loaded sprite, or null if single-frame
+export function getAnimMeta(sprite) {
+  if (!sprite) return null;
+  const frames = Math.floor(sprite.naturalWidth / FRAME_SIZE);
+  if (frames <= 1) return null;
+  return { frames, frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE };
+}
+
+// Legacy export for backward compat (horse renderer uses this)
 export const ANIMATED_SPRITES = {
-  rabbit: { frames: 3, frameWidth: 32, frameHeight: 32 },
   wild_horse: { frames: 3, frameWidth: 32, frameHeight: 32 },
 };
 

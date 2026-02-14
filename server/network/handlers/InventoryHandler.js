@@ -40,11 +40,12 @@ export default class InventoryHandler {
     const itemDef = ITEM_DB[invSlot.itemId];
     if (!itemDef || itemDef.type !== 'equipment') return;
 
-    // Extract extra data from inventory slot (gems, upgrade state)
+    // Extract all extra data from inventory slot (gems, upgrade state, pet data, etc.)
     const extraData = {};
-    if (invSlot.gems) extraData.gems = invSlot.gems;
-    if (invSlot.upgradeLevel) extraData.upgradeLevel = invSlot.upgradeLevel;
-    if (invSlot.upgradeXp) extraData.upgradeXp = invSlot.upgradeXp;
+    for (const key of Object.keys(invSlot)) {
+      if (key === 'itemId' || key === 'count') continue;
+      extraData[key] = invSlot[key];
+    }
 
     // Remove from inventory
     inventory.removeFromSlot(slotIndex, 1);
@@ -55,9 +56,11 @@ export default class InventoryHandler {
     // Put previously equipped item back into inventory (with its extra data)
     if (prev) {
       const prevExtra = {};
-      if (prev.gems && prev.gems.length > 0) prevExtra.gems = prev.gems;
-      if (prev.upgradeLevel) prevExtra.upgradeLevel = prev.upgradeLevel;
-      if (prev.upgradeXp) prevExtra.upgradeXp = prev.upgradeXp;
+      const prevDef = ITEM_DB[prev.id] || {};
+      for (const key of Object.keys(prev)) {
+        if (key in prevDef) continue;
+        prevExtra[key] = prev[key];
+      }
       inventory.addItem(prev.id, 1, Object.keys(prevExtra).length > 0 ? prevExtra : null);
     }
 
@@ -83,9 +86,11 @@ export default class InventoryHandler {
 
     equipment.unequip(slotName);
     const extraData = {};
-    if (equipped.gems && equipped.gems.length > 0) extraData.gems = equipped.gems;
-    if (equipped.upgradeLevel) extraData.upgradeLevel = equipped.upgradeLevel;
-    if (equipped.upgradeXp) extraData.upgradeXp = equipped.upgradeXp;
+    const baseDef = ITEM_DB[equipped.id] || {};
+    for (const key of Object.keys(equipped)) {
+      if (key in baseDef) continue;
+      extraData[key] = equipped[key];
+    }
     inventory.addItem(equipped.id, 1, Object.keys(extraData).length > 0 ? extraData : null);
 
     this.sendFullUpdate(player, entity);

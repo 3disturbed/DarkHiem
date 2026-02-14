@@ -15,6 +15,9 @@ import ShopHandler from './network/handlers/ShopHandler.js';
 import ChestHandler from './network/handlers/ChestHandler.js';
 import FishingHandler from './network/handlers/FishingHandler.js';
 import HorseHandler from './network/handlers/HorseHandler.js';
+import PetHandler from './network/handlers/PetHandler.js';
+import PetBattleManager from './pet/PetBattleManager.js';
+import PetBreedingManager from './pet/PetBreedingManager.js';
 import QuestComponent from './ecs/components/QuestComponent.js';
 import EntityManager from './ecs/EntityManager.js';
 import SystemManager from './ecs/SystemManager.js';
@@ -131,6 +134,15 @@ export default class GameServer {
 
     const horseHandler = new HorseHandler(this);
     horseHandler.register(this.messageRouter);
+
+    const petHandler = new PetHandler(this);
+    petHandler.register(this.messageRouter);
+
+    this.petBattleManager = new PetBattleManager(this);
+    this.petBattleManager.register(this.messageRouter);
+
+    this.petBreedingManager = new PetBreedingManager(this);
+    this.petBreedingManager.register(this.messageRouter);
 
     this.landPlotHandler = new LandPlotHandler(this);
     this.landPlotHandler.register(this.messageRouter);
@@ -758,6 +770,7 @@ export default class GameServer {
       y: spawnY,
       hasHorse: joinPc ? joinPc.hasHorse : false,
       ownedPlots: joinPc ? (joinPc.ownedPlots || []) : [],
+      petTeam: joinPc ? (joinPc.petTeam || [null, null, null]) : [null, null, null],
     });
 
     // Send current land plot registry
@@ -881,6 +894,7 @@ export default class GameServer {
       quests: quests ? quests.serialize() : null,
       hasHorse: pc ? pc.hasHorse : false,
       ownedPlots: pc ? (pc.ownedPlots || []) : [],
+      petTeam: pc ? (pc.petTeam || [null, null, null]) : [null, null, null],
     };
 
     await this.playerRepo.save(playerConn.id, data);
@@ -982,6 +996,12 @@ export default class GameServer {
     if (saveData.ownedPlots && saveData.ownedPlots.length > 0) {
       const pc = entity.getComponent(PlayerComponent);
       if (pc) pc.ownedPlots = saveData.ownedPlots;
+    }
+
+    // Restore pet team
+    if (saveData.petTeam) {
+      const pc = entity.getComponent(PlayerComponent);
+      if (pc) pc.petTeam = saveData.petTeam;
     }
   }
 

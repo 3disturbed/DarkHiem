@@ -1158,6 +1158,43 @@ export const ITEM_DB = {
     description: 'A rope lasso for capturing wild horses.',
   },
 
+  // --- Pet Cages ---
+  wooden_cage: {
+    id: 'wooden_cage', name: 'Wooden Cage', type: 'material', stackable: true, maxStack: 10,
+    cageTier: 0,
+    description: 'A simple cage for capturing meadow creatures.',
+  },
+  iron_cage: {
+    id: 'iron_cage', name: 'Iron Cage', type: 'material', stackable: true, maxStack: 10,
+    cageTier: 2,
+    description: 'A sturdy cage for capturing creatures up to swamp tier.',
+  },
+  obsidian_cage: {
+    id: 'obsidian_cage', name: 'Obsidian Cage', type: 'material', stackable: true, maxStack: 10,
+    cageTier: 4,
+    description: 'An indestructible cage for capturing any creature.',
+  },
+
+  // --- Pet Equipment ---
+  pet_item: {
+    id: 'pet_item', name: 'Captured Pet', type: 'equipment', slot: 'weapon',
+    isPet: true, stackable: false,
+    statBonuses: { baseDamage: 0 }, tier: 0, rarity: 'common', gemSlots: 0,
+    description: 'A captured creature. Equip to initiate pet battles.',
+  },
+
+  // --- Pet Consumables ---
+  pet_salve: {
+    id: 'pet_salve', name: 'Pet Salve', type: 'consumable', stackable: true, maxStack: 20,
+    effect: { petHeal: 0.5 },
+    description: 'Heals a pet for 50% of its max HP.',
+  },
+  pet_feast: {
+    id: 'pet_feast', name: 'Pet Feast', type: 'consumable', stackable: true, maxStack: 20,
+    effect: { petHeal: 1.0 },
+    description: 'Fully heals a pet to max HP.',
+  },
+
   // ============================================================
   //  CONSUMABLES
   // ============================================================

@@ -145,4 +145,19 @@ export const MSG = {
   BIOME_UNLOCK:       'world:biome_unlock',
   TIME_UPDATE:        'world:time',
   WEATHER_UPDATE:     'world:weather',
+
+  // Pet system
+  PET_CAPTURE:        'pet:capture',
+  PET_CAPTURE_RESULT: 'pet:capture:result',
+  PET_BATTLE_START:   'pet:battle:start',
+  PET_BATTLE_STATE:   'pet:battle:state',
+  PET_BATTLE_ACTION:  'pet:battle:action',
+  PET_BATTLE_RESULT:  'pet:battle:result',
+  PET_BATTLE_END:     'pet:battle:end',
+  PET_TEAM_UPDATE:    'pet:team:update',
+  PET_TEAM_SET:       'pet:team:set',
+  PET_HEAL:           'pet:heal',
+  PET_BREED_START:    'pet:breed:start',
+  PET_BREED_COLLECT:  'pet:breed:collect',
+  PET_TRAIN:          'pet:train',
 };

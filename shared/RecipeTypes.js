@@ -72,10 +72,10 @@ export const RECIPE_DB = {
 
   // --- Arrows & wooden bows ---
   arrow: {
-    id: 'arrow', name: 'Arrows (10)',
+    id: 'arrow', name: 'Arrows (100)',
     station: 'workbench', stationLevel: 1,
     ingredients: [{ itemId: 'stick', count: 2 }, { itemId: 'stone', count: 1 }],
-    results: [{ itemId: 'arrow', count: 10 }],
+    results: [{ itemId: 'arrow', count: 100 }],
   },
   wooden_bow: {
     id: 'wooden_bow', name: 'Wooden Bow',
@@ -1611,6 +1611,57 @@ export const RECIPE_DB = {
       { itemId: 'bronze_ingot', count: 1 },
     ],
     results: [{ itemId: 'lucky_charm', count: 1 }],
+  },
+
+  // ============================================================
+  //  PET SYSTEM recipes
+  // ============================================================
+
+  // --- Cages ---
+  wooden_cage: {
+    id: 'wooden_cage', name: 'Wooden Cage',
+    station: 'workbench', stationLevel: 2,
+    ingredients: [{ itemId: 'wood', count: 5 }, { itemId: 'linen_thread', count: 3 }],
+    results: [{ itemId: 'wooden_cage', count: 1 }],
+  },
+  iron_cage: {
+    id: 'iron_cage', name: 'Iron Cage',
+    station: 'forge', stationLevel: 2,
+    ingredients: [{ itemId: 'steel_ingot', count: 3 }, { itemId: 'bronze_nails', count: 5 }],
+    results: [{ itemId: 'iron_cage', count: 1 }],
+  },
+  obsidian_cage: {
+    id: 'obsidian_cage', name: 'Obsidian Cage',
+    station: 'forge', stationLevel: 4,
+    ingredients: [{ itemId: 'obsidian_plate', count: 2 }, { itemId: 'arcane_essence', count: 3 }],
+    results: [{ itemId: 'obsidian_cage', count: 1 }],
+  },
+
+  // --- Animal Pen (placeable station) ---
+  build_animal_pen: {
+    id: 'build_animal_pen', name: 'Build Animal Pen',
+    station: 'workbench', stationLevel: 2,
+    ingredients: [
+      { itemId: 'oak_plank', count: 10 },
+      { itemId: 'bronze_nails', count: 8 },
+      { itemId: 'cured_leather', count: 4 },
+    ],
+    results: [],
+    placesStation: 'animal_pen',
+  },
+
+  // --- Pet Food ---
+  pet_salve: {
+    id: 'pet_salve', name: 'Pet Salve',
+    station: 'cooking_fire', stationLevel: 1,
+    ingredients: [{ itemId: 'berries', count: 3 }, { itemId: 'raw_meat', count: 2 }],
+    results: [{ itemId: 'pet_salve', count: 1 }],
+  },
+  pet_feast: {
+    id: 'pet_feast', name: 'Pet Feast',
+    station: 'cooking_fire', stationLevel: 1,
+    ingredients: [{ itemId: 'cooked_meat', count: 2 }, { itemId: 'mushroom', count: 2 }, { itemId: 'berries', count: 3 }],
+    results: [{ itemId: 'pet_feast', count: 1 }],
   },
 };
 

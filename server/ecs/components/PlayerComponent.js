@@ -13,5 +13,7 @@ export default class PlayerComponent extends Component {
     this.hasHorse = false;  // player owns a captured horse
     this.mounted = false;   // currently riding the horse
     this.ownedPlots = [];   // array of land plot IDs owned by this player
+    this.petTeam = [null, null, null]; // inventory slot indices for pet team
+    this.activeBattle = null; // reference to active PetBattle instance
   }
 }

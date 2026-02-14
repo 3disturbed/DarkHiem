@@ -7,6 +7,7 @@ export const STATION_TYPE = {
   GEM_TABLE: 'gem_table',
   ARCANE_TABLE: 'arcane_table',
   KILN: 'kiln',
+  ANIMAL_PEN: 'animal_pen',
 };
 
 export const STATION_DB = {
@@ -134,6 +135,16 @@ export const STATION_DB = {
     isChest: true,
     chestSlots: 120,
     sprite: 'obsidian_vault',
+  },
+  animal_pen: {
+    id: 'animal_pen',
+    name: 'Animal Pen',
+    type: STATION_TYPE.ANIMAL_PEN,
+    maxLevel: 1,
+    color: '#8B4513',
+    size: 48,
+    interactRange: 80,
+    sprite: 'animal_pen',
   },
 };
 

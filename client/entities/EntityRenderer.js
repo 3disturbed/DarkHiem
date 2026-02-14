@@ -1,6 +1,6 @@
 import { PLAYER_SIZE } from '../../shared/Constants.js';
 import stationSprites from './StationSprites.js';
-import enemySprites, { ANIMATED_SPRITES } from './EnemySprites.js';
+import enemySprites, { ANIMATED_SPRITES, getAnimMeta } from './EnemySprites.js';
 import npcSprites from './NPCSprites.js';
 import playerSprites from './PlayerSprites.js';
 
@@ -60,16 +60,15 @@ export default class EntityRenderer {
     // Try sprite first
     const sprite = enemyId ? enemySprites.get(enemyId) : null;
     if (sprite) {
-      const animMeta = enemyId ? ANIMATED_SPRITES[enemyId] : null;
+      const animMeta = getAnimMeta(sprite);
+      const dx = Math.round(x - half);
+      const dy = Math.round(y - half);
       if (animMeta) {
-        // Animated sprite: pick frame based on movement state
+        // Animated sprite sheet: animate when moving, freeze frame 0 when still
         const isMoving = aiState === 'patrol' || aiState === 'chase' || aiState === 'flee';
         const frame = isMoving ? Math.floor((Date.now() / 150) % animMeta.frames) : 0;
         const sx = frame * animMeta.frameWidth;
-        const dx = Math.round(x - half);
-        const dy = Math.round(y - half);
         if (facingRight) {
-          // Flip horizontally: translate to center, scale -1, draw offset
           ctx.save();
           ctx.translate(Math.round(x), 0);
           ctx.scale(-1, 1);
@@ -81,7 +80,8 @@ export default class EntityRenderer {
             dx, dy, size, size);
         }
       } else {
-        ctx.drawImage(sprite, Math.round(x - half), Math.round(y - half), size, size);
+        // Single-frame sprite
+        ctx.drawImage(sprite, dx, dy, size, size);
       }
     } else {
       // Fallback: colored rectangle

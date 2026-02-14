@@ -2,7 +2,10 @@ import System from '../System.js';
 import EntityFactory from '../EntityFactory.js';
 import PositionComponent from '../components/PositionComponent.js';
 import PlayerComponent from '../components/PlayerComponent.js';
+import AIComponent from '../components/AIComponent.js';
+import NameComponent from '../components/NameComponent.js';
 import { CHUNK_PIXEL_SIZE, VIEW_DISTANCE } from '../../../shared/Constants.js';
+import { PET_DB, PET_PASSIVE_VARIANT_CHANCE } from '../../../shared/PetTypes.js';
 
 const SPAWN_CHECK_INTERVAL = 5; // seconds between spawn checks
 const MAX_ENEMIES_PER_CHUNK = 6;
@@ -85,6 +88,19 @@ export default class SpawnSystem extends System {
         const shuffled = [...enemySpawns].sort(() => Math.random() - 0.5);
         for (let i = 0; i < Math.min(toSpawn, shuffled.length); i++) {
           const enemy = EntityFactory.createEnemy(shuffled[i]);
+
+          // 5% chance to spawn as passive variant if creature is in PET_DB
+          const enemyId = shuffled[i].config?.id;
+          if (enemyId && PET_DB[enemyId] && Math.random() < PET_PASSIVE_VARIANT_CHANCE) {
+            const ai = enemy.getComponent(AIComponent);
+            const nameComp = enemy.getComponent(NameComponent);
+            if (ai && ai.behavior !== 'wander' && ai.behavior !== 'passive') {
+              ai.behavior = 'wander';
+              enemy.isPassiveVariant = true;
+              if (nameComp) nameComp.name = `★ ${nameComp.name}`;
+            }
+          }
+
           entityManager.add(enemy);
         }
       }

@@ -1,4 +1,6 @@
 import { ITEM_DB, RARITY_COLORS } from '../../shared/ItemTypes.js';
+import { PET_DB, getPetStats } from '../../shared/PetTypes.js';
+import { SKILL_DB } from '../../shared/SkillTypes.js';
 import itemSprites from '../entities/ItemSprites.js';
 
 // Layout constants
@@ -255,6 +257,7 @@ export default class InventoryPanel {
         upgradeLevel: slot.upgradeLevel || 0,
         gems: slot.gems || [],
         upgradeXp: slot.upgradeXp || 0,
+        petNickname: def.isPet ? (slot.nickname || PET_DB[slot.petId]?.name || null) : null,
       });
     }
     // Sort: equipment first (by slot), then materials, consumables, gems; alphabetical within
@@ -460,7 +463,7 @@ export default class InventoryPanel {
 
       // Item name (shifted right to accommodate icon)
       const nameX = pipX + 6;
-      let displayName = item.def.name;
+      let displayName = item.petNickname || item.def.name;
       if (item.upgradeLevel > 0) displayName += ` +${item.upgradeLevel}`;
       ctx.fillStyle = rarityColor;
       ctx.font = '10px monospace';
@@ -530,7 +533,7 @@ export default class InventoryPanel {
     }
 
     // Name (offset right if icon present)
-    let name = def.name;
+    let name = item.petNickname || def.name;
     if (item.upgradeLevel > 0) name += ` +${item.upgradeLevel}`;
     ctx.fillStyle = RARITY_COLORS[def.rarity] || '#fff';
     ctx.font = 'bold 12px monospace';
@@ -608,6 +611,46 @@ export default class InventoryPanel {
       lineY += lineH;
     }
 
+    // Pet info
+    if (def.isPet && slot.petId) {
+      const petDef = PET_DB[slot.petId];
+      if (petDef) {
+        ctx.fillStyle = petDef.color || '#d2b4de';
+        ctx.font = 'bold 10px monospace';
+        ctx.fillText(`${slot.isRare ? '★ ' : ''}${petDef.name}  Lv.${slot.level || 1}`, lx, lineY);
+        lineY += lineH;
+
+        const stats = getPetStats(slot.petId, slot.level || 1);
+        ctx.fillStyle = '#8cf';
+        ctx.font = '10px monospace';
+        ctx.fillText(`HP: ${slot.currentHp ?? 0}/${slot.maxHp ?? stats.hp}`, lx, lineY);
+        lineY += lineH;
+        ctx.fillText(`ATK: ${stats.attack}  DEF: ${stats.defense}`, lx, lineY);
+        lineY += lineH;
+        ctx.fillText(`SPD: ${stats.speed}  SPC: ${stats.special}`, lx, lineY);
+        lineY += lineH;
+
+        if (slot.learnedSkills && slot.learnedSkills.length > 0) {
+          ctx.fillStyle = '#d2b4de';
+          ctx.fillText('Skills:', lx, lineY);
+          lineY += lineH;
+          ctx.fillStyle = '#aaa';
+          for (const sk of slot.learnedSkills) {
+            const skName = SKILL_DB[sk]?.name || sk;
+            ctx.fillText(`  ${skName}`, lx, lineY);
+            lineY += lineH;
+          }
+        }
+
+        if (slot.fainted) {
+          ctx.fillStyle = '#e74c3c';
+          ctx.font = 'bold 10px monospace';
+          ctx.fillText('FAINTED', lx, lineY);
+          lineY += lineH;
+        }
+      }
+    }
+
     // Gem sockets
     if (def.gemSlots > 0) {
       const gems = slot.gems || [];
@@ -643,6 +686,12 @@ export default class InventoryPanel {
       ctx.fillStyle = '#2ecc71';
       ctx.font = '10px monospace';
       ctx.fillText(`Heals ${def.effect.healAmount} HP`, lx, lineY);
+      lineY += lineH;
+    }
+    if (def.effect && def.effect.petHeal) {
+      ctx.fillStyle = '#d2b4de';
+      ctx.font = '10px monospace';
+      ctx.fillText(`Pet Heal: ${Math.floor(def.effect.petHeal * 100)}% HP`, lx, lineY);
       lineY += lineH;
     }
 

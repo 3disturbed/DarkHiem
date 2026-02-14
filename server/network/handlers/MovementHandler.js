@@ -23,6 +23,10 @@ export default class MovementHandler {
     const health = entity.getComponent(HealthComponent);
     if (health && !health.isAlive()) return;
 
+    // Block movement during pet battle
+    const pc = entity.getComponent(PlayerComponent);
+    if (pc && pc.activeBattle) return;
+
     // Client-authoritative: accept position directly
     const pos = entity.getComponent(PositionComponent);
     if (pos && typeof data.x === 'number' && typeof data.y === 'number') {
@@ -40,7 +44,6 @@ export default class MovementHandler {
     }
 
     // Update facing direction from client
-    const pc = entity.getComponent(PlayerComponent);
     if (pc) {
       if (data.facing) {
         pc.facing = data.facing;
