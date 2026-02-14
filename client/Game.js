@@ -770,6 +770,7 @@ export default class Game {
 
     // Sorting minigame takes over input when active
     if (this.inSorting || this.sortingPanel.visible) {
+      this.sortingPanel.update(dt);
       const kb = this.input.keyboard;
 
       if (this.inSorting) {

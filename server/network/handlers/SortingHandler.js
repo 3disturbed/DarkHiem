@@ -110,7 +110,8 @@ export default class SortingHandler {
     // Check if correct gate for this package's color
     const correctGate = session.gateColors.indexOf(targetPkg.color) + 1;
 
-    if (gate === correctGate) {
+    const isCorrect = gate === correctGate;
+    if (isCorrect) {
       session.score += SCORE_CORRECT;
       session.correctSorts++;
     } else {
@@ -121,8 +122,13 @@ export default class SortingHandler {
     // Remove the sorted package
     session.packages = session.packages.filter(p => p.id !== targetPkg.id);
 
-    // Send state update
-    this._sendState(session);
+    // Send state update with feedback
+    this._sendState(session, {
+      type: isCorrect ? 'correct' : 'incorrect',
+      gate,
+      packageColor: targetPkg.color,
+      scoreChange: isCorrect ? SCORE_CORRECT : SCORE_INCORRECT,
+    });
   }
 
   // Called from game loop
@@ -162,13 +168,15 @@ export default class SortingHandler {
         }
       }
 
+      let missedFeedback = null;
       if (toRemove.length > 0) {
         session.packages = session.packages.filter(p => !toRemove.includes(p.id));
+        missedFeedback = { type: 'missed', count: toRemove.length, scoreChange: SCORE_MISSED * toRemove.length };
       }
 
       // Send periodic state updates (every ~0.25s to keep it smooth)
       if (Math.floor(session.timer * 4) !== Math.floor((session.timer - dt) * 4)) {
-        this._sendState(session);
+        this._sendState(session, missedFeedback);
       }
     }
   }
@@ -197,8 +205,8 @@ export default class SortingHandler {
     });
   }
 
-  _sendState(session) {
-    session.playerConn.emit(MSG.SORT_STATE, {
+  _sendState(session, feedback) {
+    const msg = {
       score: session.score,
       timer: Math.floor(session.timer),
       timeLeft: Math.max(0, GAME_DURATION - Math.floor(session.timer)),
@@ -208,7 +216,9 @@ export default class SortingHandler {
         number: p.number,
         position: p.position,
       })),
-    });
+    };
+    if (feedback) msg.feedback = feedback;
+    session.playerConn.emit(MSG.SORT_STATE, msg);
   }
 
   _endSession(session) {

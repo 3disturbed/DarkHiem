@@ -1,12 +1,17 @@
 const COLOR_NAMES = ['', 'Red', 'Blue', 'Green', 'Yellow'];
 const COLOR_HEX = ['', '#e74c3c', '#3498db', '#2ecc71', '#f1c40f'];
+const COLOR_DIM = ['', '#a03028', '#2670a0', '#1f8f4e', '#b08a10'];
 const GATE_KEYS = ['', 'W', 'A', 'S', 'D'];
+
+const FLASH_DURATION = 0.45; // seconds
+const SCORE_POP_DURATION = 0.8;
 
 export default class SortingPanel {
   constructor() {
     this.visible = false;
     this.active = false;
     this.score = 0;
+    this.displayScore = 0; // for smooth score counter
     this.timeLeft = 180;
     this.packages = []; // { id, color, number, position }
     this.gateColors = [1, 2, 3, 4];
@@ -17,41 +22,100 @@ export default class SortingPanel {
     // Layout
     this.x = 0;
     this.y = 0;
-    this.width = 300;
-    this.height = 460;
+    this.width = 320;
+    this.height = 480;
 
     // Conveyor visual
     this.conveyorX = 0;
     this.conveyorY = 0;
-    this.conveyorW = 80;
+    this.conveyorW = 86;
     this.conveyorH = 360;
+
+    // Animation
+    this.animTime = 0;
+    this.conveyorOffset = 0; // scrolling belt lines
+
+    // Feedback flash
+    this.flash = null; // { type: 'correct'|'incorrect'|'missed', timer, scoreChange }
+    this.scorePopups = []; // [{ text, color, timer, x, y }]
+
+    // Gate press highlight
+    this.gateFlash = [0, 0, 0, 0]; // per-gate flash timers
+
+    // Streak tracking
+    this.streak = 0;
+    this.bestStreak = 0;
   }
 
   start(data) {
-    // data = { duration, gateColors, conveyorLength, sortZone }
     this.visible = true;
     this.active = true;
     this.score = 0;
+    this.displayScore = 0;
     this.timeLeft = data.duration || 180;
     this.packages = [];
     this.gateColors = data.gateColors || [1, 2, 3, 4];
     this.conveyorLength = data.conveyorLength || 10;
     this.sortZone = data.sortZone || 9;
     this.results = null;
+    this.flash = null;
+    this.scorePopups = [];
+    this.gateFlash = [0, 0, 0, 0];
+    this.animTime = 0;
+    this.conveyorOffset = 0;
+    this.streak = 0;
+    this.bestStreak = 0;
   }
 
   updateState(data) {
-    // data = { score, timer, timeLeft, packages: [{ id, color, number, position }] }
     if (!this.active) return;
     this.score = data.score;
     this.timeLeft = data.timeLeft;
     this.packages = data.packages || [];
+
+    // Handle feedback
+    if (data.feedback) {
+      const fb = data.feedback;
+      this.flash = { type: fb.type, timer: FLASH_DURATION };
+
+      if (fb.type === 'correct') {
+        this.streak++;
+        if (this.streak > this.bestStreak) this.bestStreak = this.streak;
+        // Flash the gate that was pressed
+        if (fb.gate >= 1 && fb.gate <= 4) {
+          this.gateFlash[fb.gate - 1] = FLASH_DURATION;
+        }
+        const label = this.streak > 2 ? `+${fb.scoreChange} x${this.streak}` : `+${fb.scoreChange}`;
+        this._addScorePop(label, '#4eff7a');
+      } else if (fb.type === 'incorrect') {
+        this.streak = 0;
+        if (fb.gate >= 1 && fb.gate <= 4) {
+          this.gateFlash[fb.gate - 1] = FLASH_DURATION;
+        }
+        this._addScorePop(`${fb.scoreChange}`, '#ff4444');
+      } else if (fb.type === 'missed') {
+        this.streak = 0;
+        this._addScorePop(`${fb.scoreChange}`, '#ff8844');
+      }
+    }
+  }
+
+  _addScorePop(text, color) {
+    // Position near the sort zone
+    const sortZoneY = this.conveyorY + (this.sortZone / this.conveyorLength) * this.conveyorH;
+    this.scorePopups.push({
+      text,
+      color,
+      timer: SCORE_POP_DURATION,
+      x: this.conveyorX + this.conveyorW / 2,
+      y: sortZoneY - 20,
+    });
   }
 
   end(data) {
-    // data = { finalScore, gold, correct, incorrect, missed, duration }
     this.active = false;
     this.results = data;
+    this.results.bestStreak = this.bestStreak;
   }
 
   close() {
@@ -59,203 +123,593 @@ export default class SortingPanel {
     this.active = false;
     this.results = null;
     this.packages = [];
+    this.flash = null;
+    this.scorePopups = [];
   }
 
   position(screenWidth, screenHeight) {
     this.x = (screenWidth - this.width) / 2;
     this.y = (screenHeight - this.height) / 2;
-    this.conveyorX = this.x + 40;
-    this.conveyorY = this.y + 60;
+    this.conveyorX = this.x + 32;
+    this.conveyorY = this.y + 72;
+  }
+
+  update(dt) {
+    this.animTime += dt;
+    this.conveyorOffset = (this.conveyorOffset + dt * 40) % 24;
+
+    // Smooth score counter
+    if (this.displayScore !== this.score) {
+      const diff = this.score - this.displayScore;
+      const step = Math.sign(diff) * Math.max(1, Math.abs(diff) * dt * 8);
+      if (Math.abs(diff) < 2) {
+        this.displayScore = this.score;
+      } else {
+        this.displayScore += step;
+      }
+    }
+
+    // Update flash
+    if (this.flash) {
+      this.flash.timer -= dt;
+      if (this.flash.timer <= 0) this.flash = null;
+    }
+
+    // Update gate flashes
+    for (let i = 0; i < 4; i++) {
+      if (this.gateFlash[i] > 0) this.gateFlash[i] = Math.max(0, this.gateFlash[i] - dt);
+    }
+
+    // Update score popups
+    for (let i = this.scorePopups.length - 1; i >= 0; i--) {
+      this.scorePopups[i].timer -= dt;
+      this.scorePopups[i].y -= dt * 30; // float upward
+      if (this.scorePopups[i].timer <= 0) {
+        this.scorePopups.splice(i, 1);
+      }
+    }
   }
 
   handleClick(mx, my) {
     if (!this.visible) return null;
-
-    // If showing results, click anywhere to close
-    if (this.results) {
-      return { action: 'close' };
-    }
-
+    if (this.results) return { action: 'close' };
     return null;
   }
 
   render(ctx) {
     if (!this.visible) return;
 
-    // Background
-    ctx.fillStyle = 'rgba(15, 15, 25, 0.96)';
+    ctx.save();
+
+    // Panel shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(this.x + 4, this.y + 4, this.width, this.height);
+
+    // Background with gradient feel (two-tone)
+    ctx.fillStyle = 'rgba(12, 12, 22, 0.97)';
     ctx.fillRect(this.x, this.y, this.width, this.height);
 
-    // Border
+    // Inner panel subtle gradient
+    ctx.fillStyle = 'rgba(30, 28, 45, 0.5)';
+    ctx.fillRect(this.x + 2, this.y + 2, this.width - 4, 50);
+
+    // Outer border
     ctx.strokeStyle = '#d4883e';
     ctx.lineWidth = 2;
     ctx.strokeRect(this.x, this.y, this.width, this.height);
 
+    // Inner border accent
+    ctx.strokeStyle = 'rgba(212, 136, 62, 0.25)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(this.x + 3, this.y + 3, this.width - 6, this.height - 6);
+
     if (this.results) {
       this._renderResults(ctx);
+      ctx.restore();
       return;
     }
 
-    // Title
+    // === FLASH OVERLAY ===
+    if (this.flash) {
+      const alpha = (this.flash.timer / FLASH_DURATION) * 0.3;
+      if (this.flash.type === 'correct') {
+        ctx.fillStyle = `rgba(46, 255, 100, ${alpha})`;
+      } else if (this.flash.type === 'incorrect') {
+        ctx.fillStyle = `rgba(255, 50, 50, ${alpha})`;
+      } else {
+        ctx.fillStyle = `rgba(255, 140, 40, ${alpha})`;
+      }
+      ctx.fillRect(this.x + 1, this.y + 1, this.width - 2, this.height - 2);
+    }
+
+    // === TITLE BAR ===
     ctx.fillStyle = '#d4883e';
-    ctx.font = 'bold 13px monospace';
+    ctx.font = 'bold 14px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('Package Sorting', this.x + this.width / 2, this.y + 20);
+    ctx.fillText('\u2709 Package Sorting', this.x + this.width / 2, this.y + 22);
 
-    // Score and timer
-    ctx.fillStyle = '#ffd700';
-    ctx.font = 'bold 12px monospace';
+    // Decorative line under title
+    const titleLineY = this.y + 30;
+    ctx.strokeStyle = 'rgba(212, 136, 62, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(this.x + 20, titleLineY);
+    ctx.lineTo(this.x + this.width - 20, titleLineY);
+    ctx.stroke();
+
+    // === SCORE AND TIMER ===
+    // Score (left)
     ctx.textAlign = 'left';
-    ctx.fillText(`Score: ${this.score}`, this.x + 12, this.y + 44);
+    ctx.font = 'bold 12px monospace';
+    ctx.fillStyle = '#ffd700';
+    ctx.fillText(`\u2605 ${Math.round(this.displayScore)}`, this.x + 12, this.y + 48);
 
-    ctx.textAlign = 'right';
+    // Streak indicator
+    if (this.streak > 1) {
+      ctx.fillStyle = '#4eff7a';
+      ctx.font = 'bold 10px monospace';
+      ctx.fillText(`x${this.streak}`, this.x + 80, this.y + 48);
+    }
+
+    // Timer (right) with color warning
     const mins = Math.floor(this.timeLeft / 60);
     const secs = this.timeLeft % 60;
     const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
-    ctx.fillText(timeStr, this.x + this.width - 12, this.y + 44);
+    ctx.textAlign = 'right';
+    ctx.font = 'bold 12px monospace';
+    if (this.timeLeft <= 30) {
+      // Pulsing red for low time
+      const pulse = 0.5 + 0.5 * Math.sin(this.animTime * 6);
+      ctx.fillStyle = `rgba(255, ${Math.floor(60 * pulse)}, ${Math.floor(60 * pulse)}, 1)`;
+    } else if (this.timeLeft <= 60) {
+      ctx.fillStyle = '#ffaa33';
+    } else {
+      ctx.fillStyle = '#aaeeff';
+    }
+    ctx.fillText(timeStr, this.x + this.width - 12, this.y + 48);
 
-    // Conveyor belt
+    // === TIME PROGRESS BAR ===
+    const barX = this.x + 12;
+    const barY = this.y + 54;
+    const barW = this.width - 24;
+    const barH = 4;
+    const totalDuration = 180;
+    const progress = Math.max(0, this.timeLeft / totalDuration);
+
+    ctx.fillStyle = 'rgba(40, 40, 60, 0.8)';
+    ctx.fillRect(barX, barY, barW, barH);
+
+    let barColor;
+    if (this.timeLeft <= 30) barColor = '#e74c3c';
+    else if (this.timeLeft <= 60) barColor = '#f39c12';
+    else barColor = '#3498db';
+
+    ctx.fillStyle = barColor;
+    ctx.fillRect(barX, barY, barW * progress, barH);
+
+    // Bar border
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX, barY, barW, barH);
+
+    // === CONVEYOR BELT ===
     const cx = this.conveyorX;
     const cy = this.conveyorY;
     const cw = this.conveyorW;
     const ch = this.conveyorH;
 
+    // Conveyor track sides (rails)
+    ctx.fillStyle = '#3a3a50';
+    ctx.fillRect(cx - 4, cy - 2, 4, ch + 4);
+    ctx.fillRect(cx + cw, cy - 2, 4, ch + 4);
+
     // Conveyor background
-    ctx.fillStyle = 'rgba(60, 60, 80, 0.6)';
+    ctx.fillStyle = 'rgba(45, 45, 65, 0.8)';
     ctx.fillRect(cx, cy, cw, ch);
 
-    // Conveyor border
-    ctx.strokeStyle = '#555';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(cx, cy, cw, ch);
-
-    // Sort zone marker
-    const sortZoneY = cy + (this.sortZone / this.conveyorLength) * ch;
-    ctx.fillStyle = 'rgba(255, 215, 0, 0.2)';
-    ctx.fillRect(cx, sortZoneY - 18, cw, 36);
-    ctx.strokeStyle = '#ffd700';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 4]);
+    // Animated belt lines (chevrons scrolling down)
+    ctx.save();
     ctx.beginPath();
-    ctx.moveTo(cx, sortZoneY);
-    ctx.lineTo(cx + cw, sortZoneY);
+    ctx.rect(cx, cy, cw, ch);
+    ctx.clip();
+
+    ctx.strokeStyle = 'rgba(80, 80, 110, 0.5)';
+    ctx.lineWidth = 1;
+    const lineSpacing = 24;
+    const offset = this.conveyorOffset;
+    for (let ly = -lineSpacing + offset; ly < ch + lineSpacing; ly += lineSpacing) {
+      const lineY = cy + ly;
+      // Chevron pointing down
+      ctx.beginPath();
+      ctx.moveTo(cx + 4, lineY);
+      ctx.lineTo(cx + cw / 2, lineY + 8);
+      ctx.lineTo(cx + cw - 4, lineY);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // === SORT ZONE ===
+    const sortZoneY = cy + (this.sortZone / this.conveyorLength) * ch;
+    const zoneH = 40;
+
+    // Sort zone glow background
+    let zoneAlpha = 0.15 + 0.05 * Math.sin(this.animTime * 3);
+    let zoneColor = 'rgba(255, 215, 0,';
+    if (this.flash) {
+      const flashAlpha = (this.flash.timer / FLASH_DURATION);
+      if (this.flash.type === 'correct') {
+        zoneColor = 'rgba(46, 255, 100,';
+        zoneAlpha = 0.3 * flashAlpha;
+      } else if (this.flash.type === 'incorrect') {
+        zoneColor = 'rgba(255, 50, 50,';
+        zoneAlpha = 0.3 * flashAlpha;
+      }
+    }
+
+    ctx.fillStyle = `${zoneColor}${zoneAlpha})`;
+    ctx.fillRect(cx, sortZoneY - zoneH / 2, cw, zoneH);
+
+    // Sort zone border lines
+    ctx.strokeStyle = this.flash
+      ? (this.flash.type === 'correct' ? '#4eff7a' : '#ff4444')
+      : '#ffd700';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(cx, sortZoneY - zoneH / 2);
+    ctx.lineTo(cx + cw, sortZoneY - zoneH / 2);
+    ctx.moveTo(cx, sortZoneY + zoneH / 2);
+    ctx.lineTo(cx + cw, sortZoneY + zoneH / 2);
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Render packages
+    // Sort zone label
+    ctx.fillStyle = 'rgba(255, 215, 0, 0.6)';
+    ctx.font = '8px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('SORT', cx + cw / 2, sortZoneY + 3);
+
+    // === FEEDBACK INDICATOR LIGHT ===
+    // Two small indicator dots at top of conveyor (like traffic lights)
+    const lightX = cx + cw / 2;
+    const lightY = cy - 12;
+    const lightR = 6;
+
+    // Green light
+    const greenOn = this.flash && this.flash.type === 'correct';
+    ctx.beginPath();
+    ctx.arc(lightX - 10, lightY, lightR, 0, Math.PI * 2);
+    if (greenOn) {
+      const gAlpha = this.flash.timer / FLASH_DURATION;
+      ctx.fillStyle = `rgba(46, 255, 100, ${gAlpha})`;
+      ctx.fill();
+      // Glow
+      ctx.beginPath();
+      ctx.arc(lightX - 10, lightY, lightR + 3, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(46, 255, 100, ${gAlpha * 0.3})`;
+      ctx.fill();
+    } else {
+      ctx.fillStyle = 'rgba(30, 80, 40, 0.6)';
+      ctx.fill();
+    }
+    ctx.beginPath();
+    ctx.arc(lightX - 10, lightY, lightR, 0, Math.PI * 2);
+    ctx.strokeStyle = '#556';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Red light
+    const redOn = this.flash && (this.flash.type === 'incorrect' || this.flash.type === 'missed');
+    ctx.beginPath();
+    ctx.arc(lightX + 10, lightY, lightR, 0, Math.PI * 2);
+    if (redOn) {
+      const rAlpha = this.flash.timer / FLASH_DURATION;
+      ctx.fillStyle = this.flash.type === 'incorrect'
+        ? `rgba(255, 50, 50, ${rAlpha})`
+        : `rgba(255, 140, 40, ${rAlpha})`;
+      ctx.fill();
+      // Glow
+      ctx.beginPath();
+      ctx.arc(lightX + 10, lightY, lightR + 3, 0, Math.PI * 2);
+      ctx.fillStyle = this.flash.type === 'incorrect'
+        ? `rgba(255, 50, 50, ${rAlpha * 0.3})`
+        : `rgba(255, 140, 40, ${rAlpha * 0.3})`;
+      ctx.fill();
+    } else {
+      ctx.fillStyle = 'rgba(80, 30, 30, 0.6)';
+      ctx.fill();
+    }
+    ctx.beginPath();
+    ctx.arc(lightX + 10, lightY, lightR, 0, Math.PI * 2);
+    ctx.strokeStyle = '#556';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // === PACKAGES ===
     for (const pkg of this.packages) {
       const py = cy + (pkg.position / this.conveyorLength) * ch;
       if (py < cy - 20 || py > cy + ch + 20) continue;
 
       const px = cx + cw / 2;
-      const pkgSize = 28;
+      const pkgSize = 30;
+      const half = pkgSize / 2;
 
-      // Package box
-      ctx.fillStyle = COLOR_HEX[pkg.color] || '#888';
-      ctx.fillRect(px - pkgSize / 2, py - pkgSize / 2, pkgSize, pkgSize);
+      // Package shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.fillRect(px - half + 2, py - half + 2, pkgSize, pkgSize);
+
+      // Package body
+      const baseColor = COLOR_HEX[pkg.color] || '#888';
+      const dimColor = COLOR_DIM[pkg.color] || '#555';
+      ctx.fillStyle = baseColor;
+      ctx.fillRect(px - half, py - half, pkgSize, pkgSize);
+
+      // Package highlight (top-left gradient fake)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.fillRect(px - half, py - half, pkgSize, pkgSize / 3);
+
+      // Package darker bottom
+      ctx.fillStyle = dimColor;
+      ctx.fillRect(px - half, py + half - 4, pkgSize, 4);
 
       // Package border
-      ctx.strokeStyle = '#fff';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
       ctx.lineWidth = 1;
-      ctx.strokeRect(px - pkgSize / 2, py - pkgSize / 2, pkgSize, pkgSize);
+      ctx.strokeRect(px - half, py - half, pkgSize, pkgSize);
+
+      // Tape cross (parcel look)
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(px, py - half);
+      ctx.lineTo(px, py + half);
+      ctx.moveTo(px - half, py);
+      ctx.lineTo(px + half, py);
+      ctx.stroke();
 
       // Number on package
       ctx.fillStyle = '#fff';
-      ctx.font = 'bold 14px monospace';
+      ctx.font = 'bold 13px monospace';
       ctx.textAlign = 'center';
       ctx.fillText(pkg.number.toString(), px, py + 5);
+
+      // Glow when near sort zone
+      const distToZone = Math.abs(pkg.position - this.sortZone);
+      if (distToZone < 1.5) {
+        const glowAlpha = (1 - distToZone / 1.5) * 0.35;
+        ctx.strokeStyle = `rgba(255, 215, 0, ${glowAlpha})`;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(px - half - 2, py - half - 2, pkgSize + 4, pkgSize + 4);
+      }
     }
 
-    // Gate indicators (right side of conveyor)
-    const gateX = cx + cw + 20;
-    const gateStartY = this.y + 80;
+    // === SCORE POPUPS ===
+    for (const pop of this.scorePopups) {
+      const alpha = Math.min(1, pop.timer / (SCORE_POP_DURATION * 0.3));
+      ctx.fillStyle = pop.color.replace(')', `,${alpha})`).replace('rgb', 'rgba');
+      // Fallback for hex colors
+      if (pop.color.startsWith('#')) {
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = pop.color;
+      }
+      ctx.font = 'bold 14px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(pop.text, pop.x, pop.y);
+      ctx.globalAlpha = 1;
+    }
+
+    // === GATE INDICATORS ===
+    const gateX = cx + cw + 22;
+    const gateStartY = this.y + 88;
 
     ctx.fillStyle = '#aaa';
-    ctx.font = 'bold 11px monospace';
+    ctx.font = 'bold 10px monospace';
     ctx.textAlign = 'left';
-    ctx.fillText('GATES:', gateX, gateStartY - 8);
+    ctx.fillText('GATES', gateX, gateStartY - 10);
+
+    // Subtle separator
+    ctx.strokeStyle = 'rgba(170, 170, 170, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(gateX, gateStartY - 4);
+    ctx.lineTo(gateX + 140, gateStartY - 4);
+    ctx.stroke();
 
     for (let i = 0; i < 4; i++) {
-      const gy = gateStartY + i * 50;
+      const gy = gateStartY + i * 54;
       const color = this.gateColors[i];
+      const flashT = this.gateFlash[i];
+      const isFlashing = flashT > 0;
 
-      // Gate box
-      ctx.fillStyle = 'rgba(40, 40, 60, 0.8)';
-      ctx.fillRect(gateX, gy, 120, 40);
+      // Gate background
+      const bgAlpha = isFlashing ? 0.4 : 0.15;
+      ctx.fillStyle = `rgba(40, 40, 60, ${0.8 + bgAlpha})`;
+      ctx.fillRect(gateX, gy, 140, 42);
+
+      // Flash highlight on gate
+      if (isFlashing && this.flash) {
+        const fAlpha = (flashT / FLASH_DURATION) * 0.35;
+        if (this.flash.type === 'correct') {
+          ctx.fillStyle = `rgba(46, 255, 100, ${fAlpha})`;
+        } else {
+          ctx.fillStyle = `rgba(255, 50, 50, ${fAlpha})`;
+        }
+        ctx.fillRect(gateX, gy, 140, 42);
+      }
+
+      // Gate border
       ctx.strokeStyle = COLOR_HEX[color] || '#888';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(gateX, gy, 120, 40);
+      ctx.lineWidth = isFlashing ? 2 : 1;
+      ctx.strokeRect(gateX, gy, 140, 42);
 
-      // Key label
+      // Key badge (rounded look)
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.fillRect(gateX + 6, gy + 8, 28, 26);
+      ctx.strokeStyle = '#888';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(gateX + 6, gy + 8, 28, 26);
+
       ctx.fillStyle = '#fff';
       ctx.font = 'bold 14px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(GATE_KEYS[i + 1], gateX + 20, gy + 26);
+      ctx.fillText(GATE_KEYS[i + 1], gateX + 20, gy + 27);
 
-      // Color swatch
+      // Color swatch with border
       ctx.fillStyle = COLOR_HEX[color] || '#888';
-      ctx.fillRect(gateX + 40, gy + 8, 24, 24);
+      ctx.fillRect(gateX + 42, gy + 10, 22, 22);
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(gateX + 42, gy + 10, 22, 22);
 
       // Color name
-      ctx.fillStyle = '#ccc';
-      ctx.font = '10px monospace';
+      ctx.fillStyle = '#ddd';
+      ctx.font = '11px monospace';
       ctx.textAlign = 'left';
-      ctx.fillText(COLOR_NAMES[color], gateX + 70, gy + 26);
+      ctx.fillText(COLOR_NAMES[color], gateX + 72, gy + 27);
     }
 
-    // Instructions
-    ctx.fillStyle = '#666';
+    // === INSTRUCTIONS ===
+    ctx.fillStyle = '#556';
     ctx.font = '9px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('Press the correct gate key when a', this.x + this.width / 2, this.y + this.height - 24);
-    ctx.fillText('package reaches the sort zone', this.x + this.width / 2, this.y + this.height - 12);
+    ctx.fillText('Match package color \u2192 press gate key', this.x + this.width / 2, this.y + this.height - 16);
+
+    ctx.restore();
   }
 
   _renderResults(ctx) {
     const r = this.results;
     const cx = this.x + this.width / 2;
 
-    // Title
+    // Decorative top accent
+    ctx.fillStyle = 'rgba(255, 215, 0, 0.1)';
+    ctx.fillRect(this.x + 2, this.y + 2, this.width - 4, 80);
+
+    // Title with icon
     ctx.fillStyle = '#ffd700';
     ctx.font = 'bold 16px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('Sorting Complete!', cx, this.y + 60);
+    ctx.fillText('\u2605 Sorting Complete! \u2605', cx, this.y + 50);
 
-    // Score
+    // Score box
+    const scoreBoxY = this.y + 70;
+    ctx.fillStyle = 'rgba(40, 40, 60, 0.6)';
+    ctx.fillRect(this.x + 30, scoreBoxY, this.width - 60, 50);
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(this.x + 30, scoreBoxY, this.width - 60, 50);
+
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 20px monospace';
-    ctx.fillText(`Score: ${r.finalScore}`, cx, this.y + 110);
+    ctx.font = 'bold 22px monospace';
+    ctx.fillText(`${r.finalScore}`, cx, scoreBoxY + 26);
+
+    ctx.fillStyle = '#aaa';
+    ctx.font = '10px monospace';
+    ctx.fillText('FINAL SCORE', cx, scoreBoxY + 42);
 
     // Gold earned
     ctx.fillStyle = '#ffd700';
     ctx.font = 'bold 18px monospace';
-    ctx.fillText(`+${r.gold}g`, cx, this.y + 150);
+    ctx.fillText(`+${r.gold}g`, cx, this.y + 155);
 
-    // Breakdown
+    // Breakdown section
+    ctx.strokeStyle = 'rgba(212, 136, 62, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(this.x + 30, this.y + 170);
+    ctx.lineTo(this.x + this.width - 30, this.y + 170);
+    ctx.stroke();
+
+    const startX = this.x + 40;
+    const valX = this.x + this.width - 40;
+    let ly = this.y + 200;
+    const rowH = 28;
+
+    // Correct
+    ctx.fillStyle = '#2ecc71';
     ctx.font = '12px monospace';
     ctx.textAlign = 'left';
-    const startX = this.x + 50;
-    let ly = this.y + 200;
+    ctx.fillText('\u2713 Correct sorts', startX, ly);
+    ctx.textAlign = 'right';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText(`${r.correct}`, valX, ly);
+    ly += rowH;
 
-    ctx.fillStyle = '#2ecc71';
-    ctx.fillText(`Correct sorts:    ${r.correct}`, startX, ly);
-    ly += 24;
-
+    // Incorrect
     ctx.fillStyle = '#e74c3c';
-    ctx.fillText(`Incorrect sorts:  ${r.incorrect}`, startX, ly);
-    ly += 24;
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('\u2717 Incorrect sorts', startX, ly);
+    ctx.textAlign = 'right';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText(`${r.incorrect}`, valX, ly);
+    ly += rowH;
+
+    // Missed
+    ctx.fillStyle = '#f39c12';
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('\u25CB Missed packages', startX, ly);
+    ctx.textAlign = 'right';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText(`${r.missed}`, valX, ly);
+    ly += rowH;
+
+    // Best streak
+    if (r.bestStreak > 0) {
+      ctx.fillStyle = '#4eff7a';
+      ctx.font = '12px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('\u26A1 Best streak', startX, ly);
+      ctx.textAlign = 'right';
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText(`${r.bestStreak}`, valX, ly);
+      ly += rowH;
+    }
+
+    // Duration
+    ctx.fillStyle = '#aaa';
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('\u23F1 Duration', startX, ly);
+    ctx.textAlign = 'right';
+    ctx.font = 'bold 12px monospace';
+    const dm = Math.floor(r.duration / 60);
+    const ds = r.duration % 60;
+    ctx.fillText(`${dm}:${ds.toString().padStart(2, '0')}`, valX, ly);
+
+    // Separator
+    ly += 16;
+    ctx.strokeStyle = 'rgba(212, 136, 62, 0.3)';
+    ctx.beginPath();
+    ctx.moveTo(this.x + 30, ly);
+    ctx.lineTo(this.x + this.width - 30, ly);
+    ctx.stroke();
+
+    // Rating
+    ly += 28;
+    const total = r.correct + r.incorrect + r.missed;
+    const accuracy = total > 0 ? r.correct / total : 0;
+    let rating, ratingColor;
+    if (accuracy >= 0.9) { rating = 'S'; ratingColor = '#ffd700'; }
+    else if (accuracy >= 0.75) { rating = 'A'; ratingColor = '#4eff7a'; }
+    else if (accuracy >= 0.6) { rating = 'B'; ratingColor = '#3498db'; }
+    else if (accuracy >= 0.4) { rating = 'C'; ratingColor = '#f39c12'; }
+    else { rating = 'D'; ratingColor = '#e74c3c'; }
+
+    ctx.fillStyle = ratingColor;
+    ctx.font = 'bold 28px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(rating, cx, ly);
 
     ctx.fillStyle = '#888';
-    ctx.fillText(`Missed packages:  ${r.missed}`, startX, ly);
-    ly += 24;
-
-    ctx.fillStyle = '#aaa';
-    ctx.fillText(`Duration:         ${Math.floor(r.duration)}s`, startX, ly);
+    ctx.font = '10px monospace';
+    ctx.fillText(`${Math.round(accuracy * 100)}% accuracy`, cx, ly + 16);
 
     // Close hint
-    ctx.fillStyle = '#666';
+    ctx.fillStyle = '#556';
     ctx.font = '10px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('Click anywhere to close', cx, this.y + this.height - 30);
+    ctx.fillText('Click anywhere to close', cx, this.y + this.height - 16);
   }
 }
