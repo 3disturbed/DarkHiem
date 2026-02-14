@@ -41,7 +41,7 @@ export default class EntityRenderer {
   }
 
   // Render an enemy entity
-  static renderEnemy(r, x, y, color, size, name, hp, maxHp, aiState, isBoss = false, enemyId = null) {
+  static renderEnemy(r, x, y, color, size, name, hp, maxHp, aiState, isBoss = false, enemyId = null, facingRight = false) {
     const half = size / 2;
     const ctx = r.ctx;
 
@@ -66,8 +66,20 @@ export default class EntityRenderer {
         const isMoving = aiState === 'patrol' || aiState === 'chase' || aiState === 'flee';
         const frame = isMoving ? Math.floor((Date.now() / 150) % animMeta.frames) : 0;
         const sx = frame * animMeta.frameWidth;
-        ctx.drawImage(sprite, sx, 0, animMeta.frameWidth, animMeta.frameHeight,
-          Math.round(x - half), Math.round(y - half), size, size);
+        const dx = Math.round(x - half);
+        const dy = Math.round(y - half);
+        if (facingRight) {
+          // Flip horizontally: translate to center, scale -1, draw offset
+          ctx.save();
+          ctx.translate(Math.round(x), 0);
+          ctx.scale(-1, 1);
+          ctx.drawImage(sprite, sx, 0, animMeta.frameWidth, animMeta.frameHeight,
+            -half, dy, size, size);
+          ctx.restore();
+        } else {
+          ctx.drawImage(sprite, sx, 0, animMeta.frameWidth, animMeta.frameHeight,
+            dx, dy, size, size);
+        }
       } else {
         ctx.drawImage(sprite, Math.round(x - half), Math.round(y - half), size, size);
       }
