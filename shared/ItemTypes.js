@@ -1176,6 +1176,12 @@ export const ITEM_DB = {
   },
 
   // --- Pet Equipment ---
+  trainer_whistle: {
+    id: 'trainer_whistle', name: 'Trainer Whistle', type: 'equipment', slot: 'weapon',
+    petBattle: true, stackable: false,
+    statBonuses: { baseDamage: 0 }, tier: 0, rarity: 'uncommon', gemSlots: 0,
+    description: 'A carved bone whistle. Equip and attack a creature to start a pet battle using your team.',
+  },
   pet_item: {
     id: 'pet_item', name: 'Captured Pet', type: 'equipment', slot: 'weapon',
     isPet: true, stackable: false,

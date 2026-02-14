@@ -103,11 +103,11 @@ export default class CombatHandler {
     const pc = entity.getComponent(PlayerComponent);
     if (pc && pc.activeBattle) return;
 
-    // Check if weapon is a pet item → start pet battle instead
+    // Check if weapon triggers pet battle (pet item or trainer whistle)
     const equip = entity.getComponent(EquipmentComponent);
     if (equip) {
       const weapon = equip.getEquipped('weapon');
-      if (weapon && weapon.isPet) {
+      if (weapon && (weapon.isPet || weapon.petBattle)) {
         this._tryStartPetBattle(player, entity);
         return;
       }

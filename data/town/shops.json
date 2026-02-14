@@ -41,6 +41,7 @@
       "name": "Astrid's Stable Supplies",
       "sellMultiplier": 0.4,
       "inventory": [
+        { "itemId": "trainer_whistle", "price": 25, "stock": -1 },
         { "itemId": "berry", "price": 2, "stock": -1 },
         { "itemId": "raw_meat", "price": 5, "stock": -1 },
         { "itemId": "leather", "price": 8, "stock": -1 },

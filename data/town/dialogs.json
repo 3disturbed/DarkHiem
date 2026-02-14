@@ -159,6 +159,7 @@
           "text": "Well met, traveler! I'm Astrid, stablemaster of Darkheim. If you've a mind for horses, you've come to the right place. The wild ones roam the meadow -- magnificent beasts, but they won't be tamed easily.",
           "choices": [
             { "text": "How do I get a horse?", "nextNode": "about_horses" },
+            { "text": "Heal my pets (100g)", "action": "heal_pets" },
             { "text": "Do you have any work for me?", "action": "show_quests" },
             { "text": "What do you have for sale?", "action": "open_shop" },
             { "text": "Farewell.", "action": "close" }
@@ -168,6 +169,7 @@
           "text": "You'll need a lasso to capture a wild horse. Help me gather supplies for the stable and I'll give you one. Once you have a horse, press Q to mount and dismount. Mounted travel is much faster!",
           "choices": [
             { "text": "I'd like to help.", "action": "show_quests" },
+            { "text": "Heal my pets (100g)", "action": "heal_pets" },
             { "text": "What do you sell?", "action": "open_shop" },
             { "text": "Farewell.", "action": "close" }
           ]

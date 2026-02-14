@@ -1,9 +1,12 @@
 import { MSG } from '../../../shared/MessageTypes.js';
+import { getPetStats } from '../../../shared/PetTypes.js';
 import PositionComponent from '../../ecs/components/PositionComponent.js';
 import HealthComponent from '../../ecs/components/HealthComponent.js';
 import NPCComponent from '../../ecs/components/NPCComponent.js';
 import NameComponent from '../../ecs/components/NameComponent.js';
 import QuestComponent from '../../ecs/components/QuestComponent.js';
+import InventoryComponent from '../../ecs/components/InventoryComponent.js';
+import EquipmentComponent from '../../ecs/components/EquipmentComponent.js';
 
 export default class DialogHandler {
   constructor(gameServer) {
@@ -66,6 +69,16 @@ export default class DialogHandler {
       if (this.gameServer.landPlotHandler) {
         this.gameServer.landPlotHandler.handlePurchase(player, { plotId: choice.plotId });
       }
+      return;
+    }
+
+    if (choice.action === 'heal_pets') {
+      this._healAllPets(player, entity);
+      // Stay in dialog so player can continue talking
+      player.emit(MSG.DIALOG_NODE, {
+        npcId: state.npcId,
+        node: dialog.nodes[state.currentNode],
+      });
       return;
     }
 
@@ -142,6 +155,58 @@ export default class DialogHandler {
     }
 
     player.emit(MSG.QUEST_LIST, { npcId, quests });
+  }
+
+  _healAllPets(player, entity) {
+    const inv = entity.getComponent(InventoryComponent);
+    if (!inv) return;
+
+    const HEAL_COST = 100;
+    const gold = inv.countItem('gold');
+    if (gold < HEAL_COST) {
+      player.emit(MSG.CHAT_RECEIVE, { message: `Not enough gold. Need ${HEAL_COST}g (you have ${gold}g).`, sender: 'Astrid' });
+      return;
+    }
+
+    // Check if any pets need healing
+    let healed = 0;
+    for (let i = 0; i < inv.slotCount; i++) {
+      const slot = inv.slots[i];
+      if (!slot || slot.itemId !== 'pet_item') continue;
+      const petData = slot.extraData || slot;
+      if (!petData.petId) continue;
+      const stats = getPetStats(petData.petId, petData.level || 1);
+      const maxHp = stats.hp + (petData.bonusStats || 0);
+      if (petData.fainted || petData.currentHp < maxHp) {
+        petData.fainted = false;
+        petData.currentHp = maxHp;
+        petData.maxHp = maxHp;
+        healed++;
+      }
+    }
+
+    // Also heal equipped pet weapon
+    const equip = entity.getComponent(EquipmentComponent);
+    const weapon = equip?.getEquipped('weapon');
+    if (weapon?.isPet && weapon?.petId) {
+      const stats = getPetStats(weapon.petId, weapon.level || 1);
+      const maxHp = stats.hp + (weapon.bonusStats || 0);
+      if (weapon.fainted || weapon.currentHp < maxHp) {
+        weapon.fainted = false;
+        weapon.currentHp = maxHp;
+        weapon.maxHp = maxHp;
+        healed++;
+      }
+    }
+
+    if (healed === 0) {
+      player.emit(MSG.CHAT_RECEIVE, { message: 'All your pets are already healthy!', sender: 'Astrid' });
+      return;
+    }
+
+    inv.removeItem('gold', HEAL_COST);
+    player.emit(MSG.INVENTORY_UPDATE, { slots: inv.serialize().slots });
+    player.emit(MSG.CHAT_RECEIVE, { message: `All pets healed and revived! (-${HEAL_COST}g)`, sender: 'Astrid' });
   }
 
   _sendShopData(player, npcId) {
