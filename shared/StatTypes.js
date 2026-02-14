@@ -27,7 +27,7 @@ export const STAT_POINTS_PER_LEVEL = 3;
 // Derived stat formulas
 // At base VIT=5: 80 + 5*4 = 100 HP (matches current hardcoded value)
 export function deriveMaxHp(vit) {
-  return 80 + vit * 4;
+  return 80 + vit * 20;
 }
 
 // At base STR=5: 5*0.6 = 3 bonus damage
@@ -35,9 +35,9 @@ export function deriveDamageBonus(str) {
   return str * 0.6;
 }
 
-// At base END=5: 5*1.5 = 7.5 armor
+// At base END=5: 5*2.5 = 12.5 armor
 export function deriveArmor(end) {
-  return end * 1.5;
+  return end * 2.5;
 }
 
 // At base DEX=5: 1.0x speed (unchanged from current)

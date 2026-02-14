@@ -23,9 +23,9 @@
     "caveThreshold": 0.32,
     "caveMinElevation": 0.55,
     "caveMaxElevation": 0.85,
-    "caveScale": 0.06,
+    "caveScale": 0.6,
     "caveMossChance": 0.3,
-    "caveCrystalChance": 0.0
+    "caveCrystalChance": 0.1
   },
   "ambientLight": 1.0,
   "music": "meadow_theme"
