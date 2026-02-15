@@ -176,6 +176,10 @@ export const MSG = {
   ALCHEMY_START:      'alchemy:start',
   ALCHEMY_END:        'alchemy:end',
 
+  // Fishmonger minigame
+  FISHMONGER_START:   'fishmonger:start',
+  FISHMONGER_END:     'fishmonger:end',
+
   // PVP pet battle
   PVP_CHALLENGE:         'pvp:challenge',
   PVP_CHALLENGE_TIMEOUT: 'pvp:challenge:timeout',
