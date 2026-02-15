@@ -71,6 +71,7 @@ export const SKILL_DB = {
     scalePerPoint: 0.02,
     duration: 10,
     color: '#e74c3c',
+    turnBased: { scaleBase: 1.5 },
   },
   [SKILL.HEAL]: {
     id: SKILL.HEAL,
@@ -83,6 +84,7 @@ export const SKILL_DB = {
     scaleBase: 0.25,
     scalePerPoint: 0.005,
     color: '#2ecc71',
+    turnBased: { scaleBase: 0.20 },
   },
   [SKILL.EVASION]: {
     id: SKILL.EVASION,
@@ -96,6 +98,7 @@ export const SKILL_DB = {
     scalePerPoint: 0.01,
     duration: 5,
     color: '#1abc9c',
+    turnBased: { shieldPercent: 0.10 },
   },
   [SKILL.PRECISION_STRIKE]: {
     id: SKILL.PRECISION_STRIKE,
@@ -109,6 +112,7 @@ export const SKILL_DB = {
     scalePerPoint: 0.01,
     duration: 10,
     color: '#e67e22',
+    turnBased: { scaleBase: 1.4 },
   },
   [SKILL.FORTIFY]: {
     id: SKILL.FORTIFY,
@@ -122,6 +126,7 @@ export const SKILL_DB = {
     scalePerPoint: 0.005,
     duration: 8,
     color: '#34495e',
+    turnBased: { shieldPercent: 0.18 },
   },
   [SKILL.VENOM_STRIKE]: {
     id: SKILL.VENOM_STRIKE,
@@ -136,6 +141,7 @@ export const SKILL_DB = {
     poisonDuration: 8,
     duration: 10,
     color: '#16a085',
+    turnBased: { scaleBase: 1.1 },
   },
   [SKILL.CLEAVE]: {
     id: SKILL.CLEAVE,
@@ -149,6 +155,7 @@ export const SKILL_DB = {
     scalePerPoint: 0.02,
     range: 0, // 0 = use weapon range
     color: '#e67e22',
+    turnBased: { scaleBase: 1.3 },
   },
   [SKILL.WAR_CRY]: {
     id: SKILL.WAR_CRY,
@@ -160,6 +167,7 @@ export const SKILL_DB = {
     duration: 8,
     effects: { damageMod: 1.3 },
     color: '#f39c12',
+    turnBased: { scaleBase: 1.2 },
   },
   [SKILL.IRON_SKIN]: {
     id: SKILL.IRON_SKIN,
@@ -171,6 +179,7 @@ export const SKILL_DB = {
     duration: 10,
     effects: { armorFlat: 50 },
     color: '#95a5a6',
+    turnBased: { shieldPercent: 0.12 },
   },
   [SKILL.LIFE_STEAL]: {
     id: SKILL.LIFE_STEAL,
@@ -184,6 +193,7 @@ export const SKILL_DB = {
     scalePerPoint: 0.005,
     duration: 8,
     color: '#8e44ad',
+    turnBased: { scaleBase: 0.9 },
   },
   [SKILL.WHIRLWIND]: {
     id: SKILL.WHIRLWIND,
@@ -198,6 +208,7 @@ export const SKILL_DB = {
     hits: 3,
     range: 64,
     color: '#9b59b6',
+    turnBased: { scaleBase: 1.2 },
   },
   [SKILL.EXECUTE]: {
     id: SKILL.EXECUTE,
@@ -212,6 +223,7 @@ export const SKILL_DB = {
     executeThreshold: 0.3,
     scalePerPoint: 0.02,
     color: '#c0392b',
+    turnBased: { scaleBase: 1.3, executeMult: 2.5 },
   },
   [SKILL.SHADOW_STEP]: {
     id: SKILL.SHADOW_STEP,
@@ -226,6 +238,7 @@ export const SKILL_DB = {
     distance: 80,
     duration: 10,
     color: '#2c3e50',
+    turnBased: { scaleBase: 1.5 },
   },
   [SKILL.REGENERATION]: {
     id: SKILL.REGENERATION,
@@ -239,6 +252,7 @@ export const SKILL_DB = {
     scalePerPoint: 0.002,
     duration: 8,
     color: '#27ae60',
+    turnBased: { shieldPercent: 0.15 },
   },
   [SKILL.BERSERKER_RAGE]: {
     id: SKILL.BERSERKER_RAGE,
@@ -250,6 +264,7 @@ export const SKILL_DB = {
     duration: 12,
     effects: { damageMod: 1.5, attackSpeedMod: 1.25, armorMod: 0.7 },
     color: '#e74c3c',
+    turnBased: { scaleBase: 1.6 },
   },
 
   // ========================
@@ -265,6 +280,7 @@ export const SKILL_DB = {
     healPercent: 0.20,
     range: 120,
     color: '#f1c40f',
+    turnBased: { healPercent: 0.15 },
   },
   [SKILL.BLESSING_OF_MIGHT]: {
     id: SKILL.BLESSING_OF_MIGHT,
@@ -277,6 +293,7 @@ export const SKILL_DB = {
     range: 120,
     effects: { damageMod: 1.25 },
     color: '#e67e22',
+    turnBased: { scaleBase: 1.2 },
   },
   [SKILL.DIVINE_SHIELD]: {
     id: SKILL.DIVINE_SHIELD,
@@ -289,6 +306,7 @@ export const SKILL_DB = {
     duration: 8,
     range: 120,
     color: '#f39c12',
+    turnBased: { shieldPercent: 0.12 },
   },
   [SKILL.DIVINE_HYMN]: {
     id: SKILL.DIVINE_HYMN,
@@ -300,6 +318,7 @@ export const SKILL_DB = {
     healPercent: 0.40,
     range: 120,
     color: '#ffd700',
+    turnBased: { healPercent: 0.30 },
   },
 
   // ========================
@@ -316,6 +335,7 @@ export const SKILL_DB = {
     duration: 8,
     range: 120,
     color: '#2ecc71',
+    turnBased: { hotPercent: 0.12 },
   },
   [SKILL.THORNS]: {
     id: SKILL.THORNS,
@@ -328,6 +348,7 @@ export const SKILL_DB = {
     range: 120,
     effects: { thornsReflect: 0.15 },
     color: '#27ae60',
+    turnBased: { scaleBase: 1.1 },
   },
   [SKILL.BARKSKIN]: {
     id: SKILL.BARKSKIN,
@@ -340,6 +361,7 @@ export const SKILL_DB = {
     range: 120,
     effects: { armorFlat: 40 },
     color: '#8B6914',
+    turnBased: { shieldPercent: 0.10 },
   },
   [SKILL.TRANQUILITY]: {
     id: SKILL.TRANQUILITY,
@@ -352,6 +374,7 @@ export const SKILL_DB = {
     duration: 12,
     range: 120,
     color: '#1abc9c',
+    turnBased: { hotPercent: 0.20 },
   },
 
   // ============================
@@ -368,6 +391,7 @@ export const SKILL_DB = {
     healPercent: 0.25,
     range: 120,
     color: '#c0392b',
+    turnBased: { sacrificePercent: 0.12, healPercent: 0.20 },
   },
   [SKILL.SANGUINE_FURY]: {
     id: SKILL.SANGUINE_FURY,
@@ -380,6 +404,7 @@ export const SKILL_DB = {
     duration: 8,
     effects: { damageMod: 1.60 },
     color: '#8e44ad',
+    turnBased: { sacrificePercent: 0.08, scaleBase: 1.4 },
   },
   [SKILL.CRIMSON_DRAIN]: {
     id: SKILL.CRIMSON_DRAIN,
@@ -391,6 +416,7 @@ export const SKILL_DB = {
     damagePercent: 0.15,
     range: 120,
     color: '#e74c3c',
+    turnBased: { scaleBase: 1.2 },
   },
   [SKILL.BLOOD_RITUAL]: {
     id: SKILL.BLOOD_RITUAL,
@@ -405,6 +431,7 @@ export const SKILL_DB = {
     range: 120,
     effects: { damageMod: 1.30 },
     color: '#922B21',
+    turnBased: { sacrificePercent: 0.20, healPercent: 0.35 },
   },
 
   // ============================
@@ -425,6 +452,7 @@ export const SKILL_DB = {
     range: 160,
     knockback: 4,
     color: '#e74c3c',
+    turnBased: { scaleBase: 1.1 },
   },
   [SKILL.IGNITE]: {
     id: SKILL.IGNITE,
@@ -437,6 +465,7 @@ export const SKILL_DB = {
     dotDuration: 6,
     range: 120,
     color: '#e67e22',
+    turnBased: { scaleBase: 1.0 },
   },
   [SKILL.FLAME_WAVE]: {
     id: SKILL.FLAME_WAVE,
@@ -450,6 +479,7 @@ export const SKILL_DB = {
     scalePerPoint: 0.02,
     range: 120,
     color: '#d35400',
+    turnBased: { scaleBase: 1.3 },
   },
   [SKILL.METEOR]: {
     id: SKILL.METEOR,
@@ -467,6 +497,7 @@ export const SKILL_DB = {
     zoneTickDmg: 0.05,
     zoneType: 'fire',
     color: '#c0392b',
+    turnBased: { scaleBase: 2.0 },
   },
 
   // ============================
@@ -488,6 +519,7 @@ export const SKILL_DB = {
     knockback: 2,
     slowOnHit: { speedMod: 0.6, duration: 3 },
     color: '#3498db',
+    turnBased: { scaleBase: 1.0 },
   },
   [SKILL.ICE_NOVA]: {
     id: SKILL.ICE_NOVA,
@@ -502,6 +534,7 @@ export const SKILL_DB = {
     range: 100,
     freezeDuration: 1.5,
     color: '#2980b9',
+    turnBased: { scaleBase: 1.2 },
   },
   [SKILL.FROZEN_PRISON]: {
     id: SKILL.FROZEN_PRISON,
@@ -514,6 +547,7 @@ export const SKILL_DB = {
     rootDuration: 4,
     damageTakenMod: 1.2,
     color: '#1abc9c',
+    turnBased: { scaleBase: 0.8 },
   },
   [SKILL.BLIZZARD]: {
     id: SKILL.BLIZZARD,
@@ -529,6 +563,7 @@ export const SKILL_DB = {
     zoneType: 'ice',
     zoneSlowPct: 0.3,
     color: '#2471a3',
+    turnBased: { scaleBase: 1.4 },
   },
 
   // ============================
@@ -546,6 +581,7 @@ export const SKILL_DB = {
     scalePerPoint: 0.02,
     range: 140,
     color: '#f1c40f',
+    turnBased: { scaleBase: 1.3 },
   },
   [SKILL.CHAIN_LIGHTNING]: {
     id: SKILL.CHAIN_LIGHTNING,
@@ -561,6 +597,7 @@ export const SKILL_DB = {
     jumps: 4,
     falloff: 0.15,
     color: '#f39c12',
+    turnBased: { scaleBase: 1.2 },
   },
   [SKILL.STATIC_FIELD]: {
     id: SKILL.STATIC_FIELD,
@@ -572,6 +609,7 @@ export const SKILL_DB = {
     percentDamage: 0.20,
     range: 120,
     color: '#d4ac0d',
+    turnBased: { scaleBase: 1.1 },
   },
   [SKILL.STORM_CALL]: {
     id: SKILL.STORM_CALL,
@@ -586,8 +624,17 @@ export const SKILL_DB = {
     zoneTickDmg: 0.08,
     zoneType: 'lightning',
     color: '#b7950b',
+    turnBased: { scaleBase: 1.5 },
   },
 };
+
+// Get skill definition with turn-based balance overrides applied
+export function getTurnBasedSkill(skillId) {
+  const skill = SKILL_DB[skillId];
+  if (!skill) return null;
+  if (!skill.turnBased) return skill;
+  return { ...skill, ...skill.turnBased };
+}
 
 // Sorted by unlock level
 export const SKILL_UNLOCK_ORDER = Object.values(SKILL_DB)

@@ -1,5 +1,5 @@
 import { PET_DB, getPetStats, getPetSkills, getRandomPetSkills, PET_FLEE_CHANCE, PET_MAX_TURNS } from '../../shared/PetTypes.js';
-import { SKILL_DB } from '../../shared/SkillTypes.js';
+import { getTurnBasedSkill } from '../../shared/SkillTypes.js';
 
 const BATTLE_STATE = {
   CHOOSE_ACTION: 'choose_action',
@@ -176,7 +176,7 @@ export default class PetBattle {
   }
 
   _useSkill(user, target, skillId, side) {
-    const skillDef = SKILL_DB[skillId];
+    const skillDef = getTurnBasedSkill(skillId);
     if (!skillDef) {
       // Fallback to basic attack
       const dmg = this._calcDamage(user, target);

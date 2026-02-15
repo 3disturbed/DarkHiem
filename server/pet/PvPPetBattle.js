@@ -1,5 +1,5 @@
 import { PET_DB, getPetStats } from '../../shared/PetTypes.js';
-import { SKILL_DB } from '../../shared/SkillTypes.js';
+import { getTurnBasedSkill } from '../../shared/SkillTypes.js';
 
 const PVP_STATE = {
   WAITING_ACTIONS: 'waiting_actions',
@@ -193,7 +193,7 @@ export default class PvPPetBattle {
   }
 
   _useSkill(user, target, skillId, side, userTeam) {
-    const skillDef = SKILL_DB[skillId];
+    const skillDef = getTurnBasedSkill(skillId);
     if (!skillDef) {
       const dmg = this._calcDamage(user, target);
       target.currentHp = Math.max(0, target.currentHp - dmg);
