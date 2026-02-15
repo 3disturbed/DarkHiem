@@ -22,6 +22,7 @@ import PetBreedingManager from './pet/PetBreedingManager.js';
 import MailHandler from './network/handlers/MailHandler.js';
 import SortingHandler from './network/handlers/SortingHandler.js';
 import AlchemyHandler from './network/handlers/AlchemyHandler.js';
+import FishmongerHandler from './network/handlers/FishmongerHandler.js';
 import QuestComponent from './ecs/components/QuestComponent.js';
 import EntityManager from './ecs/EntityManager.js';
 import SystemManager from './ecs/SystemManager.js';
@@ -162,6 +163,9 @@ export default class GameServer {
 
     this.alchemyHandler = new AlchemyHandler(this);
     this.alchemyHandler.register(this.messageRouter);
+
+    this.fishmongerHandler = new FishmongerHandler(this);
+    this.fishmongerHandler.register(this.messageRouter);
 
     // Respawn handler
     this.messageRouter.register(MSG.PLAYER_RESPAWN, (player) => {
@@ -907,6 +911,9 @@ export default class GameServer {
 
     // Clean up alchemy state
     this.alchemyHandler.removePlayer(playerConn.id);
+
+    // Clean up fishmonger state
+    this.fishmongerHandler.removePlayer(playerConn.id);
 
     // Save player data before destroying entity
     await this.savePlayer(playerConn);
