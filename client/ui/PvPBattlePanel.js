@@ -1,152 +1,262 @@
 import enemySprites, { getAnimMeta } from '../entities/EnemySprites.js';
-import { PET_DB } from '../../shared/PetTypes.js';
-import { SKILL_DB } from '../../shared/SkillTypes.js';
+import { PET_DB, STATUS_EFFECTS, AP_PER_TURN, BASIC_ATTACK_AP } from '../../shared/PetTypes.js';
+import { SKILL_DB, getTurnBasedSkill } from '../../shared/SkillTypes.js';
 
 const MENU_MAIN = 'main';
 const MENU_SKILLS = 'skills';
-const MENU_SWAP = 'swap';
+const MENU_TARGET_ENEMY = 'target_enemy';
+const MENU_TARGET_ALLY = 'target_ally';
 
 export default class PvPBattlePanel {
   constructor() {
     this.active = false;
-    this.battleState = null;
+    this.teams = null;
+    this.initiativeOrder = [];
+    this.activeUnit = null;
+    this.ap = 0;
+    this.round = 1;
+    this.log = [];
+    this.myTeam = 'a';        // 'a' or 'b', set from server
+    this.opponentName = '';
+
     this.menuMode = MENU_MAIN;
     this.menuIndex = 0;
-    this.shakeTimer = 0;
-    this.shakeTarget = null; // 'self' or 'opponent'
-    this.flashTimer = 0;
-    this.flashTarget = null;
-    this.lastLog = [];
-    this.waitingForOpponent = false;
+    this.pendingAction = null;
     this.battleEndData = null;
+    this.ended = false;
+    this.result = null;
+
+    this.shakeTimers = {};
+    this.flashTimers = {};
   }
 
   open(battleState) {
     this.active = true;
-    this.battleState = battleState;
+    this.teams = battleState.teams;
+    this.initiativeOrder = battleState.initiativeOrder || [];
+    this.activeUnit = battleState.activeUnit;
+    this.ap = battleState.ap || AP_PER_TURN;
+    this.round = battleState.round || 1;
+    this.log = battleState.log || [];
+    this.myTeam = battleState.myTeam || 'a';
+    this.opponentName = battleState.opponentName || 'Opponent';
+    this.ended = battleState.ended || false;
+    this.result = battleState.result;
     this.menuMode = MENU_MAIN;
     this.menuIndex = 0;
-    this.lastLog = battleState.log || [];
-    this.waitingForOpponent = false;
+    this.pendingAction = null;
     this.battleEndData = null;
   }
 
   close() {
     this.active = false;
-    this.battleState = null;
+    this.teams = null;
     this.battleEndData = null;
-    this.waitingForOpponent = false;
+    this.ended = false;
+    this.result = null;
   }
 
-  updateState(state) {
+  handleTurnStart(data) {
     if (!this.active) return;
-    this.battleState = state;
-    this.lastLog = state.log || [];
-    this.waitingForOpponent = false;
+    this.activeUnit = data.activeUnit;
+    this.ap = data.ap;
+    this.round = data.round;
+    this.initiativeOrder = data.initiativeOrder || this.initiativeOrder;
+    if (data.myTeam) this.myTeam = data.myTeam;
+    if (data.unitStates) this.teams = data.unitStates;
 
-    // Trigger animations from log entries
-    for (const entry of this.lastLog) {
-      if (entry.dmg) {
-        this.shakeTimer = 0.3;
-        this.shakeTarget = entry.attackerIsMe ? 'opponent' : 'self';
-      }
-      if (entry.heal) {
-        this.flashTimer = 0.3;
-        this.flashTarget = entry.attackerIsMe ? 'self' : 'opponent';
-      }
+    // Process start-of-turn effect animations
+    for (const eff of (data.startOfTurnEffects || [])) {
+      const key = `${eff.unitTeam}_${eff.unitIndex}`;
+      if (eff.type === 'dot') this.shakeTimers[key] = 0.3;
+      if (eff.type === 'hot') this.flashTimers[key] = 0.3;
     }
 
     this.menuMode = MENU_MAIN;
     this.menuIndex = 0;
+    this.pendingAction = null;
   }
 
-  update(dt) {
-    if (this.shakeTimer > 0) this.shakeTimer -= dt;
-    if (this.flashTimer > 0) this.flashTimer -= dt;
-  }
+  handleResult(data) {
+    if (!this.active) return;
+    this.ap = data.ap;
+    if (data.unitStates) this.teams = data.unitStates;
+    this.ended = data.ended || false;
+    this.result = data.result;
 
-  // Navigation
-  selectDir(dx, dy) {
-    if (this.waitingForOpponent) return;
+    for (const r of (data.results || [])) {
+      if (r.damage && r.targetTeam !== undefined) {
+        this.shakeTimers[`${r.targetTeam}_${r.targetIndex}`] = 0.3;
+      }
+      if (r.type === 'heal' || r.type === 'lifesteal') {
+        this.flashTimers[`${r.unitTeam}_${r.unitIndex}`] = 0.3;
+      }
+      if (r.type === 'faint') {
+        this.shakeTimers[`${r.unitTeam}_${r.unitIndex}`] = 0.5;
+      }
+    }
 
-    if (this.menuMode === MENU_MAIN) {
-      const col = this.menuIndex % 2;
-      const row = Math.floor(this.menuIndex / 2);
-      const newCol = Math.max(0, Math.min(1, col + dx));
-      const newRow = Math.max(0, Math.min(1, row + dy));
-      this.menuIndex = newRow * 2 + newCol;
-    } else if (this.menuMode === MENU_SKILLS) {
-      const team = this.battleState?.self;
-      const pet = team?.pets[team.activeIndex];
-      const maxIdx = (pet?.skills?.length || 1) - 1;
-      this.menuIndex = Math.max(0, Math.min(maxIdx, this.menuIndex + dy));
-    } else if (this.menuMode === MENU_SWAP) {
-      const maxIdx = (this.battleState?.self?.pets?.length || 1) - 1;
-      this.menuIndex = Math.max(0, Math.min(maxIdx, this.menuIndex + dy));
+    for (const r of (data.results || [])) {
+      if (r.text) this.log.push(r.text);
+    }
+    if (this.log.length > 20) this.log = this.log.slice(-20);
+
+    if (!this.ended && this.ap > 0 && this._isMyTurn()) {
+      this.menuMode = MENU_MAIN;
+      this.menuIndex = 0;
+      this.pendingAction = null;
     }
   }
 
-  confirm(sendAction) {
-    if (!this.battleState || this.battleState.state === 'ended' || this.waitingForOpponent) return;
+  // Also handle PVP_BATTLE_TURN messages (action results broadcast to both)
+  updateState(data) {
+    this.handleResult(data);
+  }
+
+  update(dt) {
+    for (const key in this.shakeTimers) {
+      if (this.shakeTimers[key] > 0) this.shakeTimers[key] -= dt;
+    }
+    for (const key in this.flashTimers) {
+      if (this.flashTimers[key] > 0) this.flashTimers[key] -= dt;
+    }
+  }
+
+  _isMyTurn() {
+    return this.activeUnit?.team === this.myTeam;
+  }
+
+  _getEnemyTeamKey() {
+    return this.myTeam === 'a' ? 'b' : 'a';
+  }
+
+  _getMyActiveUnit() {
+    if (!this.teams || !this.activeUnit) return null;
+    if (this.activeUnit.team !== this.myTeam) return null;
+    return this.teams[this.myTeam][this.activeUnit.index];
+  }
+
+  // ═══════════════════════════════════════════════
+  // Input
+  // ═══════════════════════════════════════════════
+
+  selectDir(dx, dy) {
+    if (!this._isMyTurn()) return;
+
+    if (this.menuMode === MENU_MAIN) {
+      this.menuIndex = Math.max(0, Math.min(4, this.menuIndex + dx));
+    } else if (this.menuMode === MENU_SKILLS) {
+      const unit = this._getMyActiveUnit();
+      const maxIdx = (unit?.skills?.length || 1) - 1;
+      this.menuIndex = Math.max(0, Math.min(maxIdx, this.menuIndex + dy));
+    } else if (this.menuMode === MENU_TARGET_ENEMY) {
+      const enemyKey = this._getEnemyTeamKey();
+      const enemies = this.teams?.[enemyKey]?.filter(u => !u.fainted) || [];
+      if (enemies.length > 0) {
+        this.menuIndex = Math.max(0, Math.min(enemies.length - 1, this.menuIndex + dy));
+      }
+    } else if (this.menuMode === MENU_TARGET_ALLY) {
+      const allies = this.teams?.[this.myTeam]?.filter(u => !u.fainted) || [];
+      if (allies.length > 0) {
+        this.menuIndex = Math.max(0, Math.min(allies.length - 1, this.menuIndex + dy));
+      }
+    }
+  }
+
+  confirm(sendAction, sendForfeit) {
+    if (!this.teams || this.ended) return;
+    if (!this._isMyTurn()) return;
+
+    const enemyKey = this._getEnemyTeamKey();
 
     if (this.menuMode === MENU_MAIN) {
       switch (this.menuIndex) {
         case 0: // Attack
-          sendAction({ type: 'attack' });
-          this.waitingForOpponent = true;
-          break;
+          if (this.ap < BASIC_ATTACK_AP) return;
+          this.menuMode = MENU_TARGET_ENEMY;
+          this.menuIndex = 0;
+          this.pendingAction = { type: 'attack' };
+          return;
         case 1: // Skills
           this.menuMode = MENU_SKILLS;
           this.menuIndex = 0;
-          break;
-        case 2: // Swap
-          this.menuMode = MENU_SWAP;
-          this.menuIndex = 0;
-          break;
+          return;
+        case 2: // Defend
+          sendAction({ type: 'defend' });
+          return;
         case 3: // Forfeit
-          sendAction({ type: 'forfeit' });
-          this.waitingForOpponent = true;
-          break;
+          sendForfeit();
+          return;
+        case 4: // Pass
+          sendAction({ type: 'pass' });
+          return;
       }
     } else if (this.menuMode === MENU_SKILLS) {
-      const team = this.battleState.self;
-      const pet = team.pets[team.activeIndex];
-      if (pet && pet.skills[this.menuIndex]) {
-        sendAction({ type: 'skill', skillId: pet.skills[this.menuIndex] });
-        this.waitingForOpponent = true;
+      const unit = this._getMyActiveUnit();
+      if (!unit) return;
+      const skillId = unit.skills[this.menuIndex];
+      if (!skillId) return;
+      const skillDef = getTurnBasedSkill(skillId);
+      if (!skillDef) return;
+      const apCost = skillDef.apCost || BASIC_ATTACK_AP;
+      if (this.ap < apCost) return;
+
+      if (skillDef.isAoE) {
+        sendAction({ type: 'skill', skillId });
+        this.menuMode = MENU_MAIN;
+        this.menuIndex = 0;
+        return;
       }
-    } else if (this.menuMode === MENU_SWAP) {
-      const idx = this.menuIndex;
-      const team = this.battleState.self;
-      if (idx !== team.activeIndex && !team.pets[idx]?.fainted) {
-        sendAction({ type: 'swap', targetIndex: idx });
-        this.waitingForOpponent = true;
+
+      if (skillDef.targetAlly) {
+        this.pendingAction = { type: 'skill', skillId };
+        this.menuMode = MENU_TARGET_ALLY;
+        this.menuIndex = 0;
+        return;
       }
+
+      this.pendingAction = { type: 'skill', skillId };
+      this.menuMode = MENU_TARGET_ENEMY;
+      this.menuIndex = 0;
+      return;
+    } else if (this.menuMode === MENU_TARGET_ENEMY) {
+      const enemies = this.teams?.[enemyKey]?.filter(u => !u.fainted) || [];
+      const target = enemies[this.menuIndex];
+      if (!target) return;
+      sendAction({ ...this.pendingAction, targetTeam: enemyKey, targetIndex: target.index });
+      this.menuMode = MENU_MAIN;
+      this.menuIndex = 0;
+      this.pendingAction = null;
+      return;
+    } else if (this.menuMode === MENU_TARGET_ALLY) {
+      const allies = this.teams?.[this.myTeam]?.filter(u => !u.fainted) || [];
+      const target = allies[this.menuIndex];
+      if (!target) return;
+      sendAction({ ...this.pendingAction, targetTeam: this.myTeam, targetIndex: target.index });
+      this.menuMode = MENU_MAIN;
+      this.menuIndex = 0;
+      this.pendingAction = null;
+      return;
     }
   }
 
   back() {
-    if (this.waitingForOpponent) return;
+    if (!this._isMyTurn()) return;
     if (this.menuMode !== MENU_MAIN) {
       this.menuMode = MENU_MAIN;
       this.menuIndex = 0;
+      this.pendingAction = null;
     }
   }
 
+  // ═══════════════════════════════════════════════
+  // Rendering
+  // ═══════════════════════════════════════════════
+
   render(ctx, width, height) {
-    if (!this.active || !this.battleState) return;
+    if (!this.active || !this.teams) return;
 
-    const bs = this.battleState;
-    const selfTeam = bs.self;
-    const opTeam = bs.opponent;
-    const selfPet = selfTeam.pets[selfTeam.activeIndex];
-    const opPet = opTeam.pets[opTeam.activeIndex];
-
-    // Full screen dark background
-    ctx.fillStyle = '#0a0a14';
-    ctx.fillRect(0, 0, width, height);
-
-    // Arena gradient — red-tinged for PVP
+    // Red-tinged PvP arena
     const grad = ctx.createLinearGradient(0, 0, 0, height);
     grad.addColorStop(0, '#2e1a1a');
     grad.addColorStop(0.5, '#1e1628');
@@ -155,133 +265,186 @@ export default class PvPBattlePanel {
     ctx.fillRect(0, 0, width, height);
 
     // VS banner
-    ctx.fillStyle = 'rgba(200, 50, 50, 0.15)';
-    ctx.font = `bold ${Math.floor(height * 0.12)}px monospace`;
+    ctx.fillStyle = 'rgba(200, 50, 50, 0.12)';
+    ctx.font = `bold ${Math.floor(height * 0.10)}px monospace`;
     ctx.textAlign = 'center';
     ctx.fillText('VS', width / 2, height * 0.35);
 
-    // Ground line
-    const groundY = height * 0.55;
+    // Ground
+    const groundY = height * 0.52;
     ctx.fillStyle = '#1a2a1a';
     ctx.fillRect(0, groundY, width, height - groundY);
 
-    // Turn counter
+    // Round + opponent name
     ctx.fillStyle = '#888';
     ctx.font = '11px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Round ${this.round}`, 12, 16);
     ctx.textAlign = 'right';
-    ctx.fillText(`Turn ${bs.turn}`, width - 14, 16);
+    ctx.fillStyle = '#e74c3c';
+    ctx.fillText(`vs ${this.opponentName}`, width - 12, 16);
 
-    // --- Opponent Pet (top right) ---
-    const opX = width * 0.7;
-    const opY = height * 0.22;
-    if (opPet) {
-      this._renderPet(ctx, opPet, opX, opY, 64, false, 'opponent');
+    // Initiative bar
+    this._renderInitiativeBar(ctx, width);
+
+    // Display: my team on left, enemy team on right
+    const myPets = this.teams[this.myTeam];
+    const enemyPets = this.teams[this._getEnemyTeamKey()];
+
+    this._renderTeam(ctx, myPets, 10, 50, width * 0.44, this.myTeam, 'YOUR TEAM');
+    this._renderTeam(ctx, enemyPets, width * 0.56, 50, width * 0.44, this._getEnemyTeamKey(), 'OPPONENT');
+
+    // AP indicator (only when my turn)
+    if (this._isMyTurn()) {
+      this._renderAPIndicator(ctx, width, height);
     }
 
-    // Opponent info bar
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 14px monospace';
-    ctx.textAlign = 'left';
-    const opName = bs.opponentName || 'Opponent';
-    ctx.fillText(`${opName}`, width * 0.4, 14);
-    if (opPet) {
-      this._renderHpBar(ctx, opPet, width * 0.4, 20, width * 0.55, 20);
-      ctx.fillStyle = '#ccc';
-      ctx.font = '11px monospace';
-      ctx.fillText(`${opPet.nickname}  Lv.${opPet.level}`, width * 0.4, 54);
-    }
+    // Battle log
+    this._renderLog(ctx, width, height);
 
-    // Opponent team dots (top right)
-    for (let i = 0; i < opTeam.pets.length; i++) {
-      const p = opTeam.pets[i];
-      ctx.beginPath();
-      ctx.arc(width - 20 - i * 18, 14, 5, 0, Math.PI * 2);
-      if (p.fainted) {
-        ctx.strokeStyle = '#555';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      } else {
-        ctx.fillStyle = i === opTeam.activeIndex ? '#e74c3c' : '#c0392b';
-        ctx.fill();
-      }
-    }
-
-    // --- Player Pet (bottom left) ---
-    const selfX = width * 0.25;
-    const selfY = height * 0.48;
-    if (selfPet) {
-      this._renderPet(ctx, selfPet, selfX, selfY, 72, true, 'self');
-    }
-
-    // Player HP bar
-    if (selfPet) {
-      this._renderHpBar(ctx, selfPet, 20, height * 0.62, width * 0.5, 22);
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 14px monospace';
-      ctx.textAlign = 'left';
-      ctx.fillText(`${selfPet.nickname}  Lv.${selfPet.level}`, 20, height * 0.62 - 6);
-
-      // Player team dots
-      const dotY = height * 0.62 + 28;
-      for (let i = 0; i < selfTeam.pets.length; i++) {
-        const pet = selfTeam.pets[i];
-        ctx.beginPath();
-        ctx.arc(20 + i * 18, dotY, 5, 0, Math.PI * 2);
-        if (pet.fainted) {
-          ctx.strokeStyle = '#555';
-          ctx.lineWidth = 2;
-          ctx.stroke();
-        } else {
-          ctx.fillStyle = i === selfTeam.activeIndex ? '#2ecc71' : '#27ae60';
-          ctx.fill();
-        }
-      }
-    }
-
-    // --- Battle Log ---
-    const logY = height * 0.72;
-    ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.fillRect(10, logY, width - 20, 40);
-    ctx.fillStyle = '#ecf0f1';
-    ctx.font = '12px monospace';
-    ctx.textAlign = 'left';
-    for (let i = 0; i < Math.min(2, this.lastLog.length); i++) {
-      ctx.fillText(this.lastLog[i].text, 16, logY + 14 + i * 16);
-    }
-
-    // --- Menu ---
-    const menuY = height * 0.78;
-    const menuH = height - menuY - 10;
-    ctx.fillStyle = 'rgba(20, 20, 40, 0.9)';
-    ctx.fillRect(10, menuY, width - 20, menuH);
+    // Menu area
+    const menuY = height * 0.76;
+    const menuH = height - menuY - 8;
+    ctx.fillStyle = 'rgba(20, 20, 40, 0.92)';
+    ctx.fillRect(8, menuY, width - 16, menuH);
     ctx.strokeStyle = '#444';
     ctx.lineWidth = 1;
-    ctx.strokeRect(10, menuY, width - 20, menuH);
+    ctx.strokeRect(8, menuY, width - 16, menuH);
 
-    if (bs.state === 'ended') {
-      this._renderEndScreen(ctx, bs, width, height, menuY);
-    } else if (this.waitingForOpponent) {
+    if (this.ended) {
+      this._renderEndScreen(ctx, width, height, menuY, menuH);
+    } else if (!this._isMyTurn()) {
       this._renderWaiting(ctx, width, menuY, menuH);
     } else if (this.menuMode === MENU_MAIN) {
       this._renderMainMenu(ctx, width, menuY, menuH);
     } else if (this.menuMode === MENU_SKILLS) {
-      this._renderSkillsMenu(ctx, selfPet, width, menuY, menuH);
-    } else if (this.menuMode === MENU_SWAP) {
-      this._renderSwapMenu(ctx, selfTeam, width, menuY, menuH);
+      this._renderSkillsMenu(ctx, width, menuY, menuH);
+    } else if (this.menuMode === MENU_TARGET_ENEMY) {
+      this._renderTargetSelect(ctx, width, menuY, menuH, this._getEnemyTeamKey());
+    } else if (this.menuMode === MENU_TARGET_ALLY) {
+      this._renderTargetSelect(ctx, width, menuY, menuH, this.myTeam);
     }
   }
 
-  _renderPet(ctx, pet, x, y, size, isPlayer, side) {
-    let drawX = x - size / 2;
-    let drawY = y - size / 2;
+  _renderInitiativeBar(ctx, width) {
+    const barY = 24;
+    const boxSize = 22;
+    const gap = 4;
+    const totalWidth = this.initiativeOrder.length * (boxSize + gap);
+    let startX = (width - totalWidth) / 2;
 
-    // Shake effect
-    if (this.shakeTimer > 0 && this.shakeTarget === side) {
-      drawX += (Math.random() - 0.5) * 8;
-      drawY += (Math.random() - 0.5) * 8;
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'center';
+
+    for (let i = 0; i < this.initiativeOrder.length; i++) {
+      const ref = this.initiativeOrder[i];
+      const unit = this.teams[ref.team]?.[ref.index];
+      if (!unit) continue;
+
+      const x = startX + i * (boxSize + gap);
+      const isActive = this.activeUnit?.team === ref.team && this.activeUnit?.index === ref.index;
+      const isMine = ref.team === this.myTeam;
+      const petDef = PET_DB[unit.petId];
+
+      ctx.fillStyle = unit.fainted ? '#333' : (isActive ? '#2980b9' : (isMine ? '#1a5a1a' : '#5a1a1a'));
+      ctx.fillRect(x, barY, boxSize, boxSize);
+
+      if (isActive) {
+        ctx.strokeStyle = '#f1c40f';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, barY, boxSize, boxSize);
+      }
+
+      ctx.fillStyle = unit.fainted ? '#555' : (petDef?.color || '#fff');
+      ctx.fillText(unit.nickname.charAt(0), x + boxSize / 2, barY + boxSize / 2 + 3);
     }
+  }
 
-    // Try to draw sprite
+  _renderTeam(ctx, pets, x, y, w, teamKey, label) {
+    const cardH = 38;
+    const gap = 4;
+
+    ctx.fillStyle = '#666';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(label, x + 4, y);
+
+    for (let i = 0; i < pets.length; i++) {
+      const pet = pets[i];
+      const cy = y + 6 + i * (cardH + gap);
+      const key = `${teamKey}_${i}`;
+      const isActive = this.activeUnit?.team === teamKey && this.activeUnit?.index === i;
+
+      let drawX = x;
+      if (this.shakeTimers[key] > 0) drawX += (Math.random() - 0.5) * 6;
+
+      ctx.fillStyle = pet.fainted ? 'rgba(40,20,20,0.7)' : (isActive ? 'rgba(40,60,80,0.8)' : 'rgba(30,30,50,0.7)');
+      ctx.fillRect(drawX, cy, w, cardH);
+
+      if (isActive) {
+        ctx.strokeStyle = '#f1c40f';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(drawX, cy, w, cardH);
+      }
+
+      // Pet sprite
+      const sprSize = 28;
+      const sprX = drawX + 4;
+      const sprY = cy + (cardH - sprSize) / 2;
+      const isMySide = teamKey === this.myTeam;
+      this._renderSmallPet(ctx, pet, sprX, sprY, sprSize, isMySide);
+
+      // Flash
+      if (this.flashTimers[key] > 0) {
+        ctx.globalAlpha = this.flashTimers[key] * 2;
+        ctx.fillStyle = '#2ecc71';
+        ctx.fillRect(drawX, cy, w, cardH);
+        ctx.globalAlpha = 1;
+      }
+
+      // Name
+      const textX = drawX + sprSize + 10;
+      ctx.fillStyle = pet.fainted ? '#666' : '#fff';
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'left';
+      let nameStr = pet.nickname;
+      if (pet.isRare) nameStr = '★ ' + nameStr;
+      ctx.fillText(`${nameStr} Lv${pet.level}`, textX, cy + 13);
+
+      // HP bar
+      const hpBarX = textX;
+      const hpBarW = w - sprSize - 20;
+      const hpBarY = cy + 18;
+      const hpBarH = 8;
+      const ratio = pet.fainted ? 0 : Math.max(0, pet.currentHp / pet.maxHp);
+      const barColor = ratio > 0.5 ? '#2ecc71' : ratio > 0.25 ? '#f39c12' : '#e74c3c';
+
+      ctx.fillStyle = '#222';
+      ctx.fillRect(hpBarX, hpBarY, hpBarW, hpBarH);
+      ctx.fillStyle = barColor;
+      ctx.fillRect(hpBarX, hpBarY, hpBarW * ratio, hpBarH);
+      ctx.strokeStyle = '#444';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(hpBarX, hpBarY, hpBarW, hpBarH);
+
+      ctx.fillStyle = '#ccc';
+      ctx.font = '8px monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(`${pet.currentHp}/${pet.maxHp}`, drawX + w - 4, cy + 12);
+
+      if (pet.shield > 0) {
+        ctx.fillStyle = '#f39c12';
+        const shieldRatio = Math.min(1, pet.shield / pet.maxHp);
+        ctx.fillRect(hpBarX, hpBarY + hpBarH + 1, hpBarW * shieldRatio, 3);
+      }
+
+      if (pet.statusEffects && pet.statusEffects.length > 0) {
+        this._renderStatusIcons(ctx, pet.statusEffects, hpBarX, cy + 30, hpBarW);
+      }
+    }
+  }
+
+  _renderSmallPet(ctx, pet, x, y, size, flipForPlayer) {
     const sprite = enemySprites.get(pet.petId);
     if (sprite) {
       const animMeta = getAnimMeta(sprite);
@@ -290,165 +453,210 @@ export default class PvPBattlePanel {
       const sw = animMeta ? animMeta.frameWidth : sprite.width;
       const sh = animMeta ? animMeta.frameHeight : sprite.height;
 
-      if (isPlayer) {
+      if (flipForPlayer) {
         ctx.save();
-        ctx.translate(drawX + size, 0);
+        ctx.translate(x + size, 0);
         ctx.scale(-1, 1);
-        ctx.drawImage(sprite, sx, 0, sw, sh, 0, drawY, size, size);
+        ctx.drawImage(sprite, sx, 0, sw, sh, 0, y, size, size);
         ctx.restore();
       } else {
-        ctx.drawImage(sprite, sx, 0, sw, sh, drawX, drawY, size, size);
+        ctx.drawImage(sprite, sx, 0, sw, sh, x, y, size, size);
       }
     } else {
       const petDef = PET_DB[pet.petId];
-      ctx.fillStyle = petDef?.color || '#888';
+      ctx.fillStyle = pet.fainted ? '#444' : (petDef?.color || '#888');
       ctx.beginPath();
-      ctx.arc(x, y, size / 2.5, 0, Math.PI * 2);
+      ctx.arc(x + size / 2, y + size / 2, size / 3, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-
-    // Flash effect (heal)
-    if (this.flashTimer > 0 && this.flashTarget === side) {
-      ctx.globalAlpha = this.flashTimer * 2;
-      ctx.fillStyle = '#2ecc71';
-      ctx.beginPath();
-      ctx.arc(x, y, size / 2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
-    }
-
-    // Rare star
-    if (pet.isRare) {
-      ctx.fillStyle = '#ffd700';
-      ctx.font = 'bold 16px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('\u2605', x, drawY - 4);
     }
   }
 
-  _renderHpBar(ctx, pet, x, y, barWidth, barHeight) {
-    const ratio = Math.max(0, pet.currentHp / pet.maxHp);
-    const barColor = ratio > 0.5 ? '#2ecc71' : ratio > 0.25 ? '#f39c12' : '#e74c3c';
+  _renderStatusIcons(ctx, effects, x, y, maxWidth) {
+    ctx.font = 'bold 8px monospace';
+    ctx.textAlign = 'left';
+    let cx = x;
 
-    ctx.fillStyle = '#333';
-    ctx.fillRect(x, y, barWidth, barHeight);
-    ctx.fillStyle = barColor;
-    ctx.fillRect(x, y, barWidth * ratio, barHeight);
-    ctx.strokeStyle = '#666';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x, y, barWidth, barHeight);
+    for (const eff of effects) {
+      const def = STATUS_EFFECTS[eff.id];
+      if (!def) continue;
+      if (cx + 18 > x + maxWidth) break;
 
-    ctx.fillStyle = '#fff';
-    ctx.font = `bold ${Math.min(12, barHeight - 4)}px monospace`;
-    ctx.textAlign = 'center';
-    ctx.fillText(`${pet.currentHp}/${pet.maxHp}`, x + barWidth / 2, y + barHeight - 4);
+      ctx.fillStyle = def.color || '#888';
+      ctx.fillRect(cx, y, 16, 10);
+      ctx.fillStyle = '#fff';
+      ctx.fillText(def.icon || '?', cx + 2, y + 8);
+
+      ctx.fillStyle = '#ccc';
+      ctx.font = '7px monospace';
+      ctx.fillText(eff.duration, cx + 12, y + 8);
+      ctx.font = 'bold 8px monospace';
+
+      cx += 20;
+    }
   }
+
+  _renderAPIndicator(ctx, width, height) {
+    const y = height * 0.72;
+    const unit = this._getMyActiveUnit();
+    const unitName = unit?.nickname || '???';
+
+    ctx.fillStyle = '#aaa';
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(`[${unitName}'s Turn]`, 14, y);
+
+    ctx.textAlign = 'right';
+    ctx.fillText('AP:', width - 80, y);
+    for (let i = 0; i < AP_PER_TURN; i++) {
+      const dotX = width - 70 + i * 16;
+      ctx.beginPath();
+      ctx.arc(dotX, y - 4, 5, 0, Math.PI * 2);
+      if (i < this.ap) {
+        ctx.fillStyle = '#f1c40f';
+        ctx.fill();
+      } else {
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+    }
+  }
+
+  _renderLog(ctx, width, height) {
+    const logY = height * 0.66;
+    const logH = 36;
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(8, logY, width - 16, logH);
+
+    ctx.fillStyle = '#ddd';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'left';
+
+    const visible = this.log.slice(-2);
+    for (let i = 0; i < visible.length; i++) {
+      const text = typeof visible[i] === 'string' ? visible[i] : visible[i].text || '';
+      ctx.fillText(text.substring(0, 60), 14, logY + 12 + i * 14);
+    }
+  }
+
+  // ═══════════════════════════════════════════════
+  // Menu renderers
+  // ═══════════════════════════════════════════════
 
   _renderMainMenu(ctx, width, menuY, menuH) {
-    const options = ['Attack', 'Skills >', 'Swap >', 'Forfeit'];
-    const cols = 2;
-    const cellW = (width - 40) / cols;
-    const cellH = menuH / 2;
+    const options = [
+      { label: 'Attack', sub: `${BASIC_ATTACK_AP} AP`, enabled: this.ap >= BASIC_ATTACK_AP },
+      { label: 'Skills', sub: '>', enabled: true },
+      { label: 'Defend', sub: 'All AP', enabled: this.ap > 0 },
+      { label: 'Forfeit', sub: '', enabled: true, color: '#e74c3c' },
+      { label: 'Pass', sub: 'End', enabled: true },
+    ];
+
+    const cellW = (width - 24) / options.length;
+    const cellH = menuH - 8;
 
     for (let i = 0; i < options.length; i++) {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const cx = 20 + col * cellW;
-      const cy = menuY + 6 + row * cellH;
+      const opt = options[i];
+      const cx = 12 + i * cellW;
+      const cy = menuY + 4;
 
       if (i === this.menuIndex) {
-        ctx.fillStyle = i === 3 ? 'rgba(200, 50, 50, 0.3)' : 'rgba(52, 152, 219, 0.3)';
-        ctx.fillRect(cx, cy, cellW - 10, cellH - 8);
-        ctx.strokeStyle = i === 3 ? '#c0392b' : '#3498db';
+        ctx.fillStyle = opt.color ? 'rgba(200,50,50,0.3)' : (opt.enabled ? 'rgba(52, 152, 219, 0.3)' : 'rgba(100, 50, 50, 0.3)');
+        ctx.fillRect(cx, cy, cellW - 4, cellH);
+        ctx.strokeStyle = opt.color || (opt.enabled ? '#3498db' : '#c0392b');
         ctx.lineWidth = 2;
-        ctx.strokeRect(cx, cy, cellW - 10, cellH - 8);
+        ctx.strokeRect(cx, cy, cellW - 4, cellH);
       }
 
-      ctx.fillStyle = i === this.menuIndex ? '#fff' : '#aaa';
-      if (i === 3) ctx.fillStyle = i === this.menuIndex ? '#e74c3c' : '#888';
-      ctx.font = 'bold 14px monospace';
-      ctx.textAlign = 'left';
-      ctx.fillText((i === this.menuIndex ? '> ' : '  ') + options[i], cx + 8, cy + cellH / 2 + 2);
-    }
-  }
-
-  _renderSkillsMenu(ctx, pet, width, menuY, menuH) {
-    if (!pet || !pet.skills) return;
-
-    ctx.fillStyle = '#aaa';
-    ctx.font = '11px monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText('ESC to go back', 20, menuY + 14);
-
-    const startY = menuY + 24;
-    const rowH = Math.min(28, (menuH - 30) / Math.max(1, pet.skills.length));
-
-    for (let i = 0; i < pet.skills.length; i++) {
-      const sy = startY + i * rowH;
-      const skillDef = SKILL_DB[pet.skills[i]];
-      const name = skillDef?.name || pet.skills[i];
-
-      if (i === this.menuIndex) {
-        ctx.fillStyle = 'rgba(52, 152, 219, 0.3)';
-        ctx.fillRect(16, sy, width - 40, rowH - 2);
-      }
-
-      ctx.fillStyle = skillDef?.color || '#fff';
-      ctx.font = 'bold 13px monospace';
-      ctx.textAlign = 'left';
-      ctx.fillText((i === this.menuIndex ? '> ' : '  ') + name, 20, sy + rowH / 2 + 4);
-
-      if (skillDef?.description) {
-        ctx.fillStyle = '#888';
-        ctx.font = '10px monospace';
-        ctx.fillText(skillDef.description.substring(0, 40), width * 0.4, sy + rowH / 2 + 4);
-      }
-    }
-  }
-
-  _renderSwapMenu(ctx, selfTeam, width, menuY, menuH) {
-    ctx.fillStyle = '#aaa';
-    ctx.font = '11px monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText('ESC to go back', 20, menuY + 14);
-
-    const startY = menuY + 24;
-    const rowH = Math.min(32, (menuH - 30) / Math.max(1, selfTeam.pets.length));
-
-    for (let i = 0; i < selfTeam.pets.length; i++) {
-      const pet = selfTeam.pets[i];
-      const sy = startY + i * rowH;
-      const isActive = i === selfTeam.activeIndex;
-      const canSwap = !pet.fainted && !isActive;
-
-      if (i === this.menuIndex) {
-        ctx.fillStyle = canSwap ? 'rgba(52, 152, 219, 0.3)' : 'rgba(100, 50, 50, 0.3)';
-        ctx.fillRect(16, sy, width - 40, rowH - 2);
-      }
-
-      ctx.fillStyle = pet.fainted ? '#666' : isActive ? '#3498db' : '#fff';
-      ctx.font = 'bold 13px monospace';
-      ctx.textAlign = 'left';
-      let label = `${pet.nickname} Lv.${pet.level}`;
-      if (isActive) label += ' [Active]';
-      if (pet.fainted) label += ' [Fainted]';
-      ctx.fillText((i === this.menuIndex ? '> ' : '  ') + label, 20, sy + rowH / 2 + 2);
-
-      // Mini HP bar
-      const barX = width * 0.6;
-      const barW = width * 0.3;
-      const ratio = Math.max(0, pet.currentHp / pet.maxHp);
-      ctx.fillStyle = '#333';
-      ctx.fillRect(barX, sy + 4, barW, 12);
-      ctx.fillStyle = pet.fainted ? '#666' : ratio > 0.5 ? '#2ecc71' : '#f39c12';
-      ctx.fillRect(barX, sy + 4, barW * ratio, 12);
-      ctx.fillStyle = '#fff';
-      ctx.font = '10px monospace';
+      ctx.fillStyle = opt.color ? (i === this.menuIndex ? opt.color : '#888') : (!opt.enabled ? '#555' : (i === this.menuIndex ? '#fff' : '#aaa'));
+      ctx.font = 'bold 12px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(`${pet.currentHp}/${pet.maxHp}`, barX + barW / 2, sy + 14);
+      ctx.fillText(opt.label, cx + (cellW - 4) / 2, cy + cellH / 2 - 2);
+
+      if (opt.sub) {
+        ctx.fillStyle = '#777';
+        ctx.font = '9px monospace';
+        ctx.fillText(opt.sub, cx + (cellW - 4) / 2, cy + cellH / 2 + 12);
+      }
+    }
+  }
+
+  _renderSkillsMenu(ctx, width, menuY, menuH) {
+    const unit = this._getMyActiveUnit();
+    if (!unit || !unit.skills) return;
+
+    ctx.fillStyle = '#888';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('ESC: back', 16, menuY + 12);
+
+    const startY = menuY + 18;
+    const rowH = Math.min(24, (menuH - 22) / Math.max(1, unit.skills.length));
+
+    for (let i = 0; i < unit.skills.length; i++) {
+      const sy = startY + i * rowH;
+      const skillId = unit.skills[i];
+      const skillDef = getTurnBasedSkill(skillId);
+      const name = skillDef?.name || skillId;
+      const apCost = skillDef?.apCost || BASIC_ATTACK_AP;
+      const canAfford = this.ap >= apCost;
+
+      if (i === this.menuIndex) {
+        ctx.fillStyle = canAfford ? 'rgba(52, 152, 219, 0.3)' : 'rgba(100, 50, 50, 0.2)';
+        ctx.fillRect(14, sy, width - 28, rowH - 2);
+      }
+
+      ctx.fillStyle = !canAfford ? '#555' : (SKILL_DB[skillId]?.color || '#fff');
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText((i === this.menuIndex ? '>' : ' ') + name, 18, sy + rowH / 2 + 3);
+
+      ctx.fillStyle = canAfford ? '#f1c40f' : '#555';
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'right';
+      let tag = `${apCost}AP`;
+      if (skillDef?.isAoE) tag += ' AoE';
+      if (skillDef?.targetAlly) tag += ' Ally';
+      ctx.fillText(tag, width - 18, sy + rowH / 2 + 3);
+    }
+  }
+
+  _renderTargetSelect(ctx, width, menuY, menuH, teamKey) {
+    const isEnemy = teamKey !== this.myTeam;
+    const label = isEnemy ? 'Select Enemy Target' : 'Select Ally Target';
+    const targets = this.teams?.[teamKey]?.filter(u => !u.fainted) || [];
+
+    ctx.fillStyle = '#f1c40f';
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(label + ' (ESC: back)', 16, menuY + 14);
+
+    const startY = menuY + 22;
+    const rowH = Math.min(28, (menuH - 26) / Math.max(1, targets.length));
+
+    for (let i = 0; i < targets.length; i++) {
+      const pet = targets[i];
+      const sy = startY + i * rowH;
+
+      if (i === this.menuIndex) {
+        ctx.fillStyle = 'rgba(241, 196, 15, 0.2)';
+        ctx.fillRect(14, sy, width - 28, rowH - 2);
+        ctx.strokeStyle = '#f1c40f';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(14, sy, width - 28, rowH - 2);
+      }
+
+      const petDef = PET_DB[pet.petId];
+      ctx.fillStyle = petDef?.color || '#fff';
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText((i === this.menuIndex ? '> ' : '  ') + `${pet.nickname} Lv${pet.level}`, 18, sy + rowH / 2 + 3);
+
+      const ratio = Math.max(0, pet.currentHp / pet.maxHp);
+      ctx.fillStyle = '#888';
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(`${pet.currentHp}/${pet.maxHp} (${Math.floor(ratio * 100)}%)`, width - 18, sy + rowH / 2 + 3);
     }
   }
 
@@ -460,54 +668,40 @@ export default class PvPBattlePanel {
     ctx.fillText('Waiting for opponent...', width / 2, menuY + menuH / 2 + 4);
   }
 
-  _renderEndScreen(ctx, bs, width, height, menuY) {
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 20px monospace';
+  _renderEndScreen(ctx, width, height, menuY, menuH) {
+    ctx.font = 'bold 18px monospace';
     ctx.textAlign = 'center';
 
-    const result = this.battleEndData?.result || bs.result;
+    const result = this.battleEndData || {};
     let resultKey = 'draw';
-    if (result) {
-      if (result.reason === 'stalemate') {
-        resultKey = 'draw';
-      } else if (result.reason === 'forfeit') {
-        resultKey = result.winnerId === bs.selfId ? 'opponent_forfeit' : 'forfeit';
-      } else if (result.winnerId === bs.selfId) {
-        resultKey = 'win';
-      } else if (result.loserId === bs.selfId) {
-        resultKey = 'lose';
-      }
+    if (result.result === 'stalemate') {
+      resultKey = 'draw';
+    } else if (result.winnerId) {
+      // We know our team key, check who won
+      const iWon = (this.myTeam === 'a' && result.result === 'win_a') || (this.myTeam === 'b' && result.result === 'win_b');
+      resultKey = iWon ? 'win' : 'lose';
+    } else if (this.result) {
+      const iWon = (this.myTeam === 'a' && this.result === 'win_a') || (this.myTeam === 'b' && this.result === 'win_b');
+      resultKey = this.result === 'stalemate' ? 'draw' : (iWon ? 'win' : 'lose');
     }
 
-    const resultText = {
-      win: 'Victory!',
-      lose: 'Defeat...',
-      draw: 'Draw!',
-      forfeit: 'You Forfeited',
-      opponent_forfeit: 'Opponent Forfeited!',
-    };
-    const resultColor = {
-      win: '#2ecc71',
-      lose: '#e74c3c',
-      draw: '#95a5a6',
-      forfeit: '#e67e22',
-      opponent_forfeit: '#f1c40f',
-    };
+    const resultText = { win: 'Victory!', lose: 'Defeat...', draw: 'Draw!' };
+    const resultColor = { win: '#2ecc71', lose: '#e74c3c', draw: '#95a5a6' };
 
     ctx.fillStyle = resultColor[resultKey] || '#fff';
-    ctx.fillText(resultText[resultKey] || 'Battle Over', width / 2, menuY + 30);
+    ctx.fillText(resultText[resultKey] || 'Battle Over', width / 2, menuY + 24);
 
     ctx.fillStyle = '#aaa';
     ctx.font = '12px monospace';
-    ctx.fillText('No consequences \u2014 pets restored!', width / 2, menuY + 52);
+    ctx.fillText('No consequences \u2014 pets restored!', width / 2, menuY + 44);
 
     ctx.fillStyle = '#888';
-    ctx.font = '12px monospace';
-    ctx.fillText('Press SPACE or ESC to continue', width / 2, menuY + 72);
+    ctx.font = '11px monospace';
+    ctx.fillText('Press SPACE or ESC to continue', width / 2, menuY + 62);
   }
 
   handleClick(mx, my, width, height, sendAction) {
-    if (!this.active || !this.battleState) return false;
+    if (!this.active || !this.teams) return false;
     return true;
   }
 }

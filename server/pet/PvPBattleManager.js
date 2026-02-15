@@ -1,17 +1,18 @@
 import { MSG } from '../../shared/MessageTypes.js';
-import PvPPetBattle from './PvPPetBattle.js';
+import TeamBattle from './TeamBattle.js';
 import PlayerComponent from '../ecs/components/PlayerComponent.js';
 import InventoryComponent from '../ecs/components/InventoryComponent.js';
 import NameComponent from '../ecs/components/NameComponent.js';
 
-const CHALLENGE_TIMEOUT_MS = 15000; // 15 seconds to accept
+const CHALLENGE_TIMEOUT_MS = 15000;
+
+let pvpBattleIdCounter = 0;
 
 export default class PvPBattleManager {
   constructor(gameServer) {
     this.gameServer = gameServer;
     this.pendingChallenges = new Map(); // challengerId -> { targetId, timer }
-    this.activeBattles = new Map();     // playerId -> PvPPetBattle (both players mapped)
-    this.battleIdCounter = 0;
+    this.activeBattles = new Map();     // playerId -> { battle, playerAId, playerBId }
   }
 
   register(router) {
@@ -24,10 +25,8 @@ export default class PvPBattleManager {
     if (!targetPc) return;
     const targetId = targetEntity.id;
 
-    // Can't challenge yourself
     if (challengerConn.id === targetId) return;
 
-    // Block if either player is in any battle
     if (this.activeBattles.has(challengerConn.id) || this.activeBattles.has(targetId)) {
       challengerConn.emit(MSG.CHAT_RECEIVE, { message: 'One of you is already in a battle.', sender: 'System' });
       return;
@@ -43,7 +42,7 @@ export default class PvPBattleManager {
       return;
     }
 
-    // Check for reverse challenge (target already challenged us → this is acceptance)
+    // Check for reverse challenge (acceptance)
     const reverseChallenge = this.pendingChallenges.get(targetId);
     if (reverseChallenge && reverseChallenge.targetId === challengerConn.id) {
       clearTimeout(reverseChallenge.timer);
@@ -52,21 +51,18 @@ export default class PvPBattleManager {
       return;
     }
 
-    // Validate challenger has pets
     const challengerTeam = this._collectTeam(challengerConn.id);
     if (!challengerTeam || challengerTeam.length === 0) {
       challengerConn.emit(MSG.CHAT_RECEIVE, { message: 'No healthy pets in your team!', sender: 'System' });
       return;
     }
 
-    // Cancel any existing outgoing challenge from this player
     const existing = this.pendingChallenges.get(challengerConn.id);
     if (existing) {
       clearTimeout(existing.timer);
       this.pendingChallenges.delete(challengerConn.id);
     }
 
-    // Create pending challenge with timeout
     const timer = setTimeout(() => {
       this.pendingChallenges.delete(challengerConn.id);
       challengerConn.emit(MSG.PVP_CHALLENGE_TIMEOUT, {});
@@ -75,7 +71,6 @@ export default class PvPBattleManager {
 
     this.pendingChallenges.set(challengerConn.id, { targetId, timer });
 
-    // Notify both players
     const challengerName = this._getPlayerName(challengerConn.id);
     const targetConn = this.gameServer.players.get(targetId);
     if (targetConn) {
@@ -85,10 +80,7 @@ export default class PvPBattleManager {
         sender: 'System',
       });
     }
-    challengerConn.emit(MSG.CHAT_RECEIVE, {
-      message: 'Challenge sent! Waiting for response...',
-      sender: 'System',
-    });
+    challengerConn.emit(MSG.CHAT_RECEIVE, { message: 'Challenge sent! Waiting for response...', sender: 'System' });
   }
 
   _startBattle(playerAId, playerBId) {
@@ -106,91 +98,135 @@ export default class PvPBattleManager {
     const pcA = this.gameServer.getPlayerEntity(playerAId)?.getComponent(PlayerComponent);
     const pcB = this.gameServer.getPlayerEntity(playerBId)?.getComponent(PlayerComponent);
 
-    const battleId = `pvp_${this.battleIdCounter++}`;
-    const battle = new PvPPetBattle(battleId, playerAId, teamA, playerBId, teamB);
+    const battleId = `pvp_${pvpBattleIdCounter++}`;
+    const battle = new TeamBattle(battleId, teamA, teamB, { mode: 'pvp' });
 
-    this.activeBattles.set(playerAId, battle);
-    this.activeBattles.set(playerBId, battle);
+    const session = { battle, playerAId, playerBId };
+    this.activeBattles.set(playerAId, session);
+    this.activeBattles.set(playerBId, session);
 
     if (pcA) pcA.activeBattle = battle;
     if (pcB) pcB.activeBattle = battle;
 
-    // Send start to both clients
     const nameA = this._getPlayerName(playerAId);
     const nameB = this._getPlayerName(playerBId);
 
-    const stateForA = battle.getStateForPlayer(playerAId);
-    stateForA.opponentName = nameB;
-    connA.emit(MSG.PVP_BATTLE_START, stateForA);
+    // Send battle start to both
+    const startState = battle.getFullState();
+    connA.emit(MSG.PVP_BATTLE_START, { ...startState, myTeam: 'a', opponentName: nameB });
+    connB.emit(MSG.PVP_BATTLE_START, { ...startState, myTeam: 'b', opponentName: nameA });
 
-    const stateForB = battle.getStateForPlayer(playerBId);
-    stateForB.opponentName = nameA;
-    connB.emit(MSG.PVP_BATTLE_START, stateForB);
+    // Start first turn
+    this._advanceToNextTurn(session);
   }
 
   handleAction(playerConn, data) {
-    const battle = this.activeBattles.get(playerConn.id);
-    if (!battle || battle.state === 'ended') return;
+    const session = this.activeBattles.get(playerConn.id);
+    if (!session) return;
+    const { battle, playerAId, playerBId } = session;
+    if (battle.ended) return;
 
-    const bothReady = battle.submitAction(playerConn.id, data);
-    if (!bothReady) return; // Waiting for opponent
+    const current = battle.getCurrentUnit();
+    if (!current) return;
 
-    // Both actions submitted — execute turn
-    battle.executeTurn();
+    // Determine which team this player controls
+    const myTeam = playerConn.id === playerAId ? 'a' : 'b';
+    if (current.team !== myTeam) return; // Not your turn
 
-    // Send results to both players
-    this._broadcastState(battle);
+    const result = battle.executeAction(data);
+    if (!result) return;
 
-    // Check if battle ended
-    if (battle.state === 'ended') {
-      this._endBattle(battle);
+    // Broadcast result to both
+    this._broadcastResult(session, result);
+
+    if (battle.ended) {
+      this._endBattle(session);
+      return;
     }
+
+    if (battle.ap > 0) return; // Still has AP
+
+    this._advanceToNextTurn(session);
   }
 
   handleForfeit(playerConn) {
-    const battle = this.activeBattles.get(playerConn.id);
-    if (!battle || battle.state === 'ended') return;
+    const session = this.activeBattles.get(playerConn.id);
+    if (!session) return;
+    const { battle, playerAId } = session;
+    if (battle.ended) return;
 
-    const opponentId = playerConn.id === battle.playerAId ? battle.playerBId : battle.playerAId;
-    battle._endBattle(opponentId, playerConn.id, 'forfeit');
+    const myTeam = playerConn.id === playerAId ? 'a' : 'b';
+    battle.forfeit(myTeam);
 
-    this._broadcastState(battle);
-    this._endBattle(battle);
+    this._broadcastState(session);
+    this._endBattle(session);
   }
 
-  _broadcastState(battle) {
-    const connA = this.gameServer.players.get(battle.playerAId);
-    const connB = this.gameServer.players.get(battle.playerBId);
-    const nameA = this._getPlayerName(battle.playerAId);
-    const nameB = this._getPlayerName(battle.playerBId);
+  _advanceToNextTurn(session) {
+    const { battle } = session;
 
-    if (connA) {
-      const state = battle.getStateForPlayer(battle.playerAId);
-      state.opponentName = nameB;
-      connA.emit(MSG.PVP_BATTLE_TURN, state);
+    const turnState = battle.advanceTurn();
+    if (!turnState || battle.ended) {
+      if (battle.ended) this._endBattle(session);
+      return;
     }
-    if (connB) {
-      const state = battle.getStateForPlayer(battle.playerBId);
-      state.opponentName = nameA;
-      connB.emit(MSG.PVP_BATTLE_TURN, state);
-    }
+
+    // Send turn state to both players
+    this._broadcastTurnState(session, turnState);
   }
 
-  _endBattle(battle) {
-    const connA = this.gameServer.players.get(battle.playerAId);
-    const connB = this.gameServer.players.get(battle.playerBId);
+  _broadcastResult(session, result) {
+    const { playerAId, playerBId } = session;
+    const connA = this.gameServer.players.get(playerAId);
+    const connB = this.gameServer.players.get(playerBId);
 
-    if (connA) connA.emit(MSG.PVP_BATTLE_END, { result: battle.result });
-    if (connB) connB.emit(MSG.PVP_BATTLE_END, { result: battle.result });
+    if (connA) connA.emit(MSG.PVP_BATTLE_TURN, result);
+    if (connB) connB.emit(MSG.PVP_BATTLE_TURN, result);
+  }
 
-    // Clean up — do NOT sync HP back (no consequences)
-    const pcA = this.gameServer.getPlayerEntity(battle.playerAId)?.getComponent(PlayerComponent);
-    const pcB = this.gameServer.getPlayerEntity(battle.playerBId)?.getComponent(PlayerComponent);
+  _broadcastTurnState(session, turnState) {
+    const { playerAId, playerBId } = session;
+    const connA = this.gameServer.players.get(playerAId);
+    const connB = this.gameServer.players.get(playerBId);
+
+    if (connA) connA.emit(MSG.PET_BATTLE_STATE, { ...turnState, myTeam: 'a' });
+    if (connB) connB.emit(MSG.PET_BATTLE_STATE, { ...turnState, myTeam: 'b' });
+  }
+
+  _broadcastState(session) {
+    const { battle, playerAId, playerBId } = session;
+    const connA = this.gameServer.players.get(playerAId);
+    const connB = this.gameServer.players.get(playerBId);
+    const nameA = this._getPlayerName(playerAId);
+    const nameB = this._getPlayerName(playerBId);
+    const state = battle.getFullState();
+
+    if (connA) connA.emit(MSG.PVP_BATTLE_TURN, { ...state, myTeam: 'a', opponentName: nameB });
+    if (connB) connB.emit(MSG.PVP_BATTLE_TURN, { ...state, myTeam: 'b', opponentName: nameA });
+  }
+
+  _endBattle(session) {
+    const { battle, playerAId, playerBId } = session;
+    const connA = this.gameServer.players.get(playerAId);
+    const connB = this.gameServer.players.get(playerBId);
+
+    const result = {
+      result: battle.result,
+      winnerId: battle.result === 'win_a' ? playerAId : battle.result === 'win_b' ? playerBId : null,
+      loserId: battle.result === 'win_a' ? playerBId : battle.result === 'win_b' ? playerAId : null,
+    };
+
+    if (connA) connA.emit(MSG.PVP_BATTLE_END, result);
+    if (connB) connB.emit(MSG.PVP_BATTLE_END, result);
+
+    // Clean up — no HP sync (no consequences)
+    const pcA = this.gameServer.getPlayerEntity(playerAId)?.getComponent(PlayerComponent);
+    const pcB = this.gameServer.getPlayerEntity(playerBId)?.getComponent(PlayerComponent);
     if (pcA) pcA.activeBattle = null;
     if (pcB) pcB.activeBattle = null;
 
-    this.activeBattles.delete(battle.playerAId);
-    this.activeBattles.delete(battle.playerBId);
+    this.activeBattles.delete(playerAId);
+    this.activeBattles.delete(playerBId);
   }
 
   _collectTeam(playerId) {
@@ -221,14 +257,12 @@ export default class PvPBattleManager {
   }
 
   onPlayerLeave(playerId) {
-    // Cancel pending challenges
     const challenge = this.pendingChallenges.get(playerId);
     if (challenge) {
       clearTimeout(challenge.timer);
       this.pendingChallenges.delete(playerId);
     }
 
-    // Also cancel any challenge targeting this player
     for (const [challengerId, ch] of this.pendingChallenges) {
       if (ch.targetId === playerId) {
         clearTimeout(ch.timer);
@@ -236,22 +270,25 @@ export default class PvPBattleManager {
       }
     }
 
-    // Auto-forfeit active battle
-    const battle = this.activeBattles.get(playerId);
-    if (battle && battle.state !== 'ended') {
-      const opponentId = playerId === battle.playerAId ? battle.playerBId : battle.playerAId;
-      battle._endBattle(opponentId, playerId, 'disconnect');
+    const session = this.activeBattles.get(playerId);
+    if (session && !session.battle.ended) {
+      const { battle, playerAId, playerBId } = session;
+      const myTeam = playerId === playerAId ? 'a' : 'b';
+      battle.forfeit(myTeam);
 
+      const opponentId = playerId === playerAId ? playerBId : playerAId;
       const opponentConn = this.gameServer.players.get(opponentId);
       if (opponentConn) {
-        const state = battle.getStateForPlayer(opponentId);
-        state.opponentName = this._getPlayerName(playerId);
-        opponentConn.emit(MSG.PVP_BATTLE_TURN, state);
-        opponentConn.emit(MSG.PVP_BATTLE_END, { result: battle.result });
+        opponentConn.emit(MSG.PVP_BATTLE_TURN, battle.getFullState());
+        opponentConn.emit(MSG.PVP_BATTLE_END, {
+          result: battle.result,
+          winnerId: opponentId,
+          loserId: playerId,
+        });
         opponentConn.emit(MSG.CHAT_RECEIVE, { message: 'Opponent disconnected. You win!', sender: 'System' });
       }
 
-      this._endBattle(battle);
+      this._endBattle(session);
     }
   }
 

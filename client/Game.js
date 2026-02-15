@@ -661,8 +661,16 @@ export default class Game {
       this.inPetBattle = true;
       this.petBattlePanel.open(data);
     };
+    this.network.onPetBattleState = (data) => {
+      // Turn-start notification — route to whichever battle is active
+      if (this.inPetBattle) {
+        this.petBattlePanel.handleTurnStart(data);
+      } else if (this.inPvpBattle) {
+        this.pvpBattlePanel.handleTurnStart(data);
+      }
+    };
     this.network.onPetBattleResult = (data) => {
-      this.petBattlePanel.updateState(data);
+      this.petBattlePanel.handleResult(data);
     };
     this.network.onPetBattleEnd = (data) => {
       // Keep panel open to show result, close on next Escape
@@ -793,7 +801,7 @@ export default class Game {
       if (kb.wasAnyJustPressed(['ArrowDown', 'KeyS']) || actions.dpadDown) this.petBattlePanel.selectDir(0, 1);
       // Confirm with action (Space/F/click/Enter)
       if (actions.action || kb.wasJustPressed('Enter')) {
-        if (this.petBattlePanel.battleState?.state === 'ended') {
+        if (this.petBattlePanel.ended || this.petBattlePanel.battleEndData) {
           this._closePetBattle();
         } else {
           this.petBattlePanel.confirm((action) => {
@@ -803,7 +811,7 @@ export default class Game {
       }
       // Back/close with cancel (Escape)
       if (actions.cancel) {
-        if (this.petBattlePanel.battleState?.state === 'ended') {
+        if (this.petBattlePanel.ended || this.petBattlePanel.battleEndData) {
           this._closePetBattle();
         } else {
           this.petBattlePanel.back();
@@ -822,16 +830,17 @@ export default class Game {
       if (kb.wasAnyJustPressed(['ArrowUp', 'KeyW']) || actions.dpadUp) this.pvpBattlePanel.selectDir(0, -1);
       if (kb.wasAnyJustPressed(['ArrowDown', 'KeyS']) || actions.dpadDown) this.pvpBattlePanel.selectDir(0, 1);
       if (actions.action || kb.wasJustPressed('Enter')) {
-        if (this.pvpBattlePanel.battleState?.state === 'ended') {
+        if (this.pvpBattlePanel.ended || this.pvpBattlePanel.battleEndData) {
           this._closePvpBattle();
         } else {
-          this.pvpBattlePanel.confirm((action) => {
-            this.network.sendPvpBattleAction(action);
-          });
+          this.pvpBattlePanel.confirm(
+            (action) => { this.network.sendPvpBattleAction(action); },
+            () => { this.network.sendPvpBattleForfeit(); }
+          );
         }
       }
       if (actions.cancel) {
-        if (this.pvpBattlePanel.battleState?.state === 'ended') {
+        if (this.pvpBattlePanel.ended || this.pvpBattlePanel.battleEndData) {
           this._closePvpBattle();
         } else {
           this.pvpBattlePanel.back();
@@ -2030,8 +2039,11 @@ export default class Game {
     if (endData && this.localPlayer) {
       if (endData.result === 'win') {
         this.damageNumbers.add(this.localPlayer.x, this.localPlayer.y - 30, `+${endData.xpGained} Pet XP`, false, '#2ecc71');
-        if (endData.leveledUp) {
-          this.damageNumbers.add(this.localPlayer.x, this.localPlayer.y - 50, 'Pet Level Up!', false, '#f1c40f');
+        if (endData.levelUps && endData.levelUps.length > 0) {
+          this.damageNumbers.add(this.localPlayer.x, this.localPlayer.y - 50, `${endData.levelUps.length} Pet Level Up!`, false, '#f1c40f');
+        }
+        if (endData.captured) {
+          this.damageNumbers.add(this.localPlayer.x, this.localPlayer.y - 70, 'Pet Captured!', false, '#3498db');
         }
       }
     }
