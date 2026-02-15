@@ -252,7 +252,7 @@ export const SKILL_DB = {
     scalePerPoint: 0.002,
     duration: 8,
     color: '#27ae60',
-    turnBased: { shieldPercent: 0.15 },
+    turnBased: { apCost: 2, targetAlly: true, statusEffect: { id: 'regenerating', duration: 3 } },
   },
   [SKILL.BERSERKER_RAGE]: {
     id: SKILL.BERSERKER_RAGE,
@@ -264,7 +264,7 @@ export const SKILL_DB = {
     duration: 12,
     effects: { damageMod: 1.5, attackSpeedMod: 1.25, armorMod: 0.7 },
     color: '#e74c3c',
-    turnBased: { scaleBase: 1.6 },
+    turnBased: { apCost: 4, targetAlly: true, statusEffect: [{ id: 'attack_buff', duration: 3, percent: 0.60 }, { id: 'defense_debuff', duration: 3, percent: 0.30 }] },
   },
 
   // ========================
@@ -280,7 +280,7 @@ export const SKILL_DB = {
     healPercent: 0.20,
     range: 120,
     color: '#f1c40f',
-    turnBased: { healPercent: 0.15 },
+    turnBased: { healPercent: 0.15, apCost: 2, targetAlly: true },
   },
   [SKILL.BLESSING_OF_MIGHT]: {
     id: SKILL.BLESSING_OF_MIGHT,
@@ -293,7 +293,7 @@ export const SKILL_DB = {
     range: 120,
     effects: { damageMod: 1.25 },
     color: '#e67e22',
-    turnBased: { scaleBase: 1.2 },
+    turnBased: { apCost: 3, targetAlly: true, isAoE: true, statusEffect: { id: 'attack_buff', duration: 2, percent: 0.20 } },
   },
   [SKILL.DIVINE_SHIELD]: {
     id: SKILL.DIVINE_SHIELD,
@@ -306,7 +306,7 @@ export const SKILL_DB = {
     duration: 8,
     range: 120,
     color: '#f39c12',
-    turnBased: { shieldPercent: 0.12 },
+    turnBased: { shieldPercent: 0.12, apCost: 3, targetAlly: true, isAoE: true },
   },
   [SKILL.DIVINE_HYMN]: {
     id: SKILL.DIVINE_HYMN,
@@ -318,7 +318,7 @@ export const SKILL_DB = {
     healPercent: 0.40,
     range: 120,
     color: '#ffd700',
-    turnBased: { healPercent: 0.30 },
+    turnBased: { healPercent: 0.30, apCost: 4, targetAlly: true, isAoE: true },
   },
 
   // ========================
@@ -335,7 +335,7 @@ export const SKILL_DB = {
     duration: 8,
     range: 120,
     color: '#2ecc71',
-    turnBased: { hotPercent: 0.12 },
+    turnBased: { apCost: 3, targetAlly: true, isAoE: true, statusEffect: { id: 'regenerating', duration: 3 } },
   },
   [SKILL.THORNS]: {
     id: SKILL.THORNS,
@@ -348,7 +348,7 @@ export const SKILL_DB = {
     range: 120,
     effects: { thornsReflect: 0.15 },
     color: '#27ae60',
-    turnBased: { scaleBase: 1.1 },
+    turnBased: { apCost: 2, targetAlly: true, statusEffect: { id: 'defense_buff', duration: 2, percent: 0.15 } },
   },
   [SKILL.BARKSKIN]: {
     id: SKILL.BARKSKIN,
@@ -361,7 +361,7 @@ export const SKILL_DB = {
     range: 120,
     effects: { armorFlat: 40 },
     color: '#8B6914',
-    turnBased: { shieldPercent: 0.10 },
+    turnBased: { shieldPercent: 0.10, apCost: 2, targetAlly: true },
   },
   [SKILL.TRANQUILITY]: {
     id: SKILL.TRANQUILITY,
@@ -374,7 +374,7 @@ export const SKILL_DB = {
     duration: 12,
     range: 120,
     color: '#1abc9c',
-    turnBased: { hotPercent: 0.20 },
+    turnBased: { healPercent: 0.15, apCost: 4, targetAlly: true, isAoE: true, statusEffect: { id: 'regenerating', duration: 4 } },
   },
 
   // ============================
@@ -391,7 +391,7 @@ export const SKILL_DB = {
     healPercent: 0.25,
     range: 120,
     color: '#c0392b',
-    turnBased: { sacrificePercent: 0.12, healPercent: 0.20 },
+    turnBased: { sacrificePercent: 0.12, healPercent: 0.20, apCost: 2, targetAlly: true },
   },
   [SKILL.SANGUINE_FURY]: {
     id: SKILL.SANGUINE_FURY,
@@ -404,7 +404,7 @@ export const SKILL_DB = {
     duration: 8,
     effects: { damageMod: 1.60 },
     color: '#8e44ad',
-    turnBased: { sacrificePercent: 0.08, scaleBase: 1.4 },
+    turnBased: { sacrificePercent: 0.08, apCost: 2, targetAlly: true, statusEffect: { id: 'attack_buff', duration: 3, percent: 0.40 } },
   },
   [SKILL.CRIMSON_DRAIN]: {
     id: SKILL.CRIMSON_DRAIN,
@@ -416,7 +416,7 @@ export const SKILL_DB = {
     damagePercent: 0.15,
     range: 120,
     color: '#e74c3c',
-    turnBased: { scaleBase: 1.2 },
+    turnBased: { scaleBase: 1.2, apCost: 3, isAoE: true, lifesteal: 1.0 },
   },
   [SKILL.BLOOD_RITUAL]: {
     id: SKILL.BLOOD_RITUAL,
@@ -431,7 +431,7 @@ export const SKILL_DB = {
     range: 120,
     effects: { damageMod: 1.30 },
     color: '#922B21',
-    turnBased: { sacrificePercent: 0.20, healPercent: 0.35 },
+    turnBased: { sacrificePercent: 0.20, healPercent: 0.35, apCost: 3, targetAlly: true, isAoE: true, statusEffect: { id: 'attack_buff', duration: 2, percent: 0.25 } },
   },
 
   // ============================
@@ -452,7 +452,7 @@ export const SKILL_DB = {
     range: 160,
     knockback: 4,
     color: '#e74c3c',
-    turnBased: { scaleBase: 1.1 },
+    turnBased: { scaleBase: 1.1, apCost: 2 },
   },
   [SKILL.IGNITE]: {
     id: SKILL.IGNITE,
@@ -465,7 +465,7 @@ export const SKILL_DB = {
     dotDuration: 6,
     range: 120,
     color: '#e67e22',
-    turnBased: { scaleBase: 1.0 },
+    turnBased: { scaleBase: 1.0, apCost: 3, statusEffect: { id: 'burn', duration: 3 } },
   },
   [SKILL.FLAME_WAVE]: {
     id: SKILL.FLAME_WAVE,
@@ -479,7 +479,7 @@ export const SKILL_DB = {
     scalePerPoint: 0.02,
     range: 120,
     color: '#d35400',
-    turnBased: { scaleBase: 1.3 },
+    turnBased: { scaleBase: 1.3, apCost: 3, isAoE: true },
   },
   [SKILL.METEOR]: {
     id: SKILL.METEOR,
@@ -497,7 +497,7 @@ export const SKILL_DB = {
     zoneTickDmg: 0.05,
     zoneType: 'fire',
     color: '#c0392b',
-    turnBased: { scaleBase: 2.0 },
+    turnBased: { scaleBase: 2.0, apCost: 4, isAoE: true, statusEffect: { id: 'burn', duration: 2 } },
   },
 
   // ============================
@@ -519,7 +519,7 @@ export const SKILL_DB = {
     knockback: 2,
     slowOnHit: { speedMod: 0.6, duration: 3 },
     color: '#3498db',
-    turnBased: { scaleBase: 1.0 },
+    turnBased: { scaleBase: 1.0, apCost: 2, statusEffect: { id: 'speed_debuff', duration: 2, percent: 0.20 } },
   },
   [SKILL.ICE_NOVA]: {
     id: SKILL.ICE_NOVA,
@@ -534,7 +534,7 @@ export const SKILL_DB = {
     range: 100,
     freezeDuration: 1.5,
     color: '#2980b9',
-    turnBased: { scaleBase: 1.2 },
+    turnBased: { scaleBase: 1.2, apCost: 3, isAoE: true },
   },
   [SKILL.FROZEN_PRISON]: {
     id: SKILL.FROZEN_PRISON,
@@ -547,7 +547,7 @@ export const SKILL_DB = {
     rootDuration: 4,
     damageTakenMod: 1.2,
     color: '#1abc9c',
-    turnBased: { scaleBase: 0.8 },
+    turnBased: { scaleBase: 0.8, apCost: 3, statusEffect: { id: 'stun', duration: 1 } },
   },
   [SKILL.BLIZZARD]: {
     id: SKILL.BLIZZARD,
@@ -563,7 +563,7 @@ export const SKILL_DB = {
     zoneType: 'ice',
     zoneSlowPct: 0.3,
     color: '#2471a3',
-    turnBased: { scaleBase: 1.4 },
+    turnBased: { scaleBase: 1.4, apCost: 4, isAoE: true, statusEffect: { id: 'speed_debuff', duration: 2, percent: 0.30 } },
   },
 
   // ============================
@@ -581,7 +581,7 @@ export const SKILL_DB = {
     scalePerPoint: 0.02,
     range: 140,
     color: '#f1c40f',
-    turnBased: { scaleBase: 1.3 },
+    turnBased: { scaleBase: 1.3, apCost: 2 },
   },
   [SKILL.CHAIN_LIGHTNING]: {
     id: SKILL.CHAIN_LIGHTNING,
