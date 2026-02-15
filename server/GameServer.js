@@ -21,6 +21,7 @@ import PvPBattleManager from './pet/PvPBattleManager.js';
 import PetBreedingManager from './pet/PetBreedingManager.js';
 import MailHandler from './network/handlers/MailHandler.js';
 import SortingHandler from './network/handlers/SortingHandler.js';
+import AlchemyHandler from './network/handlers/AlchemyHandler.js';
 import QuestComponent from './ecs/components/QuestComponent.js';
 import EntityManager from './ecs/EntityManager.js';
 import SystemManager from './ecs/SystemManager.js';
@@ -158,6 +159,9 @@ export default class GameServer {
 
     this.sortingHandler = new SortingHandler(this);
     this.sortingHandler.register(this.messageRouter);
+
+    this.alchemyHandler = new AlchemyHandler(this);
+    this.alchemyHandler.register(this.messageRouter);
 
     // Respawn handler
     this.messageRouter.register(MSG.PLAYER_RESPAWN, (player) => {
@@ -470,11 +474,6 @@ export default class GameServer {
 
     // Run ECS systems
     this.systemManager.update(dt, this.entityManager, { worldManager: this.worldManager, combatResolver: this.combatResolver });
-
-    // Update sorting minigame sessions
-    if (this.sortingHandler) {
-      this.sortingHandler.update(dt);
-    }
 
     // Destroy marked entities
     this.entityManager.flushDestroyed();
@@ -905,6 +904,9 @@ export default class GameServer {
 
     // Clean up fishing state
     this.fishingHandler.onPlayerLeave(playerConn.id);
+
+    // Clean up alchemy state
+    this.alchemyHandler.removePlayer(playerConn.id);
 
     // Save player data before destroying entity
     await this.savePlayer(playerConn);

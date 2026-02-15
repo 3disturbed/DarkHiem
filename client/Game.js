@@ -41,6 +41,7 @@ import AnimalPenPanel from './ui/AnimalPenPanel.js';
 import PetTeamPanel from './ui/PetTeamPanel.js';
 import MailJobPanel from './ui/MailJobPanel.js';
 import SortingPanel from './ui/SortingPanel.js';
+import AlchemyPanel from './ui/AlchemyPanel.js';
 import PvPBattlePanel from './ui/PvPBattlePanel.js';
 import { LAND_PLOTS } from '../shared/LandPlotTypes.js';
 
@@ -122,6 +123,8 @@ export default class Game {
     this.mailJobOpen = false;
     this.sortingPanel = new SortingPanel();
     this.inSorting = false;
+    this.alchemyPanel = new AlchemyPanel();
+    this.inAlchemy = false;
 
     // Fishing state
     this.fishingState = null; // null | 'casting' | 'waiting' | 'bite' | 'reeling'
@@ -728,12 +731,20 @@ export default class Game {
       this.sortingPanel.position(this.renderer.logicalWidth, this.renderer.logicalHeight);
       this.sortingPanel.start(data);
     };
-    this.network.onSortState = (data) => {
-      this.sortingPanel.updateState(data);
-    };
     this.network.onSortEnd = (data) => {
       this.sortingPanel.end(data);
       this.inSorting = false;
+    };
+
+    // Alchemy minigame callbacks
+    this.network.onAlchemyStart = (data) => {
+      this.inAlchemy = true;
+      this.alchemyPanel.position(this.renderer.logicalWidth, this.renderer.logicalHeight);
+      this.alchemyPanel.start(data);
+    };
+    this.network.onAlchemyEnd = (data) => {
+      this.alchemyPanel.end(data);
+      this.inAlchemy = false;
     };
   }
 
@@ -821,12 +832,18 @@ export default class Game {
       this.sortingPanel.update(dt);
       const kb = this.input.keyboard;
 
-      if (this.inSorting) {
-        // WASD → gate inputs
-        if (kb.wasJustPressed('KeyW')) this.network.sendSortInput(1);
-        if (kb.wasJustPressed('KeyA')) this.network.sendSortInput(2);
-        if (kb.wasJustPressed('KeyS')) this.network.sendSortInput(3);
-        if (kb.wasJustPressed('KeyD')) this.network.sendSortInput(4);
+      if (this.sortingPanel.active) {
+        // WASD → gate inputs (handled locally)
+        if (kb.wasJustPressed('KeyW')) this.sortingPanel.handleGateInput(1);
+        if (kb.wasJustPressed('KeyA')) this.sortingPanel.handleGateInput(2);
+        if (kb.wasJustPressed('KeyS')) this.sortingPanel.handleGateInput(3);
+        if (kb.wasJustPressed('KeyD')) this.sortingPanel.handleGateInput(4);
+      }
+
+      // Game finished — send score report to server
+      if (this.sortingPanel.gameFinished) {
+        this.sortingPanel.gameFinished = false;
+        this.network.sendSortEnd(this.sortingPanel.getScoreReport());
       }
 
       // Escape → cancel sorting / close results
@@ -841,6 +858,32 @@ export default class Game {
         const result = this.sortingPanel.handleClick(uiMX, uiMY);
         if (result && result.action === 'close') {
           this.sortingPanel.close();
+        }
+      }
+
+      this.input.postUpdate();
+      return;
+    }
+
+    // Alchemy minigame takes over input when active
+    if (this.inAlchemy || this.alchemyPanel.visible) {
+      this.alchemyPanel.update(dt);
+      const kb = this.input.keyboard;
+
+      if (this.alchemyPanel.active) {
+        this.alchemyPanel.handleInput(kb);
+      }
+
+      // Game finished — send score report to server
+      if (this.alchemyPanel.gameFinished) {
+        this.alchemyPanel.gameFinished = false;
+        this.network.sendAlchemyEnd(this.alchemyPanel.getScoreReport());
+      }
+
+      // Escape or click to close results
+      if (actions.cancel || actions.action) {
+        if (this.alchemyPanel.results) {
+          this.alchemyPanel.close();
         }
       }
 
@@ -1895,6 +1938,12 @@ export default class Game {
     if (this.sortingPanel.visible) {
       this.sortingPanel.position(r.logicalWidth, r.logicalHeight);
       this.sortingPanel.render(ctx);
+    }
+
+    // Alchemy minigame panel
+    if (this.alchemyPanel.visible) {
+      this.alchemyPanel.position(r.logicalWidth, r.logicalHeight);
+      this.alchemyPanel.render(ctx);
     }
 
     // Context menu (renders on top of all panels)

@@ -4,24 +4,18 @@ import InventoryComponent from '../../ecs/components/InventoryComponent.js';
 import PlayerComponent from '../../ecs/components/PlayerComponent.js';
 
 const GAME_DURATION = 180;
-const CONVEYOR_LENGTH = 10;
-const SORT_ZONE_POS = 9;
+const MAX_POTIONS = 30;
+const MAX_QUALITY_PER_POTION = 100;
 
-const SCORE_CORRECT = 10;
-const SCORE_INCORRECT = -20;
-const SCORE_MISSED = -1;
-
-const MAX_ACTIONS = 350;
-
-export default class SortingHandler {
+export default class AlchemyHandler {
   constructor(gameServer) {
     this.gameServer = gameServer;
     this.sessions = new Map();
   }
 
   register(router) {
-    router.register(MSG.SORT_START, (player) => this.handleStart(player));
-    router.register(MSG.SORT_END, (player, data) => this.handleEnd(player, data));
+    router.register(MSG.ALCHEMY_START, (player) => this.handleStart(player));
+    router.register(MSG.ALCHEMY_END, (player, data) => this.handleEnd(player, data));
   }
 
   handleStart(playerConn) {
@@ -32,7 +26,10 @@ export default class SortingHandler {
     if (health && !health.isAlive()) return;
 
     if (this.sessions.has(playerConn.id)) {
-      playerConn.emit(MSG.CHAT_RECEIVE, { message: 'You are already sorting!', sender: 'Postmaster Paul' });
+      playerConn.emit(MSG.CHAT_RECEIVE, {
+        message: 'You are already distilling!',
+        sender: 'Alchemist Hilda',
+      });
       return;
     }
 
@@ -48,17 +45,14 @@ export default class SortingHandler {
       startTime: Date.now(),
     });
 
-    playerConn.emit(MSG.SORT_START, {
+    playerConn.emit(MSG.ALCHEMY_START, {
       duration: GAME_DURATION,
-      gateColors: [1, 2, 3, 4],
-      conveyorLength: CONVEYOR_LENGTH,
-      sortZone: SORT_ZONE_POS,
       seed,
     });
 
     playerConn.emit(MSG.CHAT_RECEIVE, {
-      message: 'Sorting started! Use W/A/S/D for gates 1-4. Match packages to the correct gate by color!',
-      sender: 'Postmaster Paul',
+      message: 'Distillation started! Heat the flask, add ingredients, then stabilize. Brew as many potions as you can in 3 minutes!',
+      sender: 'Alchemist Hilda',
     });
   }
 
@@ -66,33 +60,32 @@ export default class SortingHandler {
     const session = this.sessions.get(playerConn.id);
     if (!session) return;
 
-    // Validate seed
     if (data?.seed !== session.seed) {
       this.sessions.delete(playerConn.id);
       return;
     }
 
-    // Validate wall-clock time (must have waited at least ~170s)
     const elapsed = (Date.now() - session.startTime) / 1000;
     if (elapsed < GAME_DURATION - 10) {
       this.sessions.delete(playerConn.id);
       return;
     }
 
-    const correct = Math.max(0, Math.floor(data.correct || 0));
-    const incorrect = Math.max(0, Math.floor(data.incorrect || 0));
-    const missed = Math.max(0, Math.floor(data.missed || 0));
+    const potionsCompleted = Math.max(0, Math.floor(data.potionsCompleted || 0));
+    const totalQuality = Math.max(0, Math.floor(data.totalQuality || 0));
 
-    if (correct + incorrect + missed > MAX_ACTIONS) {
+    if (potionsCompleted > MAX_POTIONS) {
       this.sessions.delete(playerConn.id);
       return;
     }
 
-    // Recalculate score from breakdown (ignore client score)
-    const score = correct * SCORE_CORRECT + incorrect * SCORE_INCORRECT + missed * SCORE_MISSED;
-    const gold = Math.max(1, Math.floor(score / 10));
+    if (totalQuality > potionsCompleted * MAX_QUALITY_PER_POTION) {
+      this.sessions.delete(playerConn.id);
+      return;
+    }
 
-    // Award gold
+    const gold = Math.max(1, Math.floor(totalQuality / 5));
+
     const entity = this.gameServer.getPlayerEntity(session.playerId);
     if (entity) {
       const inv = entity.getComponent(InventoryComponent);
@@ -102,18 +95,17 @@ export default class SortingHandler {
       }
     }
 
-    session.playerConn.emit(MSG.SORT_END, {
-      finalScore: score,
+    session.playerConn.emit(MSG.ALCHEMY_END, {
+      totalQuality,
+      potionsCompleted,
       gold,
-      correct,
-      incorrect,
-      missed,
       duration: Math.floor(elapsed),
+      potionGrades: data.potionGrades || [],
     });
 
     session.playerConn.emit(MSG.CHAT_RECEIVE, {
-      message: `Sorting complete! Score: ${score} | Earned: ${gold}g`,
-      sender: 'Postmaster Paul',
+      message: `Distillation complete! ${potionsCompleted} potions brewed. Earned: ${gold}g`,
+      sender: 'Alchemist Hilda',
     });
 
     this.sessions.delete(playerConn.id);

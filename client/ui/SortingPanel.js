@@ -6,11 +6,31 @@ const GATE_KEYS = ['', 'W', 'A', 'S', 'D'];
 const FLASH_DURATION = 0.45; // seconds
 const SCORE_POP_DURATION = 0.8;
 
-// Mirror server speed tiers for client-side prediction
+// Game simulation constants
 const GAME_DURATION = 180;
 const SPEED_SLOW = 1.5;
 const SPEED_MEDIUM = 2.0;
 const SPEED_FAST = 3.0;
+const SPAWN_INTERVAL_SLOW = 1.5;
+const SPAWN_INTERVAL_MEDIUM = 1.0;
+const SPAWN_INTERVAL_FAST = 0.6;
+const PACKAGE_EXIT_POS = 10;
+const NUM_COLORS = 4;
+const NUM_NUMBERS = 4;
+const SORT_RANGE = 1.5;
+const SCORE_CORRECT = 10;
+const SCORE_INCORRECT = -20;
+const SCORE_MISSED = -1;
+
+function mulberry32(seed) {
+  let s = seed | 0;
+  return function() {
+    s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 export default class SortingPanel {
   constructor() {
@@ -51,6 +71,17 @@ export default class SortingPanel {
     // Streak tracking
     this.streak = 0;
     this.bestStreak = 0;
+
+    // Game simulation state
+    this.seed = 0;
+    this.rng = null;
+    this.timer = 0;
+    this.spawnTimer = 0;
+    this.nextPackageId = 0;
+    this.correctSorts = 0;
+    this.incorrectSorts = 0;
+    this.missedSorts = 0;
+    this.gameFinished = false;
   }
 
   start(data) {
@@ -71,73 +102,89 @@ export default class SortingPanel {
     this.conveyorOffset = 0;
     this.streak = 0;
     this.bestStreak = 0;
+
+    // Game simulation init
+    this.seed = data.seed || 0;
+    this.rng = mulberry32(this.seed);
+    this.timer = 0;
+    this.spawnTimer = 0;
+    this.nextPackageId = 0;
+    this.correctSorts = 0;
+    this.incorrectSorts = 0;
+    this.missedSorts = 0;
+    this.gameFinished = false;
   }
 
   _getSpeed() {
-    const elapsed = GAME_DURATION - this.timeLeft;
-    if (elapsed < 60) return SPEED_SLOW;
-    if (elapsed < 120) return SPEED_MEDIUM;
+    if (this.timer < 60) return SPEED_SLOW;
+    if (this.timer < 120) return SPEED_MEDIUM;
     return SPEED_FAST;
   }
 
-  updateState(data) {
-    if (!this.active) return;
-    this.score = data.score;
-    this.timeLeft = data.timeLeft;
+  _getSpawnInterval() {
+    if (this.timer < 60) return SPAWN_INTERVAL_SLOW;
+    if (this.timer < 120) return SPAWN_INTERVAL_MEDIUM;
+    return SPAWN_INTERVAL_FAST;
+  }
 
-    // Reconcile server packages with local predicted positions
-    const serverPkgs = data.packages || [];
-    const serverMap = new Map(serverPkgs.map(p => [p.id, p]));
+  _spawnPackage() {
+    const color = Math.floor(this.rng() * NUM_COLORS) + 1;
+    const number = Math.floor(this.rng() * NUM_NUMBERS) + 1;
+    this.packages.push({
+      id: this.nextPackageId++,
+      color,
+      number,
+      position: 0,
+    });
+  }
 
-    // Remove packages that the server no longer has (sorted/missed)
-    this.packages = this.packages.filter(p => serverMap.has(p.id));
+  handleGateInput(gate) {
+    if (!this.active || gate < 1 || gate > 4) return;
 
-    // Update existing & add new packages
-    const localMap = new Map(this.packages.map(p => [p.id, p]));
-    for (const sp of serverPkgs) {
-      const lp = localMap.get(sp.id);
-      if (lp) {
-        // Smoothly correct towards server position
-        lp.targetPos = sp.position;
-        lp.color = sp.color;
-        lp.number = sp.number;
-      } else {
-        // New package from server — add with no lerp needed
-        this.packages.push({
-          id: sp.id,
-          color: sp.color,
-          number: sp.number,
-          position: sp.position,
-          targetPos: sp.position,
-        });
+    // Find the package closest to the sort zone
+    let targetPkg = null;
+    let targetDist = Infinity;
+    for (const pkg of this.packages) {
+      const dist = Math.abs(pkg.position - this.sortZone);
+      if (dist < SORT_RANGE && dist < targetDist) {
+        targetDist = dist;
+        targetPkg = pkg;
       }
     }
 
-    // Handle feedback
-    if (data.feedback) {
-      const fb = data.feedback;
-      this.flash = { type: fb.type, timer: FLASH_DURATION };
+    if (!targetPkg) return;
 
-      if (fb.type === 'correct') {
-        this.streak++;
-        if (this.streak > this.bestStreak) this.bestStreak = this.streak;
-        // Flash the gate that was pressed
-        if (fb.gate >= 1 && fb.gate <= 4) {
-          this.gateFlash[fb.gate - 1] = FLASH_DURATION;
-        }
-        const label = this.streak > 2 ? `+${fb.scoreChange} x${this.streak}` : `+${fb.scoreChange}`;
-        this._addScorePop(label, '#4eff7a');
-      } else if (fb.type === 'incorrect') {
-        this.streak = 0;
-        if (fb.gate >= 1 && fb.gate <= 4) {
-          this.gateFlash[fb.gate - 1] = FLASH_DURATION;
-        }
-        this._addScorePop(`${fb.scoreChange}`, '#ff4444');
-      } else if (fb.type === 'missed') {
-        this.streak = 0;
-        this._addScorePop(`${fb.scoreChange}`, '#ff8844');
-      }
+    const correctGate = this.gateColors.indexOf(targetPkg.color) + 1;
+    const isCorrect = gate === correctGate;
+
+    if (isCorrect) {
+      this.score += SCORE_CORRECT;
+      this.correctSorts++;
+      this.streak++;
+      if (this.streak > this.bestStreak) this.bestStreak = this.streak;
+      if (gate >= 1 && gate <= 4) this.gateFlash[gate - 1] = FLASH_DURATION;
+      const label = this.streak > 2 ? `+${SCORE_CORRECT} x${this.streak}` : `+${SCORE_CORRECT}`;
+      this._addScorePop(label, '#4eff7a');
+    } else {
+      this.score += SCORE_INCORRECT;
+      this.incorrectSorts++;
+      this.streak = 0;
+      if (gate >= 1 && gate <= 4) this.gateFlash[gate - 1] = FLASH_DURATION;
+      this._addScorePop(`${SCORE_INCORRECT}`, '#ff4444');
     }
+
+    this.flash = { type: isCorrect ? 'correct' : 'incorrect', timer: FLASH_DURATION };
+    this.packages = this.packages.filter(p => p.id !== targetPkg.id);
+  }
+
+  getScoreReport() {
+    return {
+      seed: this.seed,
+      score: this.score,
+      correct: this.correctSorts,
+      incorrect: this.incorrectSorts,
+      missed: this.missedSorts,
+    };
   }
 
   _addScorePop(text, color) {
@@ -179,20 +226,43 @@ export default class SortingPanel {
     const beltSpeed = this.active ? this._getSpeed() * 20 : 40;
     this.conveyorOffset = (this.conveyorOffset + dt * beltSpeed) % 24;
 
-    // Client-side package movement prediction
+    // Game simulation
     if (this.active) {
-      const speed = this._getSpeed();
-      for (const pkg of this.packages) {
-        // Advance position at predicted speed
-        pkg.position += speed * dt;
+      this.timer += dt;
 
-        // Smoothly correct towards server-authoritative target
-        if (pkg.targetPos !== undefined) {
-          // Target also advances at server speed between ticks
-          pkg.targetPos += speed * dt;
-          const drift = pkg.targetPos - pkg.position;
-          // Lerp correction — blend towards server position
-          pkg.position += drift * Math.min(1, dt * 10);
+      // Check if game is over
+      if (this.timer >= GAME_DURATION) {
+        this.active = false;
+        this.gameFinished = true;
+        this.timeLeft = 0;
+      } else {
+        this.timeLeft = Math.max(0, Math.ceil(GAME_DURATION - this.timer));
+
+        // Spawn packages
+        const spawnInterval = this._getSpawnInterval();
+        this.spawnTimer += dt;
+        if (this.spawnTimer >= spawnInterval) {
+          this.spawnTimer -= spawnInterval;
+          this._spawnPackage();
+        }
+
+        // Move packages
+        const speed = this._getSpeed();
+        const toRemove = [];
+        for (const pkg of this.packages) {
+          pkg.position += speed * dt;
+          if (pkg.position >= PACKAGE_EXIT_POS) {
+            this.score += SCORE_MISSED;
+            this.missedSorts++;
+            toRemove.push(pkg.id);
+          }
+        }
+
+        if (toRemove.length > 0) {
+          this.packages = this.packages.filter(p => !toRemove.includes(p.id));
+          this.streak = 0;
+          this.flash = { type: 'missed', timer: FLASH_DURATION };
+          this._addScorePop(`${SCORE_MISSED * toRemove.length}`, '#ff8844');
         }
       }
     }

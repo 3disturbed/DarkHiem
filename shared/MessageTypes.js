@@ -170,9 +170,11 @@ export const MSG = {
 
   // Sorting minigame
   SORT_START:         'sort:start',
-  SORT_INPUT:         'sort:input',
-  SORT_STATE:         'sort:state',
   SORT_END:           'sort:end',
+
+  // Alchemy minigame
+  ALCHEMY_START:      'alchemy:start',
+  ALCHEMY_END:        'alchemy:end',
 
   // PVP pet battle
   PVP_CHALLENGE:         'pvp:challenge',

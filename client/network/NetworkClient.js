@@ -73,8 +73,11 @@ export default class NetworkClient {
 
     // Sorting minigame callbacks
     this.onSortStart = null;
-    this.onSortState = null;
     this.onSortEnd = null;
+
+    // Alchemy minigame callbacks
+    this.onAlchemyStart = null;
+    this.onAlchemyEnd = null;
 
     // PVP pet battle callbacks
     this.onPvpChallenge = null;
@@ -323,11 +326,16 @@ export default class NetworkClient {
     this.socket.on(MSG.SORT_START, (data) => {
       if (this.onSortStart) this.onSortStart(data);
     });
-    this.socket.on(MSG.SORT_STATE, (data) => {
-      if (this.onSortState) this.onSortState(data);
-    });
     this.socket.on(MSG.SORT_END, (data) => {
       if (this.onSortEnd) this.onSortEnd(data);
+    });
+
+    // Alchemy minigame
+    this.socket.on(MSG.ALCHEMY_START, (data) => {
+      if (this.onAlchemyStart) this.onAlchemyStart(data);
+    });
+    this.socket.on(MSG.ALCHEMY_END, (data) => {
+      if (this.onAlchemyEnd) this.onAlchemyEnd(data);
     });
 
     // PVP pet battle
@@ -613,9 +621,14 @@ export default class NetworkClient {
     this.socket.emit(MSG.MAIL_ACCEPT, { type, npcId });
   }
 
-  sendSortInput(gate) {
+  sendSortEnd(report) {
     if (!this.connected) return;
-    this.socket.emit(MSG.SORT_INPUT, { gate });
+    this.socket.emit(MSG.SORT_END, report);
+  }
+
+  sendAlchemyEnd(report) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.ALCHEMY_END, report);
   }
 
   sendPvpBattleAction(action) {

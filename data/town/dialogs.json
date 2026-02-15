@@ -79,14 +79,23 @@
           "text": "Ah, another adventurer seeking potions? I am Hilda. My concoctions can heal wounds and restore vigor.",
           "choices": [
             { "text": "Show me what you have.", "action": "open_shop" },
+            { "text": "I want to help brew potions.", "nextNode": "brew_intro" },
             { "text": "What do you sell?", "nextNode": "about_potions" },
             { "text": "Farewell.", "action": "close" }
+          ]
+        },
+        "brew_intro": {
+          "text": "Eager to learn the craft? I could use a quick hand at the distillation bench. Heat the flask, add ingredients in order, then stabilize the mixture. You'll earn gold for every potion you complete in 3 minutes.",
+          "choices": [
+            { "text": "Let's begin distilling!", "action": "start_alchemy" },
+            { "text": "Maybe later.", "action": "close" }
           ]
         },
         "about_potions": {
           "text": "Berry juice for minor wounds, mushroom soup for stamina. Bring me rare ingredients and I can brew something truly special.",
           "choices": [
             { "text": "Let me see your shop.", "action": "open_shop" },
+            { "text": "I want to help brew potions.", "nextNode": "brew_intro" },
             { "text": "Farewell.", "action": "close" }
           ]
         }

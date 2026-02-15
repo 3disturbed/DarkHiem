@@ -99,6 +99,15 @@ export default class DialogHandler {
       return;
     }
 
+    if (choice.action === 'start_alchemy') {
+      this.dialogStates.delete(player.id);
+      player.emit(MSG.DIALOG_END, { npcId: state.npcId });
+      if (this.gameServer.alchemyHandler) {
+        this.gameServer.alchemyHandler.handleStart(player);
+      }
+      return;
+    }
+
     if (choice.action === 'heal_pets') {
       this._healAllPets(player, entity);
       // Stay in dialog so player can continue talking
