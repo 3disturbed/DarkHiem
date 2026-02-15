@@ -79,6 +79,10 @@ export default class NetworkClient {
     this.onAlchemyStart = null;
     this.onAlchemyEnd = null;
 
+    // Fishmonger minigame callbacks
+    this.onFishmongerStart = null;
+    this.onFishmongerEnd = null;
+
     // PVP pet battle callbacks
     this.onPvpChallenge = null;
     this.onPvpChallengeTimeout = null;
@@ -336,6 +340,14 @@ export default class NetworkClient {
     });
     this.socket.on(MSG.ALCHEMY_END, (data) => {
       if (this.onAlchemyEnd) this.onAlchemyEnd(data);
+    });
+
+    // Fishmonger minigame
+    this.socket.on(MSG.FISHMONGER_START, (data) => {
+      if (this.onFishmongerStart) this.onFishmongerStart(data);
+    });
+    this.socket.on(MSG.FISHMONGER_END, (data) => {
+      if (this.onFishmongerEnd) this.onFishmongerEnd(data);
     });
 
     // PVP pet battle
@@ -629,6 +641,11 @@ export default class NetworkClient {
   sendAlchemyEnd(report) {
     if (!this.connected) return;
     this.socket.emit(MSG.ALCHEMY_END, report);
+  }
+
+  sendFishmongerEnd(report) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.FISHMONGER_END, report);
   }
 
   sendPvpBattleAction(action) {

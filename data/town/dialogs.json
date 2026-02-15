@@ -108,14 +108,23 @@
           "text": "Ho there! Name's Olaf. Fresh fish daily -- when someone catches them! The rivers are full of trout and the lakes hold even bigger prizes.",
           "choices": [
             { "text": "Any work for a fisherman?", "action": "show_quests" },
+            { "text": "Need help at the stall?", "nextNode": "stall_intro" },
             { "text": "Tell me about fishing.", "nextNode": "about_fishing" },
             { "text": "Farewell.", "action": "close" }
+          ]
+        },
+        "stall_intro": {
+          "text": "Aye! The morning rush is about to hit and I'm swamped! Grab an apron -- you'll be prepping, salting, smoking, and serving as fast as you can. Think you can keep up?",
+          "choices": [
+            { "text": "Let's get to work!", "action": "start_fishmonger" },
+            { "text": "Maybe later.", "action": "close" }
           ]
         },
         "about_fishing": {
           "text": "Get yourself a rod and head to any river or lake. The deeper the water, the bigger the catch. Different biomes have different fish too!",
           "choices": [
             { "text": "I'll give it a try.", "action": "show_quests" },
+            { "text": "Need help at the stall?", "nextNode": "stall_intro" },
             { "text": "Farewell.", "action": "close" }
           ]
         }

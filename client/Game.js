@@ -42,6 +42,7 @@ import PetTeamPanel from './ui/PetTeamPanel.js';
 import MailJobPanel from './ui/MailJobPanel.js';
 import SortingPanel from './ui/SortingPanel.js';
 import AlchemyPanel from './ui/AlchemyPanel.js';
+import FishmongerPanel from './ui/FishmongerPanel.js';
 import PvPBattlePanel from './ui/PvPBattlePanel.js';
 import { LAND_PLOTS } from '../shared/LandPlotTypes.js';
 
@@ -125,6 +126,8 @@ export default class Game {
     this.inSorting = false;
     this.alchemyPanel = new AlchemyPanel();
     this.inAlchemy = false;
+    this.fishmongerPanel = new FishmongerPanel();
+    this.inFishmonger = false;
 
     // Fishing state
     this.fishingState = null; // null | 'casting' | 'waiting' | 'bite' | 'reeling'
@@ -746,6 +749,17 @@ export default class Game {
       this.alchemyPanel.end(data);
       this.inAlchemy = false;
     };
+
+    // Fishmonger minigame callbacks
+    this.network.onFishmongerStart = (data) => {
+      this.inFishmonger = true;
+      this.fishmongerPanel.position(this.renderer.logicalWidth, this.renderer.logicalHeight);
+      this.fishmongerPanel.start(data);
+    };
+    this.network.onFishmongerEnd = (data) => {
+      this.fishmongerPanel.end(data);
+      this.inFishmonger = false;
+    };
   }
 
   start() {
@@ -884,6 +898,32 @@ export default class Game {
       if (actions.cancel || actions.action) {
         if (this.alchemyPanel.results) {
           this.alchemyPanel.close();
+        }
+      }
+
+      this.input.postUpdate();
+      return;
+    }
+
+    // Fishmonger minigame takes over input when active
+    if (this.inFishmonger || this.fishmongerPanel.visible) {
+      this.fishmongerPanel.update(dt);
+      const kb = this.input.keyboard;
+
+      if (this.fishmongerPanel.active) {
+        this.fishmongerPanel.handleInput(kb);
+      }
+
+      // Game finished — send score report to server
+      if (this.fishmongerPanel.gameFinished) {
+        this.fishmongerPanel.gameFinished = false;
+        this.network.sendFishmongerEnd(this.fishmongerPanel.getScoreReport());
+      }
+
+      // Escape or click to close results
+      if (actions.cancel || actions.action) {
+        if (this.fishmongerPanel.results) {
+          this.fishmongerPanel.close();
         }
       }
 
@@ -1944,6 +1984,12 @@ export default class Game {
     if (this.alchemyPanel.visible) {
       this.alchemyPanel.position(r.logicalWidth, r.logicalHeight);
       this.alchemyPanel.render(ctx);
+    }
+
+    // Fishmonger minigame panel
+    if (this.fishmongerPanel.visible) {
+      this.fishmongerPanel.position(r.logicalWidth, r.logicalHeight);
+      this.fishmongerPanel.render(ctx);
     }
 
     // Context menu (renders on top of all panels)

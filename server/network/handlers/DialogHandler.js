@@ -108,6 +108,15 @@ export default class DialogHandler {
       return;
     }
 
+    if (choice.action === 'start_fishmonger') {
+      this.dialogStates.delete(player.id);
+      player.emit(MSG.DIALOG_END, { npcId: state.npcId });
+      if (this.gameServer.fishmongerHandler) {
+        this.gameServer.fishmongerHandler.handleStart(player);
+      }
+      return;
+    }
+
     if (choice.action === 'heal_pets') {
       this._healAllPets(player, entity);
       // Stay in dialog so player can continue talking
