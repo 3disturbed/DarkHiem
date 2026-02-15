@@ -597,7 +597,7 @@ export const SKILL_DB = {
     jumps: 4,
     falloff: 0.15,
     color: '#f39c12',
-    turnBased: { scaleBase: 1.2 },
+    turnBased: { scaleBase: 1.2, apCost: 3, isAoE: true },
   },
   [SKILL.STATIC_FIELD]: {
     id: SKILL.STATIC_FIELD,
@@ -609,7 +609,7 @@ export const SKILL_DB = {
     percentDamage: 0.20,
     range: 120,
     color: '#d4ac0d',
-    turnBased: { scaleBase: 1.1 },
+    turnBased: { scaleBase: 1.1, apCost: 3, isAoE: true },
   },
   [SKILL.STORM_CALL]: {
     id: SKILL.STORM_CALL,
@@ -624,7 +624,7 @@ export const SKILL_DB = {
     zoneTickDmg: 0.08,
     zoneType: 'lightning',
     color: '#b7950b',
-    turnBased: { scaleBase: 1.5 },
+    turnBased: { scaleBase: 1.5, apCost: 4, isAoE: true },
   },
 };
 
