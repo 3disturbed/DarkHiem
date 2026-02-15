@@ -71,7 +71,7 @@ export const SKILL_DB = {
     scalePerPoint: 0.02,
     duration: 10,
     color: '#e74c3c',
-    turnBased: { scaleBase: 1.5 },
+    turnBased: { scaleBase: 1.5, apCost: 2 },
   },
   [SKILL.HEAL]: {
     id: SKILL.HEAL,
@@ -84,7 +84,7 @@ export const SKILL_DB = {
     scaleBase: 0.25,
     scalePerPoint: 0.005,
     color: '#2ecc71',
-    turnBased: { scaleBase: 0.20 },
+    turnBased: { healPercent: 0.20, apCost: 2, targetAlly: true },
   },
   [SKILL.EVASION]: {
     id: SKILL.EVASION,
@@ -98,7 +98,7 @@ export const SKILL_DB = {
     scalePerPoint: 0.01,
     duration: 5,
     color: '#1abc9c',
-    turnBased: { shieldPercent: 0.10 },
+    turnBased: { shieldPercent: 0.10, apCost: 2, targetAlly: true },
   },
   [SKILL.PRECISION_STRIKE]: {
     id: SKILL.PRECISION_STRIKE,
@@ -112,7 +112,7 @@ export const SKILL_DB = {
     scalePerPoint: 0.01,
     duration: 10,
     color: '#e67e22',
-    turnBased: { scaleBase: 1.4 },
+    turnBased: { scaleBase: 1.4, apCost: 2 },
   },
   [SKILL.FORTIFY]: {
     id: SKILL.FORTIFY,
@@ -126,7 +126,7 @@ export const SKILL_DB = {
     scalePerPoint: 0.005,
     duration: 8,
     color: '#34495e',
-    turnBased: { shieldPercent: 0.18 },
+    turnBased: { shieldPercent: 0.18, apCost: 2, targetAlly: true },
   },
   [SKILL.VENOM_STRIKE]: {
     id: SKILL.VENOM_STRIKE,
@@ -141,7 +141,7 @@ export const SKILL_DB = {
     poisonDuration: 8,
     duration: 10,
     color: '#16a085',
-    turnBased: { scaleBase: 1.1 },
+    turnBased: { scaleBase: 1.1, apCost: 2, statusEffect: { id: 'poison', duration: 3 } },
   },
   [SKILL.CLEAVE]: {
     id: SKILL.CLEAVE,
@@ -155,7 +155,7 @@ export const SKILL_DB = {
     scalePerPoint: 0.02,
     range: 0, // 0 = use weapon range
     color: '#e67e22',
-    turnBased: { scaleBase: 1.3 },
+    turnBased: { scaleBase: 1.3, apCost: 3, isAoE: true },
   },
   [SKILL.WAR_CRY]: {
     id: SKILL.WAR_CRY,
@@ -167,7 +167,7 @@ export const SKILL_DB = {
     duration: 8,
     effects: { damageMod: 1.3 },
     color: '#f39c12',
-    turnBased: { scaleBase: 1.2 },
+    turnBased: { apCost: 2, targetAlly: true, statusEffect: { id: 'attack_buff', duration: 2, percent: 0.20 } },
   },
   [SKILL.IRON_SKIN]: {
     id: SKILL.IRON_SKIN,
@@ -179,7 +179,7 @@ export const SKILL_DB = {
     duration: 10,
     effects: { armorFlat: 50 },
     color: '#95a5a6',
-    turnBased: { shieldPercent: 0.12 },
+    turnBased: { shieldPercent: 0.12, apCost: 2, targetAlly: true },
   },
   [SKILL.LIFE_STEAL]: {
     id: SKILL.LIFE_STEAL,
@@ -193,7 +193,7 @@ export const SKILL_DB = {
     scalePerPoint: 0.005,
     duration: 8,
     color: '#8e44ad',
-    turnBased: { scaleBase: 0.9 },
+    turnBased: { scaleBase: 0.9, apCost: 2, lifesteal: 0.5 },
   },
   [SKILL.WHIRLWIND]: {
     id: SKILL.WHIRLWIND,

@@ -7,6 +7,32 @@ export const PET_MAX_LEVEL = 20;
 export const PET_SKILL_UNLOCK_LEVELS = [1, 3, 5, 8, 12];
 export const PET_FLEE_CHANCE = 0.5;
 export const PET_MAX_TURNS = 50;
+export const AP_PER_TURN = 4;
+export const BASIC_ATTACK_AP = 2;
+
+// Wild encounter enemy count by creature tier
+export const ENCOUNTER_SCALING = {
+  0: [1, 1],    // Meadow: always 1
+  1: [1, 2],    // Dark Forest: 1-2
+  2: [2, 2],    // Swamp: always 2
+  3: [2, 3],    // Mountain: 2-3
+  4: [3, 3],    // Volcanic: always 3
+};
+
+// Status effect definitions
+export const STATUS_EFFECTS = {
+  burn:           { type: 'dot',    tickPercent: 0.05, color: '#e74c3c', icon: 'B' },
+  poison:         { type: 'dot',    tickPercent: 0.04, color: '#16a085', icon: 'P' },
+  regenerating:   { type: 'hot',    tickPercent: 0.06, color: '#2ecc71', icon: 'R' },
+  shield:         { type: 'shield', color: '#f39c12', icon: 'S' },
+  attack_buff:    { type: 'buff',   stat: 'attack',  color: '#e67e22', icon: '+A' },
+  defense_buff:   { type: 'buff',   stat: 'defense', color: '#3498db', icon: '+D' },
+  speed_buff:     { type: 'buff',   stat: 'speed',   color: '#1abc9c', icon: '+S' },
+  attack_debuff:  { type: 'debuff', stat: 'attack',  color: '#922B21', icon: '-A' },
+  defense_debuff: { type: 'debuff', stat: 'defense', color: '#7f8c8d', icon: '-D' },
+  speed_debuff:   { type: 'debuff', stat: 'speed',   color: '#2c3e50', icon: '-S' },
+  stun:           { type: 'cc',     color: '#8e44ad', icon: '!' },
+};
 
 // XP required to reach each level (index 0 = level 2, index 18 = level 20)
 export const PET_XP_TABLE = [
