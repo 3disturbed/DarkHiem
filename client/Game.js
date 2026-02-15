@@ -41,6 +41,7 @@ import AnimalPenPanel from './ui/AnimalPenPanel.js';
 import PetTeamPanel from './ui/PetTeamPanel.js';
 import MailJobPanel from './ui/MailJobPanel.js';
 import SortingPanel from './ui/SortingPanel.js';
+import PvPBattlePanel from './ui/PvPBattlePanel.js';
 import { LAND_PLOTS } from '../shared/LandPlotTypes.js';
 
 export default class Game {
@@ -110,6 +111,8 @@ export default class Game {
     this.contextMenu = new ContextMenu();
     this.petBattlePanel = new PetBattlePanel();
     this.inPetBattle = false;
+    this.pvpBattlePanel = new PvPBattlePanel();
+    this.inPvpBattle = false;
     this.animalPenPanel = new AnimalPenPanel();
     this.animalPenOpen = false;
     this.petTeamPanel = new PetTeamPanel();
@@ -270,6 +273,11 @@ export default class Game {
         if (this.inPetBattle) {
           this.petBattlePanel.close();
           this.inPetBattle = false;
+        }
+        if (this.inPvpBattle) {
+          this.network.sendPvpBattleForfeit();
+          this.pvpBattlePanel.close();
+          this.inPvpBattle = false;
         }
         if (this.animalPenOpen) {
           this.animalPenPanel.close();
@@ -655,6 +663,18 @@ export default class Game {
       this.petBattlePanel.battleEndData = data;
     };
 
+    // PVP pet battle callbacks
+    this.network.onPvpBattleStart = (data) => {
+      this.inPvpBattle = true;
+      this.pvpBattlePanel.open(data);
+    };
+    this.network.onPvpBattleTurn = (data) => {
+      this.pvpBattlePanel.updateState(data);
+    };
+    this.network.onPvpBattleEnd = (data) => {
+      this.pvpBattlePanel.battleEndData = data;
+    };
+
     // Land plot purchase (full registry on join OR individual purchase update)
     this.network.onLandPurchase = (data) => {
       if (data.registry) {
@@ -762,6 +782,34 @@ export default class Game {
           this._closePetBattle();
         } else {
           this.petBattlePanel.back();
+        }
+      }
+      this.input.postUpdate();
+      return;
+    }
+
+    // PVP pet battle takes over all input when active
+    if (this.inPvpBattle) {
+      this.pvpBattlePanel.update(dt);
+      const kb = this.input.keyboard;
+      if (kb.wasAnyJustPressed(['ArrowLeft', 'KeyA']) || actions.dpadLeft) this.pvpBattlePanel.selectDir(-1, 0);
+      if (kb.wasAnyJustPressed(['ArrowRight', 'KeyD']) || actions.dpadRight) this.pvpBattlePanel.selectDir(1, 0);
+      if (kb.wasAnyJustPressed(['ArrowUp', 'KeyW']) || actions.dpadUp) this.pvpBattlePanel.selectDir(0, -1);
+      if (kb.wasAnyJustPressed(['ArrowDown', 'KeyS']) || actions.dpadDown) this.pvpBattlePanel.selectDir(0, 1);
+      if (actions.action || kb.wasJustPressed('Enter')) {
+        if (this.pvpBattlePanel.battleState?.state === 'ended') {
+          this._closePvpBattle();
+        } else {
+          this.pvpBattlePanel.confirm((action) => {
+            this.network.sendPvpBattleAction(action);
+          });
+        }
+      }
+      if (actions.cancel) {
+        if (this.pvpBattlePanel.battleState?.state === 'ended') {
+          this._closePvpBattle();
+        } else {
+          this.pvpBattlePanel.back();
         }
       }
       this.input.postUpdate();
@@ -942,7 +990,7 @@ export default class Game {
 
     // Handle Ctrl key (mount / dismount only)
     if (actions.horseAction && !this.placementMode && !this.isDead) {
-      if (this.inPetBattle) {
+      if (this.inPetBattle || this.inPvpBattle) {
         // no-op during pet battle
       } else if (this.mounted) {
         this.network.sendHorseDismount();
@@ -1869,6 +1917,11 @@ export default class Game {
       this.petBattlePanel.render(ctx, r.logicalWidth, r.logicalHeight);
     }
 
+    // PVP battle overlay
+    if (this.inPvpBattle) {
+      this.pvpBattlePanel.render(ctx, r.logicalWidth, r.logicalHeight);
+    }
+
     // Death screen (renders on top of everything)
     this.deathScreen.render(ctx, r.logicalWidth, r.logicalHeight);
     r.endUI();
@@ -1885,6 +1938,22 @@ export default class Game {
         if (endData.leveledUp) {
           this.damageNumbers.add(this.localPlayer.x, this.localPlayer.y - 50, 'Pet Level Up!', false, '#f1c40f');
         }
+      }
+    }
+  }
+
+  _closePvpBattle() {
+    this.inPvpBattle = false;
+    const endData = this.pvpBattlePanel.battleEndData;
+    this.pvpBattlePanel.close();
+    if (endData && this.localPlayer) {
+      const result = endData.result;
+      if (result?.winnerId === this.network.playerId) {
+        this.damageNumbers.add(this.localPlayer.x, this.localPlayer.y - 30, 'PVP Victory!', false, '#2ecc71');
+      } else if (result?.loserId === this.network.playerId) {
+        this.damageNumbers.add(this.localPlayer.x, this.localPlayer.y - 30, 'PVP Defeat', false, '#e74c3c');
+      } else {
+        this.damageNumbers.add(this.localPlayer.x, this.localPlayer.y - 30, 'PVP Draw', false, '#95a5a6');
       }
     }
   }

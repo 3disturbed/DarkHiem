@@ -75,6 +75,13 @@ export default class NetworkClient {
     this.onSortStart = null;
     this.onSortState = null;
     this.onSortEnd = null;
+
+    // PVP pet battle callbacks
+    this.onPvpChallenge = null;
+    this.onPvpChallengeTimeout = null;
+    this.onPvpBattleStart = null;
+    this.onPvpBattleTurn = null;
+    this.onPvpBattleEnd = null;
   }
 
   connect() {
@@ -321,6 +328,23 @@ export default class NetworkClient {
     });
     this.socket.on(MSG.SORT_END, (data) => {
       if (this.onSortEnd) this.onSortEnd(data);
+    });
+
+    // PVP pet battle
+    this.socket.on(MSG.PVP_CHALLENGE, (data) => {
+      if (this.onPvpChallenge) this.onPvpChallenge(data);
+    });
+    this.socket.on(MSG.PVP_CHALLENGE_TIMEOUT, (data) => {
+      if (this.onPvpChallengeTimeout) this.onPvpChallengeTimeout(data);
+    });
+    this.socket.on(MSG.PVP_BATTLE_START, (data) => {
+      if (this.onPvpBattleStart) this.onPvpBattleStart(data);
+    });
+    this.socket.on(MSG.PVP_BATTLE_TURN, (data) => {
+      if (this.onPvpBattleTurn) this.onPvpBattleTurn(data);
+    });
+    this.socket.on(MSG.PVP_BATTLE_END, (data) => {
+      if (this.onPvpBattleEnd) this.onPvpBattleEnd(data);
     });
   }
 
@@ -592,6 +616,16 @@ export default class NetworkClient {
   sendSortInput(gate) {
     if (!this.connected) return;
     this.socket.emit(MSG.SORT_INPUT, { gate });
+  }
+
+  sendPvpBattleAction(action) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.PVP_BATTLE_ACTION, action);
+  }
+
+  sendPvpBattleForfeit() {
+    if (!this.connected) return;
+    this.socket.emit(MSG.PVP_BATTLE_FORFEIT, {});
   }
 
   getLocalPlayerState() {

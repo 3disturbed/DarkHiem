@@ -17,6 +17,7 @@ import FishingHandler from './network/handlers/FishingHandler.js';
 import HorseHandler from './network/handlers/HorseHandler.js';
 import PetHandler from './network/handlers/PetHandler.js';
 import PetBattleManager from './pet/PetBattleManager.js';
+import PvPBattleManager from './pet/PvPBattleManager.js';
 import PetBreedingManager from './pet/PetBreedingManager.js';
 import MailHandler from './network/handlers/MailHandler.js';
 import SortingHandler from './network/handlers/SortingHandler.js';
@@ -142,6 +143,9 @@ export default class GameServer {
 
     this.petBattleManager = new PetBattleManager(this);
     this.petBattleManager.register(this.messageRouter);
+
+    this.pvpBattleManager = new PvPBattleManager(this);
+    this.pvpBattleManager.register(this.messageRouter);
 
     this.petBreedingManager = new PetBreedingManager(this);
     this.petBreedingManager.register(this.messageRouter);
@@ -894,6 +898,11 @@ export default class GameServer {
   }
 
   async onPlayerLeave(playerConn) {
+    // Clean up PVP battle state
+    if (this.pvpBattleManager) {
+      this.pvpBattleManager.onPlayerLeave(playerConn.id);
+    }
+
     // Clean up fishing state
     this.fishingHandler.onPlayerLeave(playerConn.id);
 

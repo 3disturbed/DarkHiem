@@ -173,4 +173,13 @@ export const MSG = {
   SORT_INPUT:         'sort:input',
   SORT_STATE:         'sort:state',
   SORT_END:           'sort:end',
+
+  // PVP pet battle
+  PVP_CHALLENGE:         'pvp:challenge',
+  PVP_CHALLENGE_TIMEOUT: 'pvp:challenge:timeout',
+  PVP_BATTLE_START:      'pvp:battle:start',
+  PVP_BATTLE_ACTION:     'pvp:battle:action',
+  PVP_BATTLE_TURN:       'pvp:battle:turn',
+  PVP_BATTLE_END:        'pvp:battle:end',
+  PVP_BATTLE_FORFEIT:    'pvp:battle:forfeit',
 };

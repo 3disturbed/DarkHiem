@@ -260,10 +260,26 @@ export default class CombatHandler {
     const pos = entity.getComponent(PositionComponent);
     if (!pos) return;
 
+    // Check for nearby PLAYER first (PVP challenge)
+    const pvpManager = this.gameServer.pvpBattleManager;
+    if (pvpManager) {
+      const nearestPlayer = HitDetector.findNearest(
+        this.gameServer.entityManager, pos.x, pos.y, 80,
+        entity.id, 'player'
+      );
+      if (nearestPlayer) {
+        const targetPc = nearestPlayer.getComponent(PlayerComponent);
+        if (targetPc) {
+          pvpManager.issueChallenge(playerConn, nearestPlayer);
+          return;
+        }
+      }
+    }
+
+    // Fall through to PvE: find nearest enemy creature
     const battleManager = this.gameServer.petBattleManager;
     if (!battleManager) return;
 
-    // Use HitDetector to find nearest enemy in melee range (first hit target)
     const nearest = HitDetector.findNearest(
       this.gameServer.entityManager, pos.x, pos.y, 80,
       entity.id, 'enemy'
@@ -274,7 +290,6 @@ export default class CombatHandler {
       return;
     }
 
-    // Verify creature is in PET_DB (can be battled)
     const enemyId = nearest.enemyConfig?.id;
     if (!enemyId || !PET_DB[enemyId]) {
       playerConn.emit(MSG.CHAT_RECEIVE, { message: 'This creature cannot be battled.', sender: 'System' });

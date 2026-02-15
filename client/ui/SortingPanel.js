@@ -6,6 +6,12 @@ const GATE_KEYS = ['', 'W', 'A', 'S', 'D'];
 const FLASH_DURATION = 0.45; // seconds
 const SCORE_POP_DURATION = 0.8;
 
+// Mirror server speed tiers for client-side prediction
+const GAME_DURATION = 180;
+const SPEED_SLOW = 1.5;
+const SPEED_MEDIUM = 2.0;
+const SPEED_FAST = 3.0;
+
 export default class SortingPanel {
   constructor() {
     this.visible = false;
@@ -67,11 +73,45 @@ export default class SortingPanel {
     this.bestStreak = 0;
   }
 
+  _getSpeed() {
+    const elapsed = GAME_DURATION - this.timeLeft;
+    if (elapsed < 60) return SPEED_SLOW;
+    if (elapsed < 120) return SPEED_MEDIUM;
+    return SPEED_FAST;
+  }
+
   updateState(data) {
     if (!this.active) return;
     this.score = data.score;
     this.timeLeft = data.timeLeft;
-    this.packages = data.packages || [];
+
+    // Reconcile server packages with local predicted positions
+    const serverPkgs = data.packages || [];
+    const serverMap = new Map(serverPkgs.map(p => [p.id, p]));
+
+    // Remove packages that the server no longer has (sorted/missed)
+    this.packages = this.packages.filter(p => serverMap.has(p.id));
+
+    // Update existing & add new packages
+    const localMap = new Map(this.packages.map(p => [p.id, p]));
+    for (const sp of serverPkgs) {
+      const lp = localMap.get(sp.id);
+      if (lp) {
+        // Smoothly correct towards server position
+        lp.targetPos = sp.position;
+        lp.color = sp.color;
+        lp.number = sp.number;
+      } else {
+        // New package from server — add with no lerp needed
+        this.packages.push({
+          id: sp.id,
+          color: sp.color,
+          number: sp.number,
+          position: sp.position,
+          targetPos: sp.position,
+        });
+      }
+    }
 
     // Handle feedback
     if (data.feedback) {
@@ -136,7 +176,26 @@ export default class SortingPanel {
 
   update(dt) {
     this.animTime += dt;
-    this.conveyorOffset = (this.conveyorOffset + dt * 40) % 24;
+    const beltSpeed = this.active ? this._getSpeed() * 20 : 40;
+    this.conveyorOffset = (this.conveyorOffset + dt * beltSpeed) % 24;
+
+    // Client-side package movement prediction
+    if (this.active) {
+      const speed = this._getSpeed();
+      for (const pkg of this.packages) {
+        // Advance position at predicted speed
+        pkg.position += speed * dt;
+
+        // Smoothly correct towards server-authoritative target
+        if (pkg.targetPos !== undefined) {
+          // Target also advances at server speed between ticks
+          pkg.targetPos += speed * dt;
+          const drift = pkg.targetPos - pkg.position;
+          // Lerp correction — blend towards server position
+          pkg.position += drift * Math.min(1, dt * 10);
+        }
+      }
+    }
 
     // Smooth score counter
     if (this.displayScore !== this.score) {
