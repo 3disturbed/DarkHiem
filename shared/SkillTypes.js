@@ -208,7 +208,7 @@ export const SKILL_DB = {
     hits: 3,
     range: 64,
     color: '#9b59b6',
-    turnBased: { scaleBase: 1.2 },
+    turnBased: { scaleBase: 1.2, apCost: 3, isAoE: true },
   },
   [SKILL.EXECUTE]: {
     id: SKILL.EXECUTE,
@@ -223,7 +223,7 @@ export const SKILL_DB = {
     executeThreshold: 0.3,
     scalePerPoint: 0.02,
     color: '#c0392b',
-    turnBased: { scaleBase: 1.3, executeMult: 2.5 },
+    turnBased: { scaleBase: 1.3, executeMult: 2.5, apCost: 3 },
   },
   [SKILL.SHADOW_STEP]: {
     id: SKILL.SHADOW_STEP,
@@ -238,7 +238,7 @@ export const SKILL_DB = {
     distance: 80,
     duration: 10,
     color: '#2c3e50',
-    turnBased: { scaleBase: 1.5 },
+    turnBased: { scaleBase: 1.5, apCost: 2 },
   },
   [SKILL.REGENERATION]: {
     id: SKILL.REGENERATION,
