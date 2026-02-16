@@ -1059,10 +1059,70 @@ export default class GameServer {
       if (pc) pc.ownedPlots = saveData.ownedPlots;
     }
 
-    // Restore pet team
-    if (saveData.petTeam) {
+    // Restore pet codex and team
+    {
       const pc = entity.getComponent(PlayerComponent);
-      if (pc) pc.petTeam = saveData.petTeam;
+      if (pc) {
+        if (saveData.petCodex) {
+          // New format: codex exists
+          pc.petCodex = saveData.petCodex;
+          pc.petTeam = saveData.petTeam || [null, null, null];
+        } else {
+          // Migration: move pet_items from inventory into codex
+          const inv = entity.getComponent(InventoryComponent);
+          pc.petCodex = [];
+          const slotToCodex = {};
+
+          if (inv) {
+            for (let i = 0; i < inv.slotCount; i++) {
+              const slot = inv.slots[i];
+              if (!slot || slot.itemId !== 'pet_item') continue;
+              const petData = slot.extraData || slot;
+              if (!petData.petId) continue;
+              const codexIdx = pc.petCodex.length;
+              pc.petCodex.push({
+                petId: petData.petId,
+                nickname: petData.nickname || petData.petId,
+                level: petData.level || 1,
+                xp: petData.xp || 0,
+                currentHp: petData.currentHp || 50,
+                maxHp: petData.maxHp || 50,
+                learnedSkills: petData.learnedSkills || [],
+                fainted: petData.fainted || false,
+                isRare: petData.isRare || false,
+                bonusStats: petData.bonusStats || 0,
+              });
+              slotToCodex[i] = codexIdx;
+              inv.slots[i] = null;
+            }
+          }
+
+          // Check equipped weapon for pet
+          const equip = entity.getComponent(EquipmentComponent);
+          if (equip) {
+            const weapon = equip.getEquipped('weapon');
+            if (weapon?.isPet && weapon?.petId) {
+              pc.petCodex.push({
+                petId: weapon.petId,
+                nickname: weapon.nickname || weapon.petId,
+                level: weapon.level || 1,
+                xp: weapon.xp || 0,
+                currentHp: weapon.currentHp || 50,
+                maxHp: weapon.maxHp || 50,
+                learnedSkills: weapon.learnedSkills || [],
+                fainted: weapon.fainted || false,
+                isRare: weapon.isRare || false,
+                bonusStats: weapon.bonusStats || 0,
+              });
+              equip.unequip('weapon');
+            }
+          }
+
+          // Remap petTeam from inventory indices to codex indices
+          const oldTeam = saveData.petTeam || [null, null, null];
+          pc.petTeam = oldTeam.map(idx => idx !== null && slotToCodex[idx] !== undefined ? slotToCodex[idx] : null);
+        }
+      }
     }
   }
 
