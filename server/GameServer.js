@@ -495,15 +495,12 @@ export default class GameServer {
     for (const [, playerConn] of this.players) {
       const entity = this.getPlayerEntity(playerConn.id);
       if (!entity) continue;
-      const inv = entity.getComponent(InventoryComponent);
-      if (!inv) continue;
+      const pc = entity.getComponent(PlayerComponent);
+      if (!pc || !pc.petCodex || pc.petCodex.length === 0) continue;
 
       let healed = false;
-      for (let i = 0; i < inv.slotCount; i++) {
-        const slot = inv.slots[i];
-        if (!slot || slot.itemId !== 'pet_item') continue;
-        const petData = slot.extraData || slot;
-        if (!petData.petId || petData.fainted) continue;
+      for (const petData of pc.petCodex) {
+        if (!petData || !petData.petId || petData.fainted) continue;
         if (petData.currentHp >= petData.maxHp) continue;
 
         const healAmt = Math.max(1, Math.floor(petData.maxHp * 0.02));
@@ -511,19 +508,8 @@ export default class GameServer {
         healed = true;
       }
 
-      // Also heal equipped pet weapon
-      const equip = entity.getComponent(EquipmentComponent);
-      const weapon = equip?.getEquipped('weapon');
-      if (weapon?.isPet && weapon?.petId && !weapon.fainted) {
-        if (weapon.currentHp < weapon.maxHp) {
-          const healAmt = Math.max(1, Math.floor(weapon.maxHp * 0.02));
-          weapon.currentHp = Math.min(weapon.maxHp, weapon.currentHp + healAmt);
-          healed = true;
-        }
-      }
-
       if (healed) {
-        playerConn.emit(MSG.INVENTORY_UPDATE, { slots: inv.serialize().slots });
+        playerConn.emit(MSG.PET_CODEX_UPDATE, { petCodex: pc.petCodex, petTeam: pc.petTeam });
       }
     }
   }
@@ -833,6 +819,7 @@ export default class GameServer {
       hasHorse: joinPc ? joinPc.hasHorse : false,
       ownedPlots: joinPc ? (joinPc.ownedPlots || []) : [],
       petTeam: joinPc ? (joinPc.petTeam || [null, null, null]) : [null, null, null],
+      petCodex: joinPc ? (joinPc.petCodex || []) : [],
     });
 
     // Send current land plot registry
@@ -968,6 +955,7 @@ export default class GameServer {
       hasHorse: pc ? pc.hasHorse : false,
       ownedPlots: pc ? (pc.ownedPlots || []) : [],
       petTeam: pc ? (pc.petTeam || [null, null, null]) : [null, null, null],
+      petCodex: pc ? (pc.petCodex || []) : [],
     };
 
     await this.playerRepo.save(playerConn.id, data);
