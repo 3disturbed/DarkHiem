@@ -7,6 +7,26 @@ const MENU_SKILLS = 'skills';
 const MENU_TARGET_ENEMY = 'target_enemy';
 const MENU_TARGET_ALLY = 'target_ally';
 
+// Animation durations per result type (seconds)
+const ANIM_DUR = {
+  attack: 2.5,
+  skill_damage: 2.5,
+  heal: 1.8,
+  lifesteal: 1.0,
+  shield: 1.2,
+  status: 1.0,
+  faint: 1.5,
+  dot: 1.2,
+  hot: 1.2,
+  sacrifice: 2.0,
+  defend: 0.8,
+  flee: 1.2,
+  pass: 0.6,
+  sync: 0.15,
+  turn_start: 0.6,
+  turn_effect: 1.2,
+};
+
 export default class PetBattlePanel {
   constructor() {
     this.active = false;
@@ -20,15 +40,34 @@ export default class PetBattlePanel {
 
     this.menuMode = MENU_MAIN;
     this.menuIndex = 0;
-    this.pendingAction = null; // Stored action awaiting target selection
+    this.pendingAction = null;
     this.battleEndData = null;
     this.ended = false;
     this.result = null;
 
-    this.shakeTimers = {};  // 'a_0' -> timer
+    this.shakeTimers = {};
     this.flashTimers = {};
     this.enemyTurnTimer = 0;
     this.isEnemyTurn = false;
+
+    // ── Animation system ──
+    this.animQueue = [];
+    this.currentAnim = null;
+    this.animTimer = 0;
+    this.isAnimating = false;
+
+    // Visual effects
+    this.displayHp = {};       // 'team_index' -> displayed HP
+    this.floatingTexts = [];   // { text, x, y, color, alpha, timer }
+    this.particles = [];       // { x, y, vx, vy, color, size, life, maxLife }
+    this.projectile = null;    // { x, y, color, size, type }
+    this.screenFlash = null;   // { color, alpha, timer, maxTimer }
+    this.attackerGlow = null;  // { team, index, color }
+    this.cardLunge = {};       // 'team_index' -> { dx, dy }
+
+    // Cached render dimensions
+    this.lastWidth = 400;
+    this.lastHeight = 300;
   }
 
   open(battleState) {
@@ -45,6 +84,19 @@ export default class PetBattlePanel {
     this.menuIndex = 0;
     this.pendingAction = null;
     this.battleEndData = null;
+
+    // Reset animation state
+    this.animQueue = [];
+    this.currentAnim = null;
+    this.animTimer = 0;
+    this.isAnimating = false;
+    this.floatingTexts = [];
+    this.particles = [];
+    this.projectile = null;
+    this.screenFlash = null;
+    this.attackerGlow = null;
+    this.cardLunge = {};
+    this._initDisplayHp();
   }
 
   close() {
@@ -53,84 +105,510 @@ export default class PetBattlePanel {
     this.battleEndData = null;
     this.ended = false;
     this.result = null;
+    this.animQueue = [];
+    this.currentAnim = null;
+    this.isAnimating = false;
   }
 
-  // Called when server sends PET_BATTLE_STATE (new unit's turn)
+  // ═══════════════════════════════════════════════
+  // Data handlers — queue for animation
+  // ═══════════════════════════════════════════════
+
   handleTurnStart(data) {
     if (!this.active) return;
-    this.activeUnit = data.activeUnit;
-    this.ap = data.ap;
-    this.round = data.round;
-    this.initiativeOrder = data.initiativeOrder || this.initiativeOrder;
-    this.startOfTurnEffects = data.startOfTurnEffects || [];
 
-    if (data.unitStates) this.teams = data.unitStates;
-
-    // Process start-of-turn effect animations
-    for (const eff of this.startOfTurnEffects) {
-      const key = `${eff.unitTeam}_${eff.unitIndex}`;
-      if (eff.type === 'dot') this.shakeTimers[key] = 0.3;
-      if (eff.type === 'hot') this.flashTimers[key] = 0.3;
+    // Queue start-of-turn effects (DoT / HoT ticks)
+    for (const eff of (data.startOfTurnEffects || [])) {
+      this.animQueue.push({
+        kind: 'turn_effect',
+        data: eff,
+        duration: ANIM_DUR.turn_effect,
+      });
     }
 
-    // Check if it's player's turn or enemy's
-    this.isEnemyTurn = this.activeUnit?.team === 'b';
-    this.menuMode = MENU_MAIN;
-    this.menuIndex = 0;
-    this.pendingAction = null;
+    // Queue the turn transition
+    this.animQueue.push({
+      kind: 'turn_start',
+      data: {
+        activeUnit: data.activeUnit,
+        ap: data.ap,
+        round: data.round,
+        initiativeOrder: data.initiativeOrder,
+        unitStates: data.unitStates,
+      },
+      duration: ANIM_DUR.turn_start,
+    });
   }
 
-  // Called when server sends PET_BATTLE_RESULT (action result)
   handleResult(data) {
     if (!this.active) return;
-    this.ap = data.ap;
-    if (data.unitStates) this.teams = data.unitStates;
-    this.ended = data.ended || false;
-    this.result = data.result;
 
-    // Process damage/heal animations
+    // Queue each individual result as its own animation
     for (const r of (data.results || [])) {
-      if (r.damage && r.targetTeam !== undefined) {
-        this.shakeTimers[`${r.targetTeam}_${r.targetIndex}`] = 0.3;
-      }
-      if (r.type === 'heal' || r.type === 'lifesteal') {
-        this.flashTimers[`${r.unitTeam}_${r.unitIndex}`] = 0.3;
-      }
-      if (r.type === 'faint') {
-        this.shakeTimers[`${r.unitTeam}_${r.unitIndex}`] = 0.5;
-      }
+      const dur = ANIM_DUR[r.type] || 1.5;
+      this.animQueue.push({ kind: 'result', data: r, duration: dur });
     }
 
-    // Append to log
-    for (const r of (data.results || [])) {
-      if (r.text) this.log.push(r.text);
-    }
-    if (this.log.length > 20) this.log = this.log.slice(-20);
-
-    // Reset menu if still has AP and is player turn
-    if (!this.ended && this.ap > 0 && this.activeUnit?.team === 'a') {
-      this.menuMode = MENU_MAIN;
-      this.menuIndex = 0;
-      this.pendingAction = null;
-    }
+    // Queue a sync to apply final state
+    this.animQueue.push({
+      kind: 'sync',
+      data: {
+        unitStates: data.unitStates,
+        ap: data.ap,
+        ended: data.ended,
+        result: data.result,
+      },
+      duration: ANIM_DUR.sync,
+    });
   }
 
+  // ═══════════════════════════════════════════════
+  // Update loop — process animations & effects
+  // ═══════════════════════════════════════════════
+
   update(dt) {
+    // Update floating texts
+    for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+      const ft = this.floatingTexts[i];
+      ft.timer += dt;
+      ft.y -= dt * 28;
+      ft.alpha = Math.max(0, 1 - ft.timer / 1.6);
+      if (ft.alpha <= 0) this.floatingTexts.splice(i, 1);
+    }
+
+    // Update particles
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += (p.gravity || 0) * dt;
+      p.life -= dt;
+      if (p.life <= 0) this.particles.splice(i, 1);
+    }
+
+    // Screen flash
+    if (this.screenFlash) {
+      this.screenFlash.timer -= dt;
+      this.screenFlash.alpha = Math.max(0, this.screenFlash.timer / this.screenFlash.maxTimer) * 0.35;
+      if (this.screenFlash.timer <= 0) this.screenFlash = null;
+    }
+
+    // Shake timers
     for (const key in this.shakeTimers) {
       if (this.shakeTimers[key] > 0) this.shakeTimers[key] -= dt;
     }
     for (const key in this.flashTimers) {
       if (this.flashTimers[key] > 0) this.flashTimers[key] -= dt;
     }
+
+    // Smooth HP interpolation — displayHp lerps towards teams data
+    if (this.teams) {
+      for (const teamKey of ['a', 'b']) {
+        const team = this.teams[teamKey];
+        if (!team) continue;
+        for (let i = 0; i < team.length; i++) {
+          const key = `${teamKey}_${i}`;
+          const target = team[i].currentHp;
+          const current = this.displayHp[key];
+          if (current === undefined) {
+            this.displayHp[key] = target;
+          } else if (Math.abs(current - target) < 0.5) {
+            this.displayHp[key] = target;
+          } else {
+            this.displayHp[key] += (target - current) * Math.min(1, dt * 5);
+          }
+        }
+      }
+    }
+
+    // Process animation queue
+    if (this.currentAnim) {
+      this.animTimer += dt;
+      this._updateAnim(dt);
+
+      if (this.animTimer >= this.currentAnim.duration) {
+        this._finishAnim();
+        this.currentAnim = null;
+      }
+    }
+
+    if (!this.currentAnim && this.animQueue.length > 0) {
+      this.currentAnim = this.animQueue.shift();
+      this.animTimer = 0;
+      this._startAnim(this.currentAnim);
+    }
+
+    this.isAnimating = this.currentAnim !== null || this.animQueue.length > 0;
   }
 
   // ═══════════════════════════════════════════════
-  // Input handling
+  // Animation lifecycle
+  // ═══════════════════════════════════════════════
+
+  _startAnim(anim) {
+    if (anim.kind === 'result') {
+      const r = anim.data;
+      if (r.text) this.log.push(r.text);
+      if (this.log.length > 20) this.log = this.log.slice(-20);
+
+      // Set up attacker glow for attack types
+      if (r.attackerTeam !== undefined && (r.type === 'attack' || r.type === 'skill_damage' || r.type === 'sacrifice')) {
+        const color = r.type === 'attack' ? '#f1c40f' : (SKILL_DB[r.skillId]?.color || '#9b59b6');
+        this.attackerGlow = { team: r.attackerTeam, index: r.attackerIndex, color };
+      }
+
+    } else if (anim.kind === 'sync') {
+      const d = anim.data;
+      if (d.unitStates) this.teams = d.unitStates;
+      this.ap = d.ap;
+      this.ended = d.ended || false;
+      this.result = d.result;
+
+      if (!this.ended && this.ap > 0 && this.activeUnit?.team === 'a') {
+        this.menuMode = MENU_MAIN;
+        this.menuIndex = 0;
+        this.pendingAction = null;
+      }
+
+    } else if (anim.kind === 'turn_start') {
+      const d = anim.data;
+      this.activeUnit = d.activeUnit;
+      this.ap = d.ap;
+      this.round = d.round;
+      if (d.initiativeOrder) this.initiativeOrder = d.initiativeOrder;
+      if (d.unitStates) this.teams = d.unitStates;
+
+      this.isEnemyTurn = this.activeUnit?.team === 'b';
+      this.menuMode = MENU_MAIN;
+      this.menuIndex = 0;
+      this.pendingAction = null;
+
+    } else if (anim.kind === 'turn_effect') {
+      const eff = anim.data;
+      if (eff.text) this.log.push(eff.text);
+      if (this.log.length > 20) this.log = this.log.slice(-20);
+    }
+  }
+
+  _updateAnim(dt) {
+    const anim = this.currentAnim;
+    if (!anim) return;
+
+    const t = this.animTimer;
+    const dur = anim.duration;
+
+    if (anim.kind === 'result') {
+      const r = anim.data;
+
+      if (r.type === 'attack' || r.type === 'skill_damage') {
+        this._updateAttackAnim(r, t, dur, dt);
+      } else if (r.type === 'heal' || r.type === 'lifesteal' || r.type === 'hot') {
+        this._updateHealAnim(r, t, dur, dt);
+      } else if (r.type === 'faint') {
+        this._updateFaintAnim(r, t, dur);
+      } else if (r.type === 'dot') {
+        this._updateDotAnim(r, t, dur);
+      } else if (r.type === 'shield') {
+        this._updateShieldAnim(r, t, dur, dt);
+      } else if (r.type === 'status') {
+        this._updateStatusAnim(r, t, dur);
+      } else if (r.type === 'sacrifice') {
+        this._updateAttackAnim(r, t, dur, dt); // Reuse attack anim
+      } else if (r.type === 'defend') {
+        this._updateDefendAnim(r, t, dur);
+      }
+    } else if (anim.kind === 'turn_effect') {
+      const eff = anim.data;
+      if (eff.type === 'dot') {
+        this._updateDotAnim(eff, t, dur);
+      } else if (eff.type === 'hot') {
+        this._updateHealAnim(eff, t, dur, dt);
+      }
+    }
+  }
+
+  _finishAnim() {
+    this.attackerGlow = null;
+    this.projectile = null;
+    this.cardLunge = {};
+  }
+
+  // ── Attack / Skill Damage animation phases ──
+
+  _updateAttackAnim(r, t, dur, dt) {
+    const w = this.lastWidth;
+    const atkKey = r.attackerTeam !== undefined ? `${r.attackerTeam}_${r.attackerIndex}` : null;
+    const tgtKey = r.targetTeam !== undefined ? `${r.targetTeam}_${r.targetIndex}` : `${r.unitTeam}_${r.unitIndex}`;
+
+    const atkPos = atkKey ? this._getCardCenter(atkKey.split('_')[0], parseInt(atkKey.split('_')[1])) : null;
+    const tgtPos = this._getCardCenter(tgtKey.split('_')[0], parseInt(tgtKey.split('_')[1]));
+
+    // Phase: Windup (0 → 0.5s)
+    if (t < 0.5 && atkPos) {
+      const progress = t / 0.5;
+      const dirX = tgtPos.x > atkPos.x ? 1 : -1;
+      const lunge = Math.sin(progress * Math.PI) * 12;
+      this.cardLunge[atkKey] = { dx: dirX * lunge, dy: 0 };
+    }
+
+    // Phase: Projectile (0.5 → 1.2s)
+    if (t >= 0.5 && t < 1.2 && atkPos) {
+      const progress = (t - 0.5) / 0.7;
+      const color = r.type === 'attack' ? '#f1c40f' : (SKILL_DB[r.skillId]?.color || '#9b59b6');
+      const px = atkPos.x + (tgtPos.x - atkPos.x) * progress;
+      const py = atkPos.y + (tgtPos.y - atkPos.y) * progress + Math.sin(progress * Math.PI) * -25;
+      this.projectile = { x: px, y: py, color, size: r.type === 'attack' ? 6 : 8, type: r.type };
+
+      // Trail particles
+      if (Math.random() < 0.7) {
+        this.particles.push({
+          x: px + (Math.random() - 0.5) * 8,
+          y: py + (Math.random() - 0.5) * 8,
+          vx: (Math.random() - 0.5) * 30,
+          vy: (Math.random() - 0.5) * 30,
+          color, size: 1.5 + Math.random() * 2.5,
+          life: 0.25 + Math.random() * 0.2, maxLife: 0.45, gravity: 0,
+        });
+      }
+    } else if (t >= 1.2) {
+      this.projectile = null;
+      if (atkKey) this.cardLunge[atkKey] = { dx: 0, dy: 0 };
+    }
+
+    // Phase: Impact (1.2s) — apply damage once
+    if (t >= 1.2 && !this.currentAnim._impacted) {
+      this.currentAnim._impacted = true;
+
+      // Apply damage to teams data
+      const dmg = r.damage || 0;
+      if (r.targetTeam !== undefined) {
+        const unit = this.teams?.[r.targetTeam]?.[r.targetIndex];
+        if (unit) unit.currentHp = Math.max(0, unit.currentHp - dmg);
+      } else if (r.unitTeam !== undefined) {
+        const unit = this.teams?.[r.unitTeam]?.[r.unitIndex];
+        if (unit) unit.currentHp = Math.max(0, unit.currentHp - dmg);
+      }
+
+      // Shake target
+      this.shakeTimers[tgtKey] = 0.7;
+
+      // Screen flash
+      this.screenFlash = { color: '#fff', alpha: 0.3, timer: 0.2, maxTimer: 0.2 };
+
+      // Floating damage text
+      this.floatingTexts.push({
+        text: `-${dmg}`,
+        x: tgtPos.x, y: tgtPos.y - 10,
+        color: '#ff4444', alpha: 1, timer: 0,
+      });
+
+      // Impact burst particles
+      const impactColor = r.type === 'attack' ? '#f39c12' : (SKILL_DB[r.skillId]?.color || '#c0392b');
+      for (let i = 0; i < 12; i++) {
+        const angle = (Math.PI * 2 / 12) * i + Math.random() * 0.3;
+        const speed = 40 + Math.random() * 60;
+        this.particles.push({
+          x: tgtPos.x, y: tgtPos.y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          color: impactColor, size: 2 + Math.random() * 3,
+          life: 0.4 + Math.random() * 0.4, maxLife: 0.8, gravity: 60,
+        });
+      }
+    }
+  }
+
+  // ── Heal / HoT / Lifesteal animation ──
+
+  _updateHealAnim(r, t, dur, dt) {
+    const key = `${r.unitTeam}_${r.unitIndex}`;
+    const pos = this._getCardCenter(r.unitTeam, r.unitIndex);
+
+    // Green sparkle particles throughout
+    if (t < dur * 0.7 && Math.random() < 0.5) {
+      this.particles.push({
+        x: pos.x + (Math.random() - 0.5) * 40,
+        y: pos.y + 10,
+        vx: (Math.random() - 0.5) * 15,
+        vy: -25 - Math.random() * 35,
+        color: '#2ecc71', size: 2 + Math.random() * 3,
+        life: 0.5 + Math.random() * 0.4, maxLife: 0.9, gravity: -10,
+      });
+    }
+
+    // Apply heal at 40% through
+    if (t >= dur * 0.4 && !this.currentAnim._impacted) {
+      this.currentAnim._impacted = true;
+      const amt = r.amount || 0;
+      const unit = this.teams?.[r.unitTeam]?.[r.unitIndex];
+      if (unit && amt > 0) unit.currentHp = Math.min(unit.maxHp, unit.currentHp + amt);
+
+      this.flashTimers[key] = 0.5;
+      this.floatingTexts.push({
+        text: `+${amt}`,
+        x: pos.x, y: pos.y - 10,
+        color: '#2ecc71', alpha: 1, timer: 0,
+      });
+    }
+  }
+
+  // ── Faint animation ──
+
+  _updateFaintAnim(r, t, dur) {
+    const key = `${r.unitTeam}_${r.unitIndex}`;
+    const pos = this._getCardCenter(r.unitTeam, r.unitIndex);
+
+    if (t < 0.2 && !this.currentAnim._impacted) {
+      this.currentAnim._impacted = true;
+      const unit = this.teams?.[r.unitTeam]?.[r.unitIndex];
+      if (unit) unit.fainted = true;
+      this.shakeTimers[key] = 0.6;
+      this.screenFlash = { color: '#ff0000', alpha: 0.25, timer: 0.3, maxTimer: 0.3 };
+
+      this.floatingTexts.push({
+        text: 'KO!',
+        x: pos.x, y: pos.y - 5,
+        color: '#e74c3c', alpha: 1, timer: 0,
+      });
+
+      // Gray falling particles
+      for (let i = 0; i < 10; i++) {
+        this.particles.push({
+          x: pos.x + (Math.random() - 0.5) * 30,
+          y: pos.y,
+          vx: (Math.random() - 0.5) * 40,
+          vy: -20 + Math.random() * 10,
+          color: '#666', size: 2 + Math.random() * 3,
+          life: 0.6 + Math.random() * 0.5, maxLife: 1.1, gravity: 80,
+        });
+      }
+    }
+  }
+
+  // ── DoT animation ──
+
+  _updateDotAnim(r, t, dur) {
+    const key = `${r.unitTeam}_${r.unitIndex}`;
+    const pos = this._getCardCenter(r.unitTeam, r.unitIndex);
+
+    if (t >= 0.2 && !this.currentAnim._impacted) {
+      this.currentAnim._impacted = true;
+      const dmg = r.damage || 0;
+      const unit = this.teams?.[r.unitTeam]?.[r.unitIndex];
+      if (unit && dmg > 0) unit.currentHp = Math.max(0, unit.currentHp - dmg);
+
+      this.shakeTimers[key] = 0.4;
+
+      const effectColor = STATUS_EFFECTS[r.effectId]?.color || '#c0392b';
+      this.floatingTexts.push({
+        text: `-${dmg}`,
+        x: pos.x, y: pos.y - 10,
+        color: effectColor, alpha: 1, timer: 0,
+      });
+
+      // Poison/burn particles
+      for (let i = 0; i < 6; i++) {
+        this.particles.push({
+          x: pos.x + (Math.random() - 0.5) * 24,
+          y: pos.y + (Math.random() - 0.5) * 16,
+          vx: (Math.random() - 0.5) * 20,
+          vy: -15 - Math.random() * 25,
+          color: effectColor, size: 2 + Math.random() * 2,
+          life: 0.4 + Math.random() * 0.3, maxLife: 0.7, gravity: 0,
+        });
+      }
+    }
+  }
+
+  // ── Shield animation ──
+
+  _updateShieldAnim(r, t, dur, dt) {
+    const key = `${r.unitTeam}_${r.unitIndex}`;
+    const pos = this._getCardCenter(r.unitTeam, r.unitIndex);
+
+    if (t >= dur * 0.3 && !this.currentAnim._impacted) {
+      this.currentAnim._impacted = true;
+      this.flashTimers[key] = 0.5;
+
+      this.floatingTexts.push({
+        text: `+${r.amount} Shield`,
+        x: pos.x, y: pos.y - 10,
+        color: '#f39c12', alpha: 1, timer: 0,
+      });
+
+      // Golden ring particles
+      for (let i = 0; i < 8; i++) {
+        const angle = (Math.PI * 2 / 8) * i;
+        this.particles.push({
+          x: pos.x + Math.cos(angle) * 20,
+          y: pos.y + Math.sin(angle) * 12,
+          vx: Math.cos(angle) * 15,
+          vy: Math.sin(angle) * 10,
+          color: '#f1c40f', size: 2.5,
+          life: 0.5, maxLife: 0.5, gravity: 0,
+        });
+      }
+    }
+  }
+
+  // ── Status effect animation ──
+
+  _updateStatusAnim(r, t, dur) {
+    const pos = this._getCardCenter(r.unitTeam, r.unitIndex);
+    const effectColor = STATUS_EFFECTS[r.effectId]?.color || '#9b59b6';
+
+    if (t >= 0.2 && !this.currentAnim._impacted) {
+      this.currentAnim._impacted = true;
+
+      const icon = STATUS_EFFECTS[r.effectId]?.icon || '?';
+      this.floatingTexts.push({
+        text: icon + ' ' + (r.effectId || ''),
+        x: pos.x, y: pos.y - 10,
+        color: effectColor, alpha: 1, timer: 0,
+      });
+
+      // Colored ring pulse
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI * 2 / 6) * i;
+        this.particles.push({
+          x: pos.x + Math.cos(angle) * 15,
+          y: pos.y + Math.sin(angle) * 10,
+          vx: Math.cos(angle) * 25,
+          vy: Math.sin(angle) * 15,
+          color: effectColor, size: 2,
+          life: 0.4, maxLife: 0.4, gravity: 0,
+        });
+      }
+    }
+  }
+
+  // ── Defend animation ──
+
+  _updateDefendAnim(r, t, dur) {
+    if (t >= 0.1 && !this.currentAnim._impacted) {
+      this.currentAnim._impacted = true;
+      // Show shield icon on active unit
+      if (this.activeUnit) {
+        const key = `${this.activeUnit.team}_${this.activeUnit.index}`;
+        const pos = this._getCardCenter(this.activeUnit.team, this.activeUnit.index);
+        this.flashTimers[key] = 0.5;
+        this.floatingTexts.push({
+          text: 'DEFEND',
+          x: pos.x, y: pos.y - 10,
+          color: '#3498db', alpha: 1, timer: 0,
+        });
+      }
+    }
+  }
+
+  // ═══════════════════════════════════════════════
+  // Input handling — blocked during animation
   // ═══════════════════════════════════════════════
 
   selectDir(dx, dy) {
+    if (this.isAnimating) return;
+
     if (this.menuMode === MENU_MAIN) {
-      // 5 items in a row: Attack, Skills, Defend, Flee, Pass
       this.menuIndex = Math.max(0, Math.min(4, this.menuIndex + dx));
     } else if (this.menuMode === MENU_SKILLS) {
       const unit = this._getMyActiveUnit();
@@ -151,27 +629,28 @@ export default class PetBattlePanel {
 
   confirm(sendAction) {
     if (!this.teams || this.ended) return;
-    if (this.activeUnit?.team !== 'a') return; // Not player's turn
+    if (this.isAnimating) return;
+    if (this.activeUnit?.team !== 'a') return;
 
     if (this.menuMode === MENU_MAIN) {
       switch (this.menuIndex) {
-        case 0: // Attack
+        case 0:
           if (this.ap < BASIC_ATTACK_AP) return;
           this.menuMode = MENU_TARGET_ENEMY;
           this.menuIndex = 0;
           this.pendingAction = { type: 'attack' };
           return;
-        case 1: // Skills
+        case 1:
           this.menuMode = MENU_SKILLS;
           this.menuIndex = 0;
           return;
-        case 2: // Defend
+        case 2:
           sendAction({ type: 'defend' });
           return;
-        case 3: // Flee
+        case 3:
           sendAction({ type: 'flee' });
           return;
-        case 4: // Pass
+        case 4:
           sendAction({ type: 'pass' });
           return;
       }
@@ -183,10 +662,9 @@ export default class PetBattlePanel {
       const skillDef = getTurnBasedSkill(skillId);
       if (!skillDef) return;
       const apCost = skillDef.apCost || BASIC_ATTACK_AP;
-      if (this.ap < apCost) return; // Can't afford
+      if (this.ap < apCost) return;
 
       if (skillDef.isAoE) {
-        // AoE — no target needed
         sendAction({ type: 'skill', skillId });
         this.menuMode = MENU_MAIN;
         this.menuIndex = 0;
@@ -200,7 +678,6 @@ export default class PetBattlePanel {
         return;
       }
 
-      // Single-target enemy
       this.pendingAction = { type: 'skill', skillId };
       this.menuMode = MENU_TARGET_ENEMY;
       this.menuIndex = 0;
@@ -209,8 +686,7 @@ export default class PetBattlePanel {
       const enemies = this.teams?.b?.filter(u => !u.fainted) || [];
       const target = enemies[this.menuIndex];
       if (!target) return;
-      const action = { ...this.pendingAction, targetTeam: 'b', targetIndex: target.index };
-      sendAction(action);
+      sendAction({ ...this.pendingAction, targetTeam: 'b', targetIndex: target.index });
       this.menuMode = MENU_MAIN;
       this.menuIndex = 0;
       this.pendingAction = null;
@@ -219,8 +695,7 @@ export default class PetBattlePanel {
       const allies = this.teams?.a?.filter(u => !u.fainted) || [];
       const target = allies[this.menuIndex];
       if (!target) return;
-      const action = { ...this.pendingAction, targetTeam: 'a', targetIndex: target.index };
-      sendAction(action);
+      sendAction({ ...this.pendingAction, targetTeam: 'a', targetIndex: target.index });
       this.menuMode = MENU_MAIN;
       this.menuIndex = 0;
       this.pendingAction = null;
@@ -229,6 +704,7 @@ export default class PetBattlePanel {
   }
 
   back() {
+    if (this.isAnimating) return;
     if (this.menuMode !== MENU_MAIN) {
       this.menuMode = MENU_MAIN;
       this.menuIndex = 0;
@@ -248,6 +724,8 @@ export default class PetBattlePanel {
 
   render(ctx, width, height) {
     if (!this.active || !this.teams) return;
+    this.lastWidth = width;
+    this.lastHeight = height;
 
     // Full screen arena background
     const grad = ctx.createLinearGradient(0, 0, 0, height);
@@ -275,8 +753,14 @@ export default class PetBattlePanel {
     this._renderTeam(ctx, this.teams.a, 10, 50, width * 0.44, 'a');
     this._renderTeam(ctx, this.teams.b, width * 0.56, 50, width * 0.44, 'b');
 
+    // ── Animation overlay effects ──
+    this._renderProjectile(ctx);
+    this._renderParticles(ctx);
+    this._renderFloatingTexts(ctx);
+    this._renderScreenFlash(ctx, width, height);
+
     // AP indicator
-    if (this.activeUnit?.team === 'a') {
+    if (this.activeUnit?.team === 'a' && !this.isAnimating) {
       this._renderAPIndicator(ctx, width, height);
     }
 
@@ -292,10 +776,12 @@ export default class PetBattlePanel {
     ctx.lineWidth = 1;
     ctx.strokeRect(8, menuY, width - 16, menuH);
 
-    if (this.ended) {
+    if (this.ended && !this.isAnimating) {
       this._renderEndScreen(ctx, width, height, menuY, menuH);
+    } else if (this.isAnimating) {
+      this._renderAnimStatus(ctx, width, menuY, menuH);
     } else if (this.activeUnit?.team === 'b') {
-      this._renderEnemyTurn(ctx, width, menuY, menuH);
+      this._renderAnimStatus(ctx, width, menuY, menuH);
     } else if (this.menuMode === MENU_MAIN) {
       this._renderMainMenu(ctx, width, menuY, menuH);
     } else if (this.menuMode === MENU_SKILLS) {
@@ -306,6 +792,82 @@ export default class PetBattlePanel {
       this._renderTargetSelect(ctx, width, menuY, menuH, 'a');
     }
   }
+
+  // ── Animation effect renderers ──
+
+  _renderProjectile(ctx) {
+    if (!this.projectile) return;
+    const { x, y, color, size, type } = this.projectile;
+
+    // Glow
+    ctx.beginPath();
+    ctx.arc(x, y, size + 6, 0, Math.PI * 2);
+    ctx.fillStyle = color + '30';
+    ctx.fill();
+
+    // Core
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+
+    if (type === 'attack') {
+      // Draw an X slash on top
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(Date.now() / 80);
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-size, -size);
+      ctx.lineTo(size, size);
+      ctx.moveTo(size, -size);
+      ctx.lineTo(-size, size);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  _renderParticles(ctx) {
+    for (const p of this.particles) {
+      const alpha = Math.max(0, p.life / p.maxLife);
+      const sz = p.size * alpha;
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, sz, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  _renderFloatingTexts(ctx) {
+    for (const ft of this.floatingTexts) {
+      ctx.globalAlpha = ft.alpha;
+      ctx.fillStyle = ft.color;
+      ctx.font = 'bold 16px monospace';
+      ctx.textAlign = 'center';
+
+      // Shadow for readability
+      ctx.fillStyle = '#000';
+      ctx.fillText(ft.text, ft.x + 1, ft.y + 1);
+      ctx.fillStyle = ft.color;
+      ctx.fillText(ft.text, ft.x, ft.y);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  _renderScreenFlash(ctx, width, height) {
+    if (!this.screenFlash) return;
+    ctx.globalAlpha = this.screenFlash.alpha;
+    ctx.fillStyle = this.screenFlash.color;
+    ctx.fillRect(0, 0, width, height);
+    ctx.globalAlpha = 1;
+  }
+
+  // ═══════════════════════════════════════════════
+  // Team / card renderers (enhanced with displayHp)
+  // ═══════════════════════════════════════════════
 
   _renderInitiativeBar(ctx, width) {
     const barY = 24;
@@ -326,7 +888,6 @@ export default class PetBattlePanel {
       const isActive = this.activeUnit?.team === ref.team && this.activeUnit?.index === ref.index;
       const petDef = PET_DB[unit.petId];
 
-      // Background box
       ctx.fillStyle = unit.fainted ? '#333' : (isActive ? '#2980b9' : (ref.team === 'a' ? '#1a5a1a' : '#5a1a1a'));
       ctx.fillRect(x, barY, boxSize, boxSize);
 
@@ -336,7 +897,6 @@ export default class PetBattlePanel {
         ctx.strokeRect(x, barY, boxSize, boxSize);
       }
 
-      // Pet initial
       ctx.fillStyle = unit.fainted ? '#555' : (petDef?.color || '#fff');
       ctx.fillText(unit.nickname.charAt(0), x + boxSize / 2, barY + boxSize / 2 + 3);
     }
@@ -359,33 +919,48 @@ export default class PetBattlePanel {
       const isActive = this.activeUnit?.team === teamKey && this.activeUnit?.index === i;
 
       let drawX = x;
+      let drawY = cy;
+
+      // Card lunge offset
+      const lunge = this.cardLunge[key];
+      if (lunge) { drawX += lunge.dx; drawY += lunge.dy; }
 
       // Shake
       if (this.shakeTimers[key] > 0) {
-        drawX += (Math.random() - 0.5) * 6;
+        drawX += (Math.random() - 0.5) * 8;
+        drawY += (Math.random() - 0.5) * 3;
       }
 
       // Card background
       ctx.fillStyle = pet.fainted ? 'rgba(40,20,20,0.7)' : (isActive ? 'rgba(40,60,80,0.8)' : 'rgba(30,30,50,0.7)');
-      ctx.fillRect(drawX, cy, w, cardH);
+      ctx.fillRect(drawX, drawY, w, cardH);
 
+      // Active unit border
       if (isActive) {
         ctx.strokeStyle = '#f1c40f';
         ctx.lineWidth = 2;
-        ctx.strokeRect(drawX, cy, w, cardH);
+        ctx.strokeRect(drawX, drawY, w, cardH);
       }
 
-      // Pet sprite (small)
+      // Attacker glow
+      if (this.attackerGlow && this.attackerGlow.team === teamKey && this.attackerGlow.index === i) {
+        const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 100);
+        ctx.strokeStyle = this.attackerGlow.color;
+        ctx.lineWidth = 2 + pulse * 2;
+        ctx.strokeRect(drawX - 2, drawY - 2, w + 4, cardH + 4);
+      }
+
+      // Pet sprite
       const sprSize = 28;
       const sprX = drawX + 4;
-      const sprY = cy + (cardH - sprSize) / 2;
+      const sprY = drawY + (cardH - sprSize) / 2;
       this._renderSmallPet(ctx, pet, sprX, sprY, sprSize, teamKey);
 
-      // Flash effect
+      // Flash effect (heal)
       if (this.flashTimers[key] > 0) {
         ctx.globalAlpha = this.flashTimers[key] * 2;
         ctx.fillStyle = '#2ecc71';
-        ctx.fillRect(drawX, cy, w, cardH);
+        ctx.fillRect(drawX, drawY, w, cardH);
         ctx.globalAlpha = 1;
       }
 
@@ -396,14 +971,15 @@ export default class PetBattlePanel {
       ctx.textAlign = 'left';
       let nameStr = pet.nickname;
       if (pet.isRare) nameStr = '★ ' + nameStr;
-      ctx.fillText(`${nameStr} Lv${pet.level}`, textX, cy + 13);
+      ctx.fillText(`${nameStr} Lv${pet.level}`, textX, drawY + 13);
 
-      // HP bar
+      // HP bar — uses displayHp for smooth animation
       const hpBarX = textX;
       const hpBarW = w - sprSize - 20;
-      const hpBarY = cy + 18;
+      const hpBarY = drawY + 18;
       const hpBarH = 8;
-      const ratio = pet.fainted ? 0 : Math.max(0, pet.currentHp / pet.maxHp);
+      const hp = this.displayHp[key] !== undefined ? this.displayHp[key] : pet.currentHp;
+      const ratio = pet.fainted ? 0 : Math.max(0, hp / pet.maxHp);
       const barColor = ratio > 0.5 ? '#2ecc71' : ratio > 0.25 ? '#f39c12' : '#e74c3c';
 
       ctx.fillStyle = '#222';
@@ -418,9 +994,9 @@ export default class PetBattlePanel {
       ctx.fillStyle = '#ccc';
       ctx.font = '8px monospace';
       ctx.textAlign = 'right';
-      ctx.fillText(`${pet.currentHp}/${pet.maxHp}`, drawX + w - 4, cy + 12);
+      ctx.fillText(`${Math.round(hp)}/${pet.maxHp}`, drawX + w - 4, drawY + 12);
 
-      // Shield bar (below HP bar if has shield)
+      // Shield bar
       if (pet.shield > 0) {
         ctx.fillStyle = '#f39c12';
         const shieldRatio = Math.min(1, pet.shield / pet.maxHp);
@@ -429,7 +1005,7 @@ export default class PetBattlePanel {
 
       // Status effect icons
       if (pet.statusEffects && pet.statusEffects.length > 0) {
-        this._renderStatusIcons(ctx, pet.statusEffects, hpBarX, cy + 30, hpBarW);
+        this._renderStatusIcons(ctx, pet.statusEffects, hpBarX, drawY + 30, hpBarW);
       }
     }
   }
@@ -476,7 +1052,6 @@ export default class PetBattlePanel {
       ctx.fillStyle = '#fff';
       ctx.fillText(def.icon || '?', cx + 2, y + 8);
 
-      // Duration
       ctx.fillStyle = '#ccc';
       ctx.font = '7px monospace';
       ctx.fillText(eff.duration, cx + 12, y + 8);
@@ -496,7 +1071,6 @@ export default class PetBattlePanel {
     ctx.textAlign = 'left';
     ctx.fillText(`[${unitName}'s Turn]`, 14, y);
 
-    // AP dots
     ctx.textAlign = 'right';
     ctx.fillText('AP:', width - 80, y);
     for (let i = 0; i < AP_PER_TURN; i++) {
@@ -601,7 +1175,6 @@ export default class PetBattlePanel {
       ctx.textAlign = 'left';
       ctx.fillText((i === this.menuIndex ? '>' : ' ') + name, 18, sy + rowH / 2 + 3);
 
-      // AP cost
       ctx.fillStyle = canAfford ? '#f1c40f' : '#555';
       ctx.font = '10px monospace';
       ctx.textAlign = 'right';
@@ -642,7 +1215,6 @@ export default class PetBattlePanel {
       ctx.textAlign = 'left';
       ctx.fillText((i === this.menuIndex ? '> ' : '  ') + `${pet.nickname} Lv${pet.level}`, 18, sy + rowH / 2 + 3);
 
-      // HP
       const ratio = Math.max(0, pet.currentHp / pet.maxHp);
       ctx.fillStyle = '#888';
       ctx.font = '10px monospace';
@@ -651,14 +1223,41 @@ export default class PetBattlePanel {
     }
   }
 
-  _renderEnemyTurn(ctx, width, menuY, menuH) {
+  _renderAnimStatus(ctx, width, menuY, menuH) {
     const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 300);
-    ctx.globalAlpha = 0.6 + pulse * 0.4;
-    ctx.fillStyle = '#e74c3c';
-    ctx.font = 'bold 16px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('Enemy Turn...', width / 2, menuY + menuH / 2 + 4);
-    ctx.globalAlpha = 1;
+    const isEnemy = this.activeUnit?.team === 'b';
+
+    if (this.isAnimating && this.currentAnim?.kind === 'result') {
+      const r = this.currentAnim.data;
+      const isAttackerEnemy = r.attackerTeam === 'b';
+      const who = isAttackerEnemy ? 'Enemy' : 'Your pet';
+
+      ctx.globalAlpha = 0.6 + pulse * 0.4;
+      ctx.fillStyle = isAttackerEnemy ? '#e74c3c' : '#3498db';
+      ctx.font = 'bold 14px monospace';
+      ctx.textAlign = 'center';
+
+      let actionText = isEnemy ? 'Enemy Turn...' : 'Attacking...';
+      if (r.type === 'attack') actionText = `${who} attacks!`;
+      else if (r.type === 'skill_damage') {
+        const sName = SKILL_DB[r.skillId]?.name || 'skill';
+        actionText = `${who} uses ${sName}!`;
+      }
+      else if (r.type === 'heal') actionText = `${who} heals!`;
+      else if (r.type === 'defend') actionText = `${who} defends!`;
+      else if (r.type === 'pass') actionText = `${who} passes.`;
+      else if (r.type === 'faint') actionText = 'A pet faints!';
+
+      ctx.fillText(actionText, width / 2, menuY + menuH / 2 + 4);
+      ctx.globalAlpha = 1;
+    } else {
+      ctx.globalAlpha = 0.6 + pulse * 0.4;
+      ctx.fillStyle = isEnemy ? '#e74c3c' : '#3498db';
+      ctx.font = 'bold 16px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(isEnemy ? 'Enemy Turn...' : 'Wait...', width / 2, menuY + menuH / 2 + 4);
+      ctx.globalAlpha = 1;
+    }
   }
 
   _renderEndScreen(ctx, width, height, menuY, menuH) {
@@ -666,7 +1265,6 @@ export default class PetBattlePanel {
     ctx.textAlign = 'center';
 
     let resultKey = this.battleEndData?.result || this.result || 'win';
-    // Map internal results
     if (resultKey === 'win_a') resultKey = 'win';
     if (resultKey === 'win_b') resultKey = 'lose';
 
@@ -708,6 +1306,35 @@ export default class PetBattlePanel {
     ctx.fillStyle = '#aaa';
     ctx.font = '11px monospace';
     ctx.fillText('Press SPACE or ESC to continue', width / 2, infoY + 4);
+  }
+
+  // ═══════════════════════════════════════════════
+  // Helpers
+  // ═══════════════════════════════════════════════
+
+  _getCardCenter(team, index) {
+    const w = this.lastWidth;
+    const cardH = 38;
+    const gap = 4;
+    const cy = 50 + 6 + index * (cardH + gap) + cardH / 2;
+
+    if (team === 'a') {
+      return { x: 10 + w * 0.22, y: cy };
+    } else {
+      return { x: w * 0.56 + w * 0.22, y: cy };
+    }
+  }
+
+  _initDisplayHp() {
+    this.displayHp = {};
+    if (!this.teams) return;
+    for (const teamKey of ['a', 'b']) {
+      const team = this.teams[teamKey];
+      if (!team) continue;
+      for (let i = 0; i < team.length; i++) {
+        this.displayHp[`${teamKey}_${i}`] = team[i].currentHp;
+      }
+    }
   }
 
   handleClick(mx, my, width, height, sendAction) {

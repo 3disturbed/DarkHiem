@@ -1054,6 +1054,13 @@ export const RECIPE_DB = {
     results: [],
     placesStation: 'cooking_fire',
   },
+  build_fish_smoker: {
+    id: 'build_fish_smoker', name: 'Build Fish Smoker',
+    station: 'workbench', stationLevel: 2,
+    ingredients: [{ itemId: 'iron_ingot', count: 4 }, { itemId: 'stick', count: 8 }, { itemId: 'stone', count: 6 }],
+    results: [],
+    placesStation: 'fish_smoker',
+  },
   build_summoning_shrine: {
     id: 'build_summoning_shrine', name: 'Build Summoning Shrine',
     station: 'hand', stationLevel: 0,
@@ -1361,6 +1368,52 @@ export const RECIPE_DB = {
     station: 'cooking_fire', stationLevel: 1,
     ingredients: [{ itemId: 'lava_eel', count: 1 }],
     results: [{ itemId: 'grilled_lava_eel', count: 1 }],
+  },
+
+  // ============================================================
+  //  SMOKED FISH recipes (fish smoker)
+  // ============================================================
+  smoked_trout: {
+    id: 'smoked_trout', name: 'Smoked Trout',
+    station: 'fish_smoker', stationLevel: 1,
+    ingredients: [{ itemId: 'river_trout', count: 1 }],
+    results: [{ itemId: 'smoked_trout', count: 1 }],
+  },
+  smoked_carp: {
+    id: 'smoked_carp', name: 'Smoked Carp',
+    station: 'fish_smoker', stationLevel: 1,
+    ingredients: [{ itemId: 'golden_carp', count: 1 }],
+    results: [{ itemId: 'smoked_carp', count: 1 }],
+  },
+  smoked_bass: {
+    id: 'smoked_bass', name: 'Smoked Bass',
+    station: 'fish_smoker', stationLevel: 1,
+    ingredients: [{ itemId: 'lake_bass', count: 1 }],
+    results: [{ itemId: 'smoked_bass', count: 1 }],
+  },
+  smoked_pike: {
+    id: 'smoked_pike', name: 'Smoked Pike',
+    station: 'fish_smoker', stationLevel: 1,
+    ingredients: [{ itemId: 'shadow_pike', count: 1 }],
+    results: [{ itemId: 'smoked_pike', count: 1 }],
+  },
+  smoked_eel: {
+    id: 'smoked_eel', name: 'Smoked Eel',
+    station: 'fish_smoker', stationLevel: 1,
+    ingredients: [{ itemId: 'swamp_eel', count: 1 }],
+    results: [{ itemId: 'smoked_eel', count: 1 }],
+  },
+  smoked_salmon: {
+    id: 'smoked_salmon', name: 'Smoked Salmon',
+    station: 'fish_smoker', stationLevel: 1,
+    ingredients: [{ itemId: 'frost_salmon', count: 1 }],
+    results: [{ itemId: 'smoked_salmon', count: 1 }],
+  },
+  smoked_lava_eel: {
+    id: 'smoked_lava_eel', name: 'Smoked Lava Eel',
+    station: 'fish_smoker', stationLevel: 1,
+    ingredients: [{ itemId: 'lava_eel', count: 1 }],
+    results: [{ itemId: 'smoked_lava_eel', count: 1 }],
   },
 
   // ============================================================

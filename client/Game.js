@@ -43,6 +43,7 @@ import MailJobPanel from './ui/MailJobPanel.js';
 import SortingPanel from './ui/SortingPanel.js';
 import AlchemyPanel from './ui/AlchemyPanel.js';
 import FishmongerPanel from './ui/FishmongerPanel.js';
+import FishingMinigame from './ui/FishingMinigame.js';
 import PvPBattlePanel from './ui/PvPBattlePanel.js';
 import { LAND_PLOTS } from '../shared/LandPlotTypes.js';
 
@@ -140,11 +141,12 @@ export default class Game {
     this.inFishmonger = false;
 
     // Fishing state
-    this.fishingState = null; // null | 'casting' | 'waiting' | 'bite' | 'reeling'
+    this.fishingState = null; // null | 'waiting' | 'minigame'
     this.fishingCastX = 0;
     this.fishingCastY = 0;
     this.fishingMessage = '';
     this.fishingMessageTimer = 0;
+    this.fishingMinigame = new FishingMinigame();
 
     this.panelsOpen = false;
     this.craftingOpen = false;
@@ -311,6 +313,7 @@ export default class Game {
         if (this.fishingState) {
           this.network.sendFishCancel();
           this.fishingState = null;
+          this.fishingMinigame.close();
         }
         this.inventoryPanel.visible = false;
         this.equipmentPanel.visible = false;
@@ -621,22 +624,32 @@ export default class Game {
       this.fishingCastY = data.castY;
     };
 
-    this.network.onFishBite = () => {
-      this.fishingState = 'bite';
+    this.network.onFishBite = (data) => {
+      this.fishingState = 'minigame';
+      this.fishingMinigame.start(data.fishId, data.difficulty, data.reelMod || 1.0);
+      this.fishingMinigame.onSuccess = () => {
+        this.network.sendFishReel();
+      };
+      this.fishingMinigame.onFailure = () => {
+        this.network.sendFishCancel();
+        this.fishingState = null;
+        this.fishingMessage = 'Fish got away!';
+        this.fishingMessageTimer = 2;
+      };
     };
 
-    this.network.onFishReel = () => {
-      this.fishingState = 'reeling';
-    };
+    this.network.onFishReel = () => {};
 
     this.network.onFishCatch = (data) => {
       this.fishingState = null;
+      this.fishingMinigame.close();
       this.fishingMessage = `Caught ${data.fishName}!`;
       this.fishingMessageTimer = 3;
     };
 
     this.network.onFishFail = (data) => {
       this.fishingState = null;
+      this.fishingMinigame.close();
       if (data?.reason) {
         this.fishingMessage = data.reason;
         this.fishingMessageTimer = 2;
@@ -905,9 +918,13 @@ export default class Game {
         this.network.sendSortEnd(this.sortingPanel.getScoreReport());
       }
 
-      // Escape → cancel sorting / close results
-      if (actions.cancel || actions.action) {
-        if (this.sortingPanel.results) {
+      // Escape → close at any point (quit active game or close results)
+      if (actions.cancel) {
+        if (this.sortingPanel.active) {
+          // Force end the game early
+          this.sortingPanel.active = false;
+          this.sortingPanel.gameFinished = true;
+        } else {
           this.sortingPanel.close();
         }
       }
@@ -1191,7 +1208,7 @@ export default class Game {
       this.worldMap.toggle(this.localPlayer);
     }
 
-    // World map drag panning
+    // World map drag panning + station click
     if (this.worldMap.visible) {
       if (actions.action) {
         this.worldMap.handleMouseDown(uiMX, uiMY);
@@ -1199,6 +1216,15 @@ export default class Game {
       if (actions.actionHeld) {
         this.worldMap.handleMouseMove(uiMX, uiMY);
       } else {
+        if (this.worldMap.dragging) {
+          // Mouse released — check for click (not drag)
+          const r = this.renderer;
+          const result = this.worldMap.handleClick(uiMX, uiMY, r.logicalWidth, r.logicalHeight, this.localPlayer, this.stations);
+          if (result && result.action === 'travel') {
+            this.network.sendStationTravel(result.x, result.y);
+            this.worldMap.close();
+          }
+        }
         this.worldMap.handleMouseUp();
       }
     }
@@ -1325,7 +1351,9 @@ export default class Game {
 
     // Scroll routing: panels get scroll when open, otherwise camera zoom
     if (actions.scrollDelta !== 0) {
-      if (this.petCodexOpen) {
+      if (this.animalPenOpen) {
+        this.animalPenPanel.handleScroll(actions.scrollDelta);
+      } else if (this.petCodexOpen) {
         this.petCodexPanel.handleScroll(actions.scrollDelta);
       } else if (this.shopOpen) {
         this.shopPanel.handleScroll(actions.scrollDelta);
@@ -1352,28 +1380,30 @@ export default class Game {
       }
     }
 
+    // Update fishing minigame
+    if (this.fishingMinigame.active) {
+      this.fishingMinigame.update(dt, actions.actionHeld);
+    }
+
     // Handle attack input (block when panels open, crafting open, or placement mode)
     this.attackCooldown = Math.max(0, this.attackCooldown - dt);
     if (this.localPlayer && actions.action && this.attackCooldown <= 0 && !this.panelsOpen && !this.craftingOpen && !this.upgradeOpen && !this.skillsOpen && !this.placementMode && !this.dialogOpen && !this.fishingRodOpen) {
       // Check if fishing rod is equipped
       const equippedTool = this.equipment.getEquipped('tool');
       if (equippedTool && ITEM_DB[equippedTool.id]?.toolType === 'fishing_rod') {
-        if (this.fishingState === 'bite') {
-          this.network.sendFishReel();
-          this.attackCooldown = 0.3;
-        } else if (!this.fishingState) {
+        if (!this.fishingState) {
           this.network.sendFishCast(actions.aimX, actions.aimY);
           this.attackCooldown = 0.5;
         }
-        // While waiting/reeling, ignore clicks
-      } else {
+        // During waiting/minigame, ignore cast clicks
+      } else if (!this.fishingMinigame.active) {
         this.network.sendAttack(actions.aimX, actions.aimY);
         this.attackCooldown = 0.4; // client-side cooldown to prevent spam
       }
     }
 
-    // Cancel fishing on movement when waiting/reeling
-    if (this.fishingState && this.localPlayer) {
+    // Cancel fishing on movement (only when waiting, not during minigame)
+    if (this.fishingState === 'waiting' && this.localPlayer) {
       const moving = Math.abs(actions.moveX) > 0.1 || Math.abs(actions.moveY) > 0.1;
       if (moving) {
         this.network.sendFishCancel();
@@ -1573,6 +1603,7 @@ export default class Game {
           (s1, s2) => this.network.sendPetBreedStart(s1, s2),
           () => this.network.sendPetBreedCollect(),
           (codexIdx) => this.network.sendPetTrain(codexIdx),
+          (target, sacrifices) => this.network.sendPetTierUp(target, sacrifices),
         );
       }
     }
@@ -2049,11 +2080,11 @@ export default class Game {
     // Minimap (always visible when not in world map)
     if (!this.worldMap.visible) {
       this.minimap.position(r.logicalWidth);
-      this.minimap.render(ctx, this.worldManager, this.exploredChunks, this.localPlayer, this.remotePlayers);
+      this.minimap.render(ctx, this.worldManager, this.exploredChunks, this.localPlayer, this.remotePlayers, this.stations);
     }
 
     // World map (full-screen overlay)
-    this.worldMap.render(ctx, r.logicalWidth, r.logicalHeight, this.exploredChunks, this.biomeCache, this.localPlayer, this.remotePlayers);
+    this.worldMap.render(ctx, r.logicalWidth, r.logicalHeight, this.exploredChunks, this.biomeCache, this.localPlayer, this.remotePlayers, this.stations, this.worldManager);
 
     // Pet battle overlay (renders on top of everything except death screen)
     if (this.inPetBattle) {
@@ -2329,7 +2360,7 @@ export default class Game {
         r, player.x, player.y - (player.mounted ? 8 : 0),
         player.color, player.name,
         player.hp ?? 100, player.maxHp ?? 100,
-        false, 0, 1
+        false, 0, 1, player.isMoving || false
       );
     }
 
@@ -2344,10 +2375,10 @@ export default class Game {
     // Render local player
     if (this.localPlayer) {
       const p = this.localPlayer;
+      const actions = this.input.actions;
+      const localMoving = actions.moveX !== 0 || actions.moveY !== 0;
       // Draw horse underneath if mounted
       if (this.mounted) {
-        const actions = this.input.actions;
-        const localMoving = actions.moveX !== 0 || actions.moveY !== 0;
         EntityRenderer.renderHorse(r, p.x, p.y + 6, '#8B6C42', 30, '', true, null,
           localMoving, facing.x > 0);
       }
@@ -2356,7 +2387,7 @@ export default class Game {
         r, p.x, p.y - yOffset,
         p.color, p.name,
         p.hp, p.maxHp,
-        true, facing.x, facing.y
+        true, facing.x, facing.y, localMoving
       );
       // Mounted hint
       if (this.mounted) {
@@ -2565,27 +2596,20 @@ export default class Game {
 
   renderFishingHUD(ctx, r) {
     // Fishing state indicator near center-bottom
-    if (this.fishingState) {
+    if (this.fishingState === 'waiting') {
       const cx = r.logicalWidth / 2;
       const baseY = r.logicalHeight - 140;
-
       ctx.font = 'bold 16px monospace';
       ctx.textAlign = 'center';
+      ctx.fillStyle = '#88aacc';
+      ctx.fillText('Fishing...', cx, baseY);
+      const dots = '.'.repeat(1 + Math.floor(Date.now() / 500) % 3);
+      ctx.fillText(dots, cx + 50, baseY);
+    }
 
-      if (this.fishingState === 'waiting') {
-        ctx.fillStyle = '#88aacc';
-        ctx.fillText('Fishing...', cx, baseY);
-        // Animate dots
-        const dots = '.'.repeat(1 + Math.floor(Date.now() / 500) % 3);
-        ctx.fillText(dots, cx + 50, baseY);
-      } else if (this.fishingState === 'bite') {
-        ctx.fillStyle = '#ffcc00';
-        ctx.font = 'bold 20px monospace';
-        ctx.fillText('BITE! Click to reel!', cx, baseY);
-      } else if (this.fishingState === 'reeling') {
-        ctx.fillStyle = '#44cc88';
-        ctx.fillText('Reeling...', cx, baseY);
-      }
+    // Stardew-style minigame
+    if (this.fishingMinigame.active) {
+      this.fishingMinigame.render(ctx, r.logicalWidth, r.logicalHeight);
     }
 
     // Fishing message (catch result / error)
@@ -2620,12 +2644,12 @@ export default class Game {
     ctx.fillStyle = '#fff';
     ctx.fill();
 
-    // Bounce on bite
-    if (this.fishingState === 'bite') {
-      const splash = Math.sin(Date.now() / 100) * 3;
+    // Splash effect during minigame
+    if (this.fishingState === 'minigame') {
+      const splash = Math.sin(Date.now() / 150) * 2;
       ctx.beginPath();
       ctx.arc(this.fishingCastX, bobY + splash, bobberSize + 2, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(255, 255, 100, 0.6)';
+      ctx.strokeStyle = 'rgba(255, 255, 100, 0.5)';
       ctx.lineWidth = 2;
       ctx.stroke();
     }

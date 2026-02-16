@@ -25,7 +25,7 @@ export default class TeamBattle {
   }
 
   _buildUnit(petData, team, index) {
-    const stats = getPetStats(petData.petId, petData.level || 1);
+    const stats = getPetStats(petData.petId, petData.level || 1, petData.tierUp || 0);
     return {
       team,
       index,

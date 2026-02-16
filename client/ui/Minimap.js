@@ -1,4 +1,5 @@
-import { CHUNK_PIXEL_SIZE } from '../../shared/Constants.js';
+import { CHUNK_PIXEL_SIZE, CHUNK_SIZE } from '../../shared/Constants.js';
+import { TILE } from '../../shared/TileTypes.js';
 
 const SIZE = 160;
 const DOT = 3;           // pixels per chunk on minimap
@@ -12,18 +13,41 @@ const BIOME_COLORS = {
   volcanic:   '#4a1a1a',
 };
 
+const WATER_TILES = new Set([TILE.WATER, TILE.DEEP_WATER, TILE.MARSH_WATER, TILE.BOG, TILE.ICE]);
+const WALL_TILES = new Set([TILE.WALL, TILE.CAVE_WALL, TILE.CLIFF]);
+
 export default class Minimap {
   constructor() {
     this.x = 0;
     this.y = 8;
+    this.chunkMeta = new Map(); // "cx,cy" -> { waterRatio, hasWalls }
   }
 
   position(screenWidth) {
     this.x = screenWidth - SIZE - 8;
   }
 
-  render(ctx, worldManager, exploredChunks, localPlayer, remotePlayers) {
+  _updateMeta(worldManager) {
+    if (!worldManager) return;
+    for (const [key, chunk] of worldManager.chunks) {
+      if (this.chunkMeta.has(key)) continue;
+      if (!chunk.tiles) continue;
+      let waterCount = 0;
+      let wallCount = 0;
+      const total = CHUNK_SIZE * CHUNK_SIZE;
+      for (let i = 0; i < total; i++) {
+        const t = chunk.tiles[i];
+        if (WATER_TILES.has(t)) waterCount++;
+        if (WALL_TILES.has(t)) wallCount++;
+      }
+      this.chunkMeta.set(key, { waterRatio: waterCount / total, hasWalls: wallCount > 0 });
+    }
+  }
+
+  render(ctx, worldManager, exploredChunks, localPlayer, remotePlayers, stations) {
     if (!localPlayer) return;
+
+    this._updateMeta(worldManager);
 
     const mx = this.x;
     const my = this.y;
@@ -67,6 +91,33 @@ export default class Minimap {
       const biome = chunk ? chunk.biomeId : null;
       ctx.fillStyle = (biome && BIOME_COLORS[biome]) || '#333';
       ctx.fillRect(dotX, dotY, DOT, DOT);
+
+      // Water overlay
+      const meta = this.chunkMeta.get(key);
+      if (meta && meta.waterRatio > 0.1) {
+        ctx.fillStyle = `rgba(41, 128, 185, ${Math.min(0.8, meta.waterRatio)})`;
+        ctx.fillRect(dotX, dotY, DOT, DOT);
+      }
+
+      // Wall overlay
+      if (meta && meta.hasWalls) {
+        ctx.fillStyle = 'rgba(120, 120, 140, 0.5)';
+        ctx.fillRect(dotX, dotY, DOT, DOT);
+      }
+    }
+
+    // Station dots
+    if (stations) {
+      for (const [id, s] of stations) {
+        const sdx = (s.x / CHUNK_PIXEL_SIZE) - pcx;
+        const sdy = (s.y / CHUNK_PIXEL_SIZE) - pcy;
+        if (Math.abs(sdx) > RADIUS || Math.abs(sdy) > RADIUS) continue;
+
+        const sx = centerX + sdx * DOT;
+        const sy = centerY + sdy * DOT;
+        ctx.fillStyle = '#ff8c00';
+        ctx.fillRect(sx - 1, sy - 1, 2, 2);
+      }
     }
 
     // Remote player dots
@@ -95,6 +146,6 @@ export default class Minimap {
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
     ctx.font = '8px monospace';
     ctx.textAlign = 'right';
-    ctx.fillText('MAP', mx + SIZE - 4, my + SIZE - 4);
+    ctx.fillText('MAP [M]', mx + SIZE - 4, my + SIZE - 4);
   }
 }

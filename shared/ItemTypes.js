@@ -1288,6 +1288,45 @@ export const ITEM_DB = {
   },
 
   // ============================================================
+  //  SMOKED FISH (fish smoker station — higher heal than grilled)
+  // ============================================================
+  smoked_trout: {
+    id: 'smoked_trout', name: 'Smoked Trout', type: 'consumable', stackable: true, maxStack: 20,
+    effect: { healAmount: 35 },
+    description: 'Slowly smoked river trout. Restores 35 HP.',
+  },
+  smoked_carp: {
+    id: 'smoked_carp', name: 'Smoked Carp', type: 'consumable', stackable: true, maxStack: 20,
+    effect: { healAmount: 55 },
+    description: 'Rich smoked golden carp. Restores 55 HP.',
+  },
+  smoked_bass: {
+    id: 'smoked_bass', name: 'Smoked Bass', type: 'consumable', stackable: true, maxStack: 20,
+    effect: { healAmount: 50 },
+    description: 'Smoked lake bass. Restores 50 HP.',
+  },
+  smoked_pike: {
+    id: 'smoked_pike', name: 'Smoked Pike', type: 'consumable', stackable: true, maxStack: 20,
+    effect: { healAmount: 75 },
+    description: 'Smoked shadow pike. Restores 75 HP.',
+  },
+  smoked_eel: {
+    id: 'smoked_eel', name: 'Smoked Eel', type: 'consumable', stackable: true, maxStack: 20,
+    effect: { healAmount: 40 },
+    description: 'Smoked swamp eel. Restores 40 HP.',
+  },
+  smoked_salmon: {
+    id: 'smoked_salmon', name: 'Smoked Salmon', type: 'consumable', stackable: true, maxStack: 20,
+    effect: { healAmount: 90 },
+    description: 'Premium smoked frost salmon. Restores 90 HP.',
+  },
+  smoked_lava_eel: {
+    id: 'smoked_lava_eel', name: 'Smoked Lava Eel', type: 'consumable', stackable: true, maxStack: 20,
+    effect: { healAmount: 120 },
+    description: 'Smoked lava eel, intensely flavored. Restores 120 HP.',
+  },
+
+  // ============================================================
   //  FISHING PARTS (rod attachments)
   // ============================================================
 

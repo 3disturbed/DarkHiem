@@ -2,6 +2,7 @@ import { AI_STATE } from '../ecs/components/AIComponent.js';
 import PositionComponent from '../ecs/components/PositionComponent.js';
 import HealthComponent from '../ecs/components/HealthComponent.js';
 import StatusEffectComponent from '../ecs/components/StatusEffectComponent.js';
+import PlayerComponent from '../ecs/components/PlayerComponent.js';
 import VelocityComponent from '../ecs/components/VelocityComponent.js';
 
 const PHASE_THRESHOLDS = [0.6, 0.3]; // phase 2 at 60%, phase 3 at 30%
@@ -248,6 +249,9 @@ export default class BossAIController {
         const dy = pPos.y - pos.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist <= GROUND_POUND_RADIUS) {
+          // Skip players in pet battles
+          const pc = player.getComponent(PlayerComponent);
+          if (pc && pc.activeBattle) continue;
           const health = player.getComponent(HealthComponent);
           if (health && health.isAlive()) {
             const dmg = health.damage(GROUND_POUND_DAMAGE);
@@ -344,6 +348,9 @@ export default class BossAIController {
       if (!pPos) continue;
       const health = player.getComponent(HealthComponent);
       if (!health || !health.isAlive()) continue;
+      // Skip players in pet battles
+      const pc = player.getComponent(PlayerComponent);
+      if (pc && pc.activeBattle) continue;
       const dx = pPos.x - pos.x;
       const dy = pPos.y - pos.y;
       const dist = Math.sqrt(dx * dx + dy * dy);

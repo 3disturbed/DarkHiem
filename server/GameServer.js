@@ -177,6 +177,11 @@ export default class GameServer {
       this.handleTownRecall(player);
     });
 
+    // Station travel (map fast-travel to placed stations)
+    this.messageRouter.register(MSG.STATION_TRAVEL, (player, data) => {
+      this.handleStationTravel(player, data);
+    });
+
     // Station placement handlers (ghost placement confirm/cancel)
     this.messageRouter.register(MSG.STATION_PLACE, (player, data) => {
       this.handleStationPlace(player, data);
@@ -254,6 +259,42 @@ export default class GameServer {
     });
 
     console.log(`[GameServer] Player recalled to town: ${playerConn.name}`);
+  }
+
+  handleStationTravel(playerConn, data) {
+    const entity = this.entityManager.get(playerConn.id);
+    if (!entity) return;
+
+    const health = entity.getComponent(HealthComponent);
+    if (!health || !health.isAlive()) return;
+
+    const pc = entity.getComponent(PlayerComponent);
+    if (pc && pc.activeBattle) return;
+
+    // Validate station exists
+    const targetX = data?.x;
+    const targetY = data?.y;
+    if (typeof targetX !== 'number' || typeof targetY !== 'number') return;
+
+    // Teleport to station location (offset slightly so player isn't on top)
+    const pos = entity.getComponent(PositionComponent);
+    pos.x = targetX + (Math.random() - 0.5) * 48;
+    pos.y = targetY + 48;
+
+    const vel = entity.getComponent(VelocityComponent);
+    if (vel) { vel.dx = 0; vel.dy = 0; }
+
+    playerConn.emit(MSG.PLAYER_RESPAWN, {
+      x: pos.x,
+      y: pos.y,
+      hp: health.current,
+      maxHp: health.max,
+    });
+
+    playerConn.emit(MSG.CHAT_RECEIVE, {
+      message: `Traveled to station at (${Math.round(targetX)}, ${Math.round(targetY)}).`,
+      sender: 'System',
+    });
   }
 
   handleStationPlace(playerConn, data) {

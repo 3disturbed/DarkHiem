@@ -3,6 +3,7 @@ import CombatComponent from '../components/CombatComponent.js';
 import AIComponent, { AI_STATE } from '../components/AIComponent.js';
 import HealthComponent from '../components/HealthComponent.js';
 import PositionComponent from '../components/PositionComponent.js';
+import PlayerComponent from '../components/PlayerComponent.js';
 
 export default class CombatSystem extends System {
   constructor(combatResolver) {
@@ -27,6 +28,9 @@ export default class CombatSystem extends System {
       if (ai.state === AI_STATE.ATTACK && combat.isAttacking && combat.targetId) {
         const target = entityManager.get(combat.targetId);
         if (target) {
+          // Skip targets in pet battles (player entered battle after being targeted)
+          const pc = target.getComponent(PlayerComponent);
+          if (pc && pc.activeBattle) { combat.targetId = null; continue; }
           const health = target.getComponent(HealthComponent);
           if (health && health.isAlive()) {
             this.combatResolver.resolveEnemyAttack(enemy, target);

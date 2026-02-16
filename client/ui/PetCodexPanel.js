@@ -335,7 +335,12 @@ export default class PetCodexPanel {
       ctx.textAlign = 'left';
       let name = pet.nickname || petDef?.name || pet.petId;
       if (pet.isRare && !name.startsWith('★')) name = '★ ' + name;
-      ctx.fillText(`${name}  Lv.${pet.level || 1}`, this.x + 32, ry + ROW_H / 2 + 3);
+      const baseTxt = `${name}  Lv.${pet.level || 1}`;
+      ctx.fillText(baseTxt, this.x + 32, ry + ROW_H / 2 + 3);
+      if (pet.tierUp > 0) {
+        ctx.fillStyle = '#ffd700';
+        ctx.fillText(` T+${pet.tierUp}`, this.x + 32 + ctx.measureText(baseTxt).width, ry + ROW_H / 2 + 3);
+      }
 
       // HP text
       ctx.fillStyle = '#888';
@@ -381,7 +386,13 @@ export default class PetCodexPanel {
     ctx.textAlign = 'left';
     let name = pet.nickname || petDef?.name || pet.petId;
     if (pet.isRare && !name.startsWith('★')) name = '★ ' + name;
-    ctx.fillText(`${name}  Lv.${pet.level || 1}`, this.x + 14, detailY + 18);
+    const detailBaseTxt = `${name}  Lv.${pet.level || 1}`;
+    ctx.fillText(detailBaseTxt, this.x + 14, detailY + 18);
+    if (pet.tierUp > 0) {
+      ctx.fillStyle = '#ffd700';
+      ctx.font = 'bold 11px monospace';
+      ctx.fillText(`  T+${pet.tierUp} (+${pet.tierUp * 20}% stats)`, this.x + 14 + ctx.measureText(detailBaseTxt).width, detailY + 18);
+    }
 
     if (pet.fainted) {
       ctx.fillStyle = '#e74c3c';
@@ -419,7 +430,7 @@ export default class PetCodexPanel {
     ctx.fillText(xpNeeded < Infinity ? `XP ${pet.xp || 0}/${xpNeeded}` : 'MAX', barX + barW / 2, xpY + 8);
 
     // Stats
-    const stats = getPetStats(pet.petId, pet.level || 1);
+    const stats = getPetStats(pet.petId, pet.level || 1, pet.tierUp || 0);
     ctx.fillStyle = '#aaa';
     ctx.font = '10px monospace';
     ctx.textAlign = 'left';
@@ -528,7 +539,13 @@ export default class PetCodexPanel {
       ctx.textAlign = 'left';
       let name = pet.nickname || petDef.name;
       if (pet.isRare && !name.startsWith('★')) name = '★ ' + name;
-      ctx.fillText(`${name}  Lv.${pet.level || 1}`, this.x + 42, sy + 30);
+      const teamBaseTxt = `${name}  Lv.${pet.level || 1}`;
+      ctx.fillText(teamBaseTxt, this.x + 42, sy + 30);
+      if (pet.tierUp > 0) {
+        ctx.fillStyle = '#ffd700';
+        ctx.font = 'bold 10px monospace';
+        ctx.fillText(` T+${pet.tierUp}`, this.x + 42 + ctx.measureText(teamBaseTxt).width, sy + 30);
+      }
 
       // HP bar
       const barX = this.x + 42;
@@ -559,7 +576,7 @@ export default class PetCodexPanel {
       ctx.fillText(xpNeeded < Infinity ? `XP ${pet.xp || 0}/${xpNeeded}` : 'MAX', barX + barW / 2, xpY + 7);
 
       // Stats
-      const stats = getPetStats(pet.petId, pet.level || 1);
+      const stats = getPetStats(pet.petId, pet.level || 1, pet.tierUp || 0);
       ctx.fillStyle = '#aaa';
       ctx.font = '9px monospace';
       ctx.textAlign = 'left';
@@ -632,6 +649,7 @@ export default class PetCodexPanel {
       ctx.font = '11px monospace';
       ctx.textAlign = 'left';
       let label = `${pet.isRare ? '★ ' : ''}${pet.nickname || pet.petId} Lv.${pet.level || 1}`;
+      if (pet.tierUp > 0) label += ` T+${pet.tierUp}`;
       if (pet.fainted) label += ' [F]';
       if (isAssigned) label += ' [Assigned]';
       ctx.fillText(label, this.x + 30, ry + ROW_H / 2 + 3);

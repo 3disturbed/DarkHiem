@@ -1,5 +1,5 @@
 import { MSG } from '../../shared/MessageTypes.js';
-import { PET_DB, getPetStats, getPetSkills, getRandomPetSkills, getRandomNewSkill, getXpForLevel, PET_MAX_LEVEL, PET_SKILL_UNLOCK_LEVELS } from '../../shared/PetTypes.js';
+import { PET_DB, getPetStats, getPetSkills, getRandomPetSkills, getRandomNewSkill, getXpForLevel, PET_MAX_LEVEL, PET_MAX_TIER_UP, PET_SKILL_UNLOCK_LEVELS } from '../../shared/PetTypes.js';
 import { ITEM_DB } from '../../shared/ItemTypes.js';
 import PlayerComponent from '../ecs/components/PlayerComponent.js';
 import InventoryComponent from '../ecs/components/InventoryComponent.js';
@@ -29,6 +29,7 @@ export default class PetBreedingManager {
     router.register(MSG.PET_BREED_START, (player, data) => this.handleBreedStart(player, data));
     router.register(MSG.PET_BREED_COLLECT, (player, data) => this.handleBreedCollect(player, data));
     router.register(MSG.PET_TRAIN, (player, data) => this.handleTrain(player, data));
+    router.register(MSG.PET_TIER_UP, (player, data) => this.handleTierUp(player, data));
   }
 
   handleBreedStart(playerConn, data) {
@@ -246,7 +247,7 @@ export default class PetBreedingManager {
         petData.level++;
         leveledUp = true;
 
-        const newStats = getPetStats(petData.petId, petData.level);
+        const newStats = getPetStats(petData.petId, petData.level, petData.tierUp || 0);
         petData.maxHp = newStats.hp + (petData.bonusStats || 0);
         petData.currentHp = petData.maxHp;
 
@@ -271,6 +272,87 @@ export default class PetBreedingManager {
     if (leveledUp) msg += ` → Level ${petData.level}!`;
     if (newSkills.length > 0) msg += ` Learned: ${newSkills.join(', ')}`;
     playerConn.emit(MSG.CHAT_RECEIVE, { message: msg, sender: 'System' });
+  }
+
+  handleTierUp(playerConn, data) {
+    const entity = this.gameServer.getPlayerEntity(playerConn.id);
+    if (!entity) return;
+
+    const pc = entity.getComponent(PlayerComponent);
+    const pos = entity.getComponent(PositionComponent);
+    if (!pc || !pos) return;
+
+    const penEntity = this._findNearestPen(pos);
+    if (!penEntity) {
+      playerConn.emit(MSG.CHAT_RECEIVE, { message: 'Must be near an Animal Pen.', sender: 'System' });
+      return;
+    }
+
+    const { targetCodex, sacrificeCodexes } = data;
+    if (targetCodex === undefined || !Array.isArray(sacrificeCodexes) || sacrificeCodexes.length !== 5) {
+      playerConn.emit(MSG.CHAT_RECEIVE, { message: 'Select 5 pets to sacrifice.', sender: 'System' });
+      return;
+    }
+
+    const targetPet = pc.petCodex[targetCodex];
+    if (!targetPet || !targetPet.petId) {
+      playerConn.emit(MSG.CHAT_RECEIVE, { message: 'Invalid target pet.', sender: 'System' });
+      return;
+    }
+
+    const currentTierUp = targetPet.tierUp || 0;
+    if (currentTierUp >= PET_MAX_TIER_UP) {
+      playerConn.emit(MSG.CHAT_RECEIVE, { message: 'Pet is already at max tier!', sender: 'System' });
+      return;
+    }
+
+    // Validate no duplicates and target not in sacrifice list
+    const allIndices = [targetCodex, ...sacrificeCodexes];
+    if (new Set(allIndices).size !== allIndices.length) {
+      playerConn.emit(MSG.CHAT_RECEIVE, { message: 'Cannot sacrifice the same pet twice or sacrifice the target.', sender: 'System' });
+      return;
+    }
+
+    // Validate all sacrifices exist and are same species
+    for (const idx of sacrificeCodexes) {
+      const pet = pc.petCodex[idx];
+      if (!pet || !pet.petId) {
+        playerConn.emit(MSG.CHAT_RECEIVE, { message: 'Invalid sacrifice pet.', sender: 'System' });
+        return;
+      }
+      if (pet.petId !== targetPet.petId) {
+        playerConn.emit(MSG.CHAT_RECEIVE, { message: 'All sacrificed pets must be the same species.', sender: 'System' });
+        return;
+      }
+    }
+
+    // Apply tier up
+    targetPet.tierUp = currentTierUp + 1;
+
+    // Recalculate target stats with new tierUp
+    const newStats = getPetStats(targetPet.petId, targetPet.level, targetPet.tierUp);
+    targetPet.maxHp = newStats.hp + (targetPet.bonusStats || 0);
+    targetPet.currentHp = targetPet.maxHp; // Full heal on tier-up
+
+    // Remove sacrificed pets from codex (highest index first to avoid shifting)
+    const toRemove = [...sacrificeCodexes].sort((a, b) => b - a);
+    for (const idx of toRemove) {
+      pc.petCodex.splice(idx, 1);
+      for (let t = 0; t < pc.petTeam.length; t++) {
+        if (pc.petTeam[t] === idx) {
+          pc.petTeam[t] = null;
+        } else if (pc.petTeam[t] !== null && pc.petTeam[t] > idx) {
+          pc.petTeam[t]--;
+        }
+      }
+    }
+
+    playerConn.emit(MSG.PET_CODEX_UPDATE, { petCodex: pc.petCodex, petTeam: pc.petTeam });
+    const petDef = PET_DB[targetPet.petId];
+    playerConn.emit(MSG.CHAT_RECEIVE, {
+      message: `${targetPet.nickname || petDef?.name} tiered up to T${targetPet.tierUp}! (+${targetPet.tierUp * 20}% stats)`,
+      sender: 'System',
+    });
   }
 
   _findNearestPen(pos) {

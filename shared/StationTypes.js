@@ -8,6 +8,7 @@ export const STATION_TYPE = {
   ARCANE_TABLE: 'arcane_table',
   KILN: 'kiln',
   ANIMAL_PEN: 'animal_pen',
+  FISH_SMOKER: 'fish_smoker',
 };
 
 export const STATION_DB = {
@@ -145,6 +146,16 @@ export const STATION_DB = {
     size: 48,
     interactRange: 80,
     sprite: 'animal_pen',
+  },
+  fish_smoker: {
+    id: 'fish_smoker',
+    name: 'Fish Smoker',
+    type: STATION_TYPE.FISH_SMOKER,
+    maxLevel: 1,
+    color: '#6B4226',
+    size: 36,
+    interactRange: 80,
+    sprite: 'fish_smoker',
   },
 };
 

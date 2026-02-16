@@ -4,8 +4,6 @@ import InventoryComponent from '../../ecs/components/InventoryComponent.js';
 import PlayerComponent from '../../ecs/components/PlayerComponent.js';
 
 const GAME_DURATION = 180;
-const CONVEYOR_LENGTH = 10;
-const SORT_ZONE_POS = 9;
 
 const SCORE_CORRECT = 10;
 const SCORE_INCORRECT = -20;
@@ -50,14 +48,11 @@ export default class SortingHandler {
 
     playerConn.emit(MSG.SORT_START, {
       duration: GAME_DURATION,
-      gateColors: [1, 2, 3, 4],
-      conveyorLength: CONVEYOR_LENGTH,
-      sortZone: SORT_ZONE_POS,
       seed,
     });
 
     playerConn.emit(MSG.CHAT_RECEIVE, {
-      message: 'Sorting started! Use W/A/S/D for gates 1-4. Match packages to the correct gate by color!',
+      message: 'Sorting started! W=Letter A=Box S=Parcel D=Delicate. Sort the packages!',
       sender: 'Postmaster Paul',
     });
   }
@@ -72,12 +67,7 @@ export default class SortingHandler {
       return;
     }
 
-    // Validate wall-clock time (must have waited at least ~170s)
     const elapsed = (Date.now() - session.startTime) / 1000;
-    if (elapsed < GAME_DURATION - 10) {
-      this.sessions.delete(playerConn.id);
-      return;
-    }
 
     const correct = Math.max(0, Math.floor(data.correct || 0));
     const incorrect = Math.max(0, Math.floor(data.incorrect || 0));

@@ -1,5 +1,6 @@
 import { AI_STATE } from '../ecs/components/AIComponent.js';
 import StatusEffectComponent from '../ecs/components/StatusEffectComponent.js';
+import PlayerComponent from '../ecs/components/PlayerComponent.js';
 import PatrolBehavior from './PatrolBehavior.js';
 import ChaseBehavior from './ChaseBehavior.js';
 import AttackBehavior from './AttackBehavior.js';
@@ -268,6 +269,9 @@ export default class AIController {
     for (const player of players) {
       const pPos = player.getComponent(pos.constructor);
       if (!pPos) continue;
+      // Skip players in pet battles
+      const pc = player.getComponent(PlayerComponent);
+      if (pc && pc.activeBattle) continue;
       const dx = pPos.x - pos.x;
       const dy = pPos.y - pos.y;
       const dist = Math.sqrt(dx * dx + dy * dy);

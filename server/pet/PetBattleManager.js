@@ -220,7 +220,7 @@ export default class PetBattleManager {
               petData.level++;
               levelUps.push({ petId: petData.petId, newLevel: petData.level });
 
-              const newStats = getPetStats(petData.petId, petData.level);
+              const newStats = getPetStats(petData.petId, petData.level, petData.tierUp || 0);
               petData.maxHp = newStats.hp + (petData.bonusStats || 0);
               petData.currentHp = petData.maxHp;
 

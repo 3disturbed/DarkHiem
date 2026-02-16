@@ -635,6 +635,77 @@ def gen_kiln():
 
     return px
 
+# ─── FISH SMOKER ───
+def gen_fish_smoker():
+    px = new_canvas()
+    wood = hex_to_rgba('#6B4226')
+    wood_dark = darken(wood)
+    wood_light = lighten(wood, 1.3)
+    iron = hex_to_rgba('#555555')
+    iron_light = lighten(iron, 1.3)
+    smoke = hex_to_rgba('#888888', 120)
+    grill = hex_to_rgba('#444444')
+    ember = hex_to_rgba('#FF6600')
+    ember_y = hex_to_rgba('#FFAA00')
+
+    # Base/barrel body
+    fill_rect(px, 6, 14, 20, 14, wood)
+    fill_rect(px, 5, 16, 22, 10, wood)
+    # Top rim
+    fill_rect(px, 7, 13, 18, 2, wood_dark)
+    # Wood grain
+    for y in range(16, 27, 3):
+        fill_rect(px, 6, y, 20, 1, wood_dark)
+    # Light highlights
+    fill_rect(px, 7, 15, 1, 10, wood_light)
+    fill_rect(px, 24, 15, 1, 10, wood_light)
+
+    # Iron bands
+    fill_rect(px, 5, 18, 22, 1, iron)
+    fill_rect(px, 5, 24, 22, 1, iron)
+    # Band rivets
+    for x in [7, 11, 15, 19, 23]:
+        set_px(px, x, 18, iron_light)
+        set_px(px, x, 24, iron_light)
+
+    # Lid (slightly lifted showing smoke gap)
+    fill_rect(px, 7, 10, 18, 3, iron)
+    fill_rect(px, 8, 9, 16, 1, iron_light)
+    # Handle on lid
+    fill_rect(px, 14, 8, 4, 2, iron_light)
+    fill_rect(px, 15, 7, 2, 1, iron)
+
+    # Grill lines visible through gap
+    fill_rect(px, 8, 13, 16, 1, grill)
+    for x in range(9, 24, 2):
+        set_px(px, x, 13, wood_dark)
+
+    # Ember glow at bottom
+    fill_rect(px, 10, 26, 12, 2, hex_to_rgba('#331100'))
+    set_px(px, 12, 27, ember)
+    set_px(px, 15, 27, ember_y)
+    set_px(px, 18, 27, ember)
+
+    # Smoke wisps rising from lid gap
+    set_px(px, 12, 8, smoke)
+    set_px(px, 11, 6, hex_to_rgba('#777777', 100))
+    set_px(px, 13, 5, hex_to_rgba('#888888', 80))
+    set_px(px, 19, 7, smoke)
+    set_px(px, 20, 5, hex_to_rgba('#777777', 90))
+    set_px(px, 18, 4, hex_to_rgba('#666666', 60))
+    set_px(px, 15, 3, hex_to_rgba('#555555', 50))
+    set_px(px, 16, 2, hex_to_rgba('#555555', 40))
+
+    # Fish silhouette hint on side
+    fill_rect(px, 11, 20, 6, 1, wood_light)
+    set_px(px, 17, 20, wood_light)
+    set_px(px, 10, 20, wood_light)
+    set_px(px, 18, 19, wood_light)
+    set_px(px, 18, 21, wood_light)
+
+    return px
+
+
 GENERATORS = {
     'workbench': gen_workbench,
     'furnace': gen_furnace,
@@ -648,6 +719,7 @@ GENERATORS = {
     'iron_chest': gen_iron_chest,
     'obsidian_vault': gen_obsidian_vault,
     'kiln': gen_kiln,
+    'fish_smoker': gen_fish_smoker,
 }
 
 def main():

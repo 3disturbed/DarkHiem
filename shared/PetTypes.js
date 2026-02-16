@@ -4,6 +4,7 @@ export const PET_CAPTURE_HP_THRESHOLD = 0.3; // Must be below 30% HP to capture
 export const PET_PASSIVE_VARIANT_CHANCE = 0.05; // 5% chance for rare passive variant
 export const PET_TEAM_SIZE = 3;
 export const PET_MAX_LEVEL = 20;
+export const PET_MAX_TIER_UP = 5;
 export const PET_SKILL_UNLOCK_LEVELS = [1, 3, 5, 8, 12];
 export const PET_FLEE_CHANCE = 0.5;
 export const PET_MAX_TURNS = 50;
@@ -303,17 +304,18 @@ export const PET_DB = {
 };
 
 // Calculate pet stats at a given level
-export function getPetStats(petId, level) {
+export function getPetStats(petId, level, tierUp = 0) {
   const def = PET_DB[petId];
   if (!def) return null;
   const lvl = Math.max(1, Math.min(level, PET_MAX_LEVEL));
   const growth = lvl - 1;
+  const mult = 1 + Math.max(0, Math.min(tierUp, PET_MAX_TIER_UP)) * 0.2;
   return {
-    hp: Math.floor(def.baseStats.hp + def.growthPerLevel.hp * growth),
-    attack: Math.floor(def.baseStats.attack + def.growthPerLevel.attack * growth),
-    defense: Math.floor(def.baseStats.defense + def.growthPerLevel.defense * growth),
-    speed: Math.floor(def.baseStats.speed + def.growthPerLevel.speed * growth),
-    special: Math.floor(def.baseStats.special + def.growthPerLevel.special * growth),
+    hp: Math.floor((def.baseStats.hp + def.growthPerLevel.hp * growth) * mult),
+    attack: Math.floor((def.baseStats.attack + def.growthPerLevel.attack * growth) * mult),
+    defense: Math.floor((def.baseStats.defense + def.growthPerLevel.defense * growth) * mult),
+    speed: Math.floor((def.baseStats.speed + def.growthPerLevel.speed * growth) * mult),
+    special: Math.floor((def.baseStats.special + def.growthPerLevel.special * growth) * mult),
   };
 }
 

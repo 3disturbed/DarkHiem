@@ -270,6 +270,11 @@ export default class CombatHandler {
       if (nearestPlayer) {
         const targetPc = nearestPlayer.getComponent(PlayerComponent);
         if (targetPc) {
+          // Don't challenge players already in a pet battle
+          if (targetPc.activeBattle) {
+            playerConn.emit(MSG.CHAT_RECEIVE, { message: 'That player is in a pet battle.', sender: 'System' });
+            return;
+          }
           pvpManager.issueChallenge(playerConn, nearestPlayer);
           return;
         }

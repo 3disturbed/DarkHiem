@@ -6,14 +6,18 @@ import playerSprites from './PlayerSprites.js';
 
 export default class EntityRenderer {
   // Render a player entity
-  static renderPlayer(r, x, y, color, name, hp, maxHp, isLocal, facingX, facingY) {
+  static renderPlayer(r, x, y, color, name, hp, maxHp, isLocal, facingX, facingY, isMoving) {
     const half = PLAYER_SIZE / 2;
     const ctx = r.ctx;
 
     // Try sprite first
-    const tinted = playerSprites.getTinted(color);
-    if (tinted) {
-      ctx.drawImage(tinted, Math.round(x - half), Math.round(y - half), PLAYER_SIZE, PLAYER_SIZE);
+    const frameIndex = (isMoving && playerSprites.frameCount > 1)
+      ? Math.floor((Date.now() / 200) % playerSprites.frameCount)
+      : 0;
+    const frameData = playerSprites.getFrame(color, frameIndex);
+    if (frameData) {
+      ctx.drawImage(frameData.sheet, frameData.sx, frameData.sy, frameData.sw, frameData.sh,
+        Math.round(x - half), Math.round(y - half), PLAYER_SIZE, PLAYER_SIZE);
     } else {
       // Fallback: colored square
       r.drawRect(x - half, y - half, PLAYER_SIZE, PLAYER_SIZE, color);

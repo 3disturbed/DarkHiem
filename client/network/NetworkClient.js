@@ -458,6 +458,11 @@ export default class NetworkClient {
     this.socket.emit(MSG.TOWN_RECALL, {});
   }
 
+  sendStationTravel(x, y) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.STATION_TRAVEL, { x, y });
+  }
+
   sendInteract() {
     if (!this.connected) return;
     this.socket.emit(MSG.STATION_INTERACT, {});
@@ -638,6 +643,11 @@ export default class NetworkClient {
   sendPetTrain(codexIndex) {
     if (!this.connected) return;
     this.socket.emit(MSG.PET_TRAIN, { codexIndex });
+  }
+
+  sendPetTierUp(targetCodex, sacrificeCodexes) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.PET_TIER_UP, { targetCodex, sacrificeCodexes });
   }
 
   sendMailAccept(type, npcId) {

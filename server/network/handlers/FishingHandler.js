@@ -182,13 +182,21 @@ export default class FishingHandler {
 
     fs.state = STATE.BITE;
 
-    // 2-second window to reel
+    // Safety timeout: 60 seconds for the minigame (in case client disconnects)
     fs.timer = setTimeout(() => {
       this._onBiteTimeout(playerId);
-    }, 2000);
+    }, 60000);
+
+    // Send fish difficulty + reel modifier for the minigame
+    const fishDef = ITEM_DB[fs.fishId];
+    const difficulty = fishDef ? fishDef.rarity : 'common';
+    const reelItem = fs.rodParts.reel ? ITEM_DB[fs.rodParts.reel] : null;
+    const reelMod = reelItem ? reelItem.reelSpeed : 1.0;
 
     playerConn.emit(MSG.FISH_BITE, {
       fishId: fs.fishId,
+      difficulty,
+      reelMod,
       state: 'bite',
     });
   }
@@ -201,7 +209,7 @@ export default class FishingHandler {
     this.fishingStates.delete(playerId);
 
     if (playerConn) {
-      playerConn.emit(MSG.FISH_FAIL, { reason: 'Fish got away! Too slow to reel.' });
+      playerConn.emit(MSG.FISH_FAIL, { reason: 'Fish got away!' });
     }
   }
 
@@ -210,35 +218,13 @@ export default class FishingHandler {
     if (!fs || fs.state !== STATE.BITE) return;
 
     if (fs.timer) clearTimeout(fs.timer);
-    fs.state = STATE.REELING;
 
-    // Reel duration (1-3 seconds, modified by reel)
-    const reelItem = fs.rodParts.reel ? ITEM_DB[fs.rodParts.reel] : null;
-    const reelSpeedMod = reelItem ? reelItem.reelSpeed : 1.0;
-    const baseReelTime = 1000 + Math.random() * 2000; // 1-3 seconds
-    const reelTime = baseReelTime / reelSpeedMod;
+    const entity = this.gameServer.getPlayerEntity(playerConn.id);
+    this.fishingStates.delete(playerConn.id);
 
-    fs.timer = setTimeout(() => {
-      this._onReelComplete(playerConn.id);
-    }, reelTime);
+    if (!entity) return;
 
-    playerConn.emit(MSG.FISH_REEL, {
-      state: 'reeling',
-      reelTime,
-    });
-  }
-
-  _onReelComplete(playerId) {
-    const fs = this.fishingStates.get(playerId);
-    if (!fs || fs.state !== STATE.REELING) return;
-
-    const playerConn = this.gameServer.players.get(playerId);
-    const entity = this.gameServer.getPlayerEntity(playerId);
-    this.fishingStates.delete(playerId);
-
-    if (!playerConn || !entity) return;
-
-    // Add fish to inventory
+    // Minigame succeeded — award fish immediately
     const inv = entity.getComponent(InventoryComponent);
     if (inv) {
       const added = inv.addItem(fs.fishId, 1);

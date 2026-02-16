@@ -132,8 +132,9 @@ export const MSG = {
   // Tile mining
   TILE_UPDATE:        'tile:update',
 
-  // Town recall
+  // Town recall / travel
   TOWN_RECALL:        'player:recall',
+  STATION_TRAVEL:     'station:travel',
 
   // Horse
   HORSE_CAPTURE:      'horse:capture',
@@ -160,6 +161,7 @@ export const MSG = {
   PET_BREED_START:    'pet:breed:start',
   PET_BREED_COLLECT:  'pet:breed:collect',
   PET_TRAIN:          'pet:train',
+  PET_TIER_UP:        'pet:tier:up',
   PET_CODEX_UPDATE:   'pet:codex:update',
   PET_RENAME:         'pet:rename',
 
