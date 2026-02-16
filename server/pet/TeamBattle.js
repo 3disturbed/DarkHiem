@@ -39,6 +39,7 @@ export default class TeamBattle {
       effectiveStats: { ...stats },
       skills: petData.learnedSkills || petData.skills || [],
       fainted: petData.fainted || false,
+      faintReported: petData.fainted || false,
       isRare: petData.isRare || false,
       statusEffects: [],
       shield: 0,
@@ -79,6 +80,15 @@ export default class TeamBattle {
 
     // Process status effects at start of turn
     const stunned = this._processStartOfTurnEffects(unit);
+
+    // Check if DoT killed this unit or caused a team wipe
+    this._checkDeaths(this.startOfTurnEffects);
+    if (this.ended) return null;
+
+    // If unit died from DoT, skip to next turn
+    if (unit.fainted) {
+      return this.advanceTurn();
+    }
 
     // If stunned, skip turn
     if (stunned) {
@@ -522,7 +532,7 @@ export default class TeamBattle {
       eff.duration--;
       if (eff.duration <= 0) {
         if (eff.id === 'shield') {
-          target.shield = 0; // This won't be reached since shield duration ticks
+          unit.shield = 0;
         }
         unit.statusEffects.splice(i, 1);
       }
@@ -538,12 +548,15 @@ export default class TeamBattle {
   }
 
   _checkDeaths(results) {
-    // Check all units for fainted state
+    // Check all units for fainted state (units may already be marked fainted by _applyDamageToUnit)
     for (const team of ['a', 'b']) {
       for (const unit of this.teams[team]) {
         if (unit.currentHp <= 0 && !unit.fainted) {
           unit.fainted = true;
           unit.currentHp = 0;
+        }
+        if (unit.fainted && !unit.faintReported) {
+          unit.faintReported = true;
           results.push({ type: 'faint', unitTeam: team, unitIndex: unit.index, text: `${unit.nickname} fainted!` });
         }
       }
