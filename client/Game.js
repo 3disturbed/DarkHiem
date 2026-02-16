@@ -38,7 +38,7 @@ import FishingRodPanel from './ui/FishingRodPanel.js';
 import ContextMenu from './ui/ContextMenu.js';
 import PetBattlePanel from './ui/PetBattlePanel.js';
 import AnimalPenPanel from './ui/AnimalPenPanel.js';
-import PetTeamPanel from './ui/PetTeamPanel.js';
+import PetCodexPanel from './ui/PetCodexPanel.js';
 import MailJobPanel from './ui/MailJobPanel.js';
 import SortingPanel from './ui/SortingPanel.js';
 import AlchemyPanel from './ui/AlchemyPanel.js';
@@ -117,9 +117,19 @@ export default class Game {
     this.inPvpBattle = false;
     this.animalPenPanel = new AnimalPenPanel();
     this.animalPenOpen = false;
-    this.petTeamPanel = new PetTeamPanel();
-    this.petTeamOpen = false;
+    this.petCodexPanel = new PetCodexPanel();
+    this.petCodexOpen = false;
     this.petTeam = [null, null, null];
+    this.petCodex = [];
+
+    // Forward raw key events to pet codex panel for rename mode
+    window.addEventListener('keydown', (e) => {
+      if (this.petCodexOpen && this.petCodexPanel.renaming) {
+        e.preventDefault();
+        this.petCodexPanel.handleKeyInput(e.key);
+      }
+    });
+
     this.mailJobPanel = new MailJobPanel();
     this.mailJobOpen = false;
     this.sortingPanel = new SortingPanel();
@@ -193,8 +203,9 @@ export default class Game {
       this.followHorse.initialized = false;
       // Restore land plot ownership
       this.ownedPlots = data.ownedPlots || [];
-      // Restore pet team
+      // Restore pet codex and team
       this.petTeam = data.petTeam || [null, null, null];
+      this.petCodex = data.petCodex || [];
       console.log(`[Game] Joined as ${data.name}`);
     };
 
@@ -289,9 +300,9 @@ export default class Game {
           this.animalPenPanel.close();
           this.animalPenOpen = false;
         }
-        if (this.petTeamOpen) {
-          this.petTeamPanel.close();
-          this.petTeamOpen = false;
+        if (this.petCodexOpen) {
+          this.petCodexPanel.close();
+          this.petCodexOpen = false;
         }
         if (this.mounted) {
           this.network.sendHorseDismount();
@@ -332,8 +343,7 @@ export default class Game {
     // Inventory/equipment/stats callbacks
     this.network.onInventoryUpdate = (data) => {
       this.inventory.update(data);
-      if (this.animalPenOpen) this.animalPenPanel.refresh(this.inventory);
-      if (this.petTeamOpen) this.petTeamPanel.refresh(this.inventory, this.petTeam);
+      if (this.animalPenOpen) this.animalPenPanel.refresh(this.petCodex);
     };
 
     this.network.onEquipmentUpdate = (data) => {
@@ -373,7 +383,7 @@ export default class Game {
       if (data.success && data.type === 'station') {
         if (data.stationId === 'animal_pen') {
           this.animalPenPanel.position(this.renderer.logicalWidth, this.renderer.logicalHeight);
-          this.animalPenPanel.open(this.inventory);
+          this.animalPenPanel.open(this.petCodex);
           this.animalPenOpen = true;
         } else {
           this.craftingPanel.position(this.renderer.logicalWidth, this.renderer.logicalHeight);
@@ -648,12 +658,12 @@ export default class Game {
       }
     };
 
-    // Pet team update
-    this.network.onPetTeamUpdate = (data) => {
-      if (data.petTeam) {
-        this.petTeam = [...data.petTeam];
-        if (this.petTeamOpen) this.petTeamPanel.refresh(this.inventory, this.petTeam);
-      }
+    // Pet codex update
+    this.network.onPetCodexUpdate = (data) => {
+      if (data.petCodex) this.petCodex = data.petCodex;
+      if (data.petTeam) this.petTeam = [...data.petTeam];
+      if (this.petCodexOpen) this.petCodexPanel.refresh(this.petCodex, this.petTeam);
+      if (this.animalPenOpen) this.animalPenPanel.refresh(this.petCodex);
     };
 
     // Pet battle callbacks
@@ -789,6 +799,16 @@ export default class Game {
     const s = r.uiScale;
     const uiMX = actions.mouseScreenX / s;
     const uiMY = actions.mouseScreenY / s;
+
+    // Suppress game actions while pet codex rename is active (keys go to text input)
+    if (this.petCodexOpen && this.petCodexPanel.renaming) {
+      actions.moveX = 0;
+      actions.moveY = 0;
+      // Keep only mouse/tap for clicking out of rename
+      for (const key of ['interact', 'cancel', 'inventory', 'craft', 'upgrade', 'skills', 'questLog', 'map', 'fishingRod', 'petTeam', 'chat', 'dash', 'horseAction']) {
+        actions[key] = false;
+      }
+    }
 
     // Pet battle takes over all input when active
     if (this.inPetBattle) {
@@ -1138,15 +1158,15 @@ export default class Game {
       }
     }
 
-    // Handle P key (toggle pet team panel)
-    if (actions.petTeam && !this.placementMode) {
-      if (this.petTeamOpen) {
-        this.petTeamPanel.close();
-        this.petTeamOpen = false;
+    // Handle P key (toggle pet codex panel)
+    if (actions.petTeam && !this.placementMode && !(this.petCodexOpen && this.petCodexPanel.renaming)) {
+      if (this.petCodexOpen) {
+        this.petCodexPanel.close();
+        this.petCodexOpen = false;
       } else {
-        this.petTeamPanel.position(r.logicalWidth, r.logicalHeight);
-        this.petTeamPanel.open(this.inventory, this.petTeam);
-        this.petTeamOpen = true;
+        this.petCodexPanel.position(r.logicalWidth, r.logicalHeight);
+        this.petCodexPanel.open(this.petCodex, this.petTeam);
+        this.petCodexOpen = true;
       }
     }
 
@@ -1192,9 +1212,9 @@ export default class Game {
         this.network.sendDialogEnd(this.dialogPanel.npcId);
         this.dialogPanel.close();
         this.dialogOpen = false;
-      } else if (this.petTeamOpen) {
-        this.petTeamPanel.close();
-        this.petTeamOpen = false;
+      } else if (this.petCodexOpen && !this.petCodexPanel.renaming) {
+        this.petCodexPanel.close();
+        this.petCodexOpen = false;
       } else if (this.animalPenOpen) {
         this.animalPenPanel.close();
         this.animalPenOpen = false;
@@ -1289,7 +1309,9 @@ export default class Game {
 
     // Scroll routing: panels get scroll when open, otherwise camera zoom
     if (actions.scrollDelta !== 0) {
-      if (this.shopOpen) {
+      if (this.petCodexOpen) {
+        this.petCodexPanel.handleScroll(actions.scrollDelta);
+      } else if (this.shopOpen) {
         this.shopPanel.handleScroll(actions.scrollDelta);
       } else if (this.worldMap.visible) {
         this.worldMap.handleScroll(actions.scrollDelta);
@@ -1531,27 +1553,28 @@ export default class Game {
       this.animalPenPanel.handleMouseMove(uiMX, uiMY);
       if (actions.action || actions.screenTap) {
         this.animalPenPanel.handleClick(
-          uiMX, uiMY, this.inventory,
+          uiMX, uiMY, this.petCodex,
           (s1, s2) => this.network.sendPetBreedStart(s1, s2),
           () => this.network.sendPetBreedCollect(),
-          (slot) => this.network.sendPetTrain(slot),
+          (codexIdx) => this.network.sendPetTrain(codexIdx),
         );
       }
     }
 
-    // Handle pet team panel interaction
-    if (this.petTeamOpen) {
-      this.petTeamPanel.handleMouseMove(uiMX, uiMY);
+    // Handle pet codex panel interaction
+    if (this.petCodexOpen) {
+      this.petCodexPanel.handleMouseMove(uiMX, uiMY);
       if (actions.action || actions.screenTap) {
-        this.petTeamPanel.handleClick(
-          uiMX, uiMY, this.inventory,
-          (slotIdx, teamIdx) => this.network.sendPetTeamSet(slotIdx, teamIdx),
+        this.petCodexPanel.handleClick(
+          uiMX, uiMY,
+          (codexIdx, teamIdx) => this.network.sendPetTeamSet(codexIdx, teamIdx),
+          (codexIdx, newName) => this.network.sendPetRename(codexIdx, newName),
         );
       }
     }
 
     // Skill bar tap/click handling
-    if ((actions.action || actions.screenTap) && !this.panelsOpen && !this.craftingOpen && !this.upgradeOpen && !this.skillsOpen && !this.placementMode && !this.dialogOpen && !this.questPanelOpen && !this.shopOpen && !this.chestOpen && !this.fishingRodOpen && !this.animalPenOpen && !this.petTeamOpen && !this.mailJobOpen) {
+    if ((actions.action || actions.screenTap) && !this.panelsOpen && !this.craftingOpen && !this.upgradeOpen && !this.skillsOpen && !this.placementMode && !this.dialogOpen && !this.questPanelOpen && !this.shopOpen && !this.chestOpen && !this.fishingRodOpen && !this.animalPenOpen && !this.petCodexOpen && !this.mailJobOpen) {
       const slot = this.skillBar.handleClick(uiMX, uiMY);
       if (slot >= 0) {
         this.network.sendSkillUse(slot);
@@ -1968,13 +1991,13 @@ export default class Game {
     // Animal pen panel
     if (this.animalPenOpen) {
       this.animalPenPanel.position(r.logicalWidth, r.logicalHeight);
-      this.animalPenPanel.render(ctx, this.inventory);
+      this.animalPenPanel.render(ctx);
     }
 
-    // Pet team panel
-    if (this.petTeamOpen) {
-      this.petTeamPanel.position(r.logicalWidth, r.logicalHeight);
-      this.petTeamPanel.render(ctx);
+    // Pet codex panel
+    if (this.petCodexOpen) {
+      this.petCodexPanel.position(r.logicalWidth, r.logicalHeight);
+      this.petCodexPanel.render(ctx);
     }
 
     // Mail job panel

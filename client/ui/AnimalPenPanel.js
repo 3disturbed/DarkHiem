@@ -23,29 +23,29 @@ export default class AnimalPenPanel {
     this.height = 340;
 
     // Breed state
-    this.breedSlot1 = -1; // inventory slot index
-    this.breedSlot2 = -1;
+    this.breedCodex1 = -1; // codex index
+    this.breedCodex2 = -1;
 
     // Train state
-    this.trainSlot = -1;
+    this.trainCodex = -1;
 
-    // Pet inventory slots (cached when opened)
-    this.petSlots = []; // [{ slotIdx, petId, nickname, level, ... }]
+    // Pet list (cached from codex)
+    this.petSlots = []; // [{ codexIndex, petId, nickname, level, ... }]
 
     // Scroll
     this.scrollOffset = 0;
     this.hoverIndex = -1;
   }
 
-  open(inventory) {
+  open(petCodex) {
     this.visible = true;
     this.tab = TAB_BREED;
-    this.breedSlot1 = -1;
-    this.breedSlot2 = -1;
-    this.trainSlot = -1;
+    this.breedCodex1 = -1;
+    this.breedCodex2 = -1;
+    this.trainCodex = -1;
     this.scrollOffset = 0;
     this.hoverIndex = -1;
-    this._refreshPetSlots(inventory);
+    this._refreshPetSlots(petCodex);
   }
 
   close() {
@@ -57,16 +57,14 @@ export default class AnimalPenPanel {
     this.y = Math.floor((screenH - this.height) / 2);
   }
 
-  _refreshPetSlots(inventory) {
+  _refreshPetSlots(petCodex) {
     this.petSlots = [];
-    if (!inventory || !inventory.slots) return;
-    const slots = inventory.slots;
-    for (let i = 0; i < slots.length; i++) {
-      const s = slots[i];
-      if (!s || s.itemId !== 'pet_item') continue;
-      const data = s.extraData || s;
+    if (!petCodex) return;
+    for (let i = 0; i < petCodex.length; i++) {
+      const data = petCodex[i];
+      if (!data || !data.petId) continue;
       this.petSlots.push({
-        slotIdx: i,
+        codexIndex: i,
         petId: data.petId,
         nickname: data.nickname || PET_DB[data.petId]?.name || data.petId,
         level: data.level || 1,
@@ -78,7 +76,7 @@ export default class AnimalPenPanel {
     }
   }
 
-  handleClick(mx, my, inventory, sendBreedStart, sendBreedCollect, sendTrain) {
+  handleClick(mx, my, petCodex, sendBreedStart, sendBreedCollect, sendTrain) {
     if (!this.visible) return false;
     if (mx < this.x || mx > this.x + this.width || my < this.y || my > this.y + this.height) {
       return false;
@@ -90,12 +88,12 @@ export default class AnimalPenPanel {
     if (my >= tabY && my <= tabY + 24) {
       if (mx >= this.x + 5 && mx < this.x + 5 + tabW) {
         this.tab = TAB_BREED;
-        this._refreshPetSlots(inventory);
+        this._refreshPetSlots(petCodex);
         return true;
       }
       if (mx >= this.x + this.width / 2 + 5 && mx < this.x + this.width / 2 + 5 + tabW) {
         this.tab = TAB_TRAIN;
-        this._refreshPetSlots(inventory);
+        this._refreshPetSlots(petCodex);
         return true;
       }
     }
@@ -105,12 +103,11 @@ export default class AnimalPenPanel {
     if (this.tab === TAB_BREED) {
       return this._handleBreedClick(mx, my, contentY, sendBreedStart, sendBreedCollect);
     } else {
-      return this._handleTrainClick(mx, my, contentY, inventory, sendTrain);
+      return this._handleTrainClick(mx, my, contentY, sendTrain);
     }
   }
 
   _handleBreedClick(mx, my, contentY, sendBreedStart, sendBreedCollect) {
-    // Pet list area
     const listY = contentY + 60;
     const rowH = 24;
 
@@ -118,10 +115,10 @@ export default class AnimalPenPanel {
       const ry = listY + i * rowH - this.scrollOffset;
       if (my >= ry && my < ry + rowH && mx >= this.x + 10 && mx < this.x + this.width - 10) {
         const slot = this.petSlots[i];
-        if (this.breedSlot1 === -1 || this.breedSlot1 === slot.slotIdx) {
-          this.breedSlot1 = slot.slotIdx;
+        if (this.breedCodex1 === -1 || this.breedCodex1 === slot.codexIndex) {
+          this.breedCodex1 = slot.codexIndex;
         } else {
-          this.breedSlot2 = slot.slotIdx;
+          this.breedCodex2 = slot.codexIndex;
         }
         return true;
       }
@@ -130,10 +127,10 @@ export default class AnimalPenPanel {
     // Breed button
     const btnY = this.y + this.height - 60;
     if (my >= btnY && my <= btnY + 26 && mx >= this.x + 20 && mx < this.x + this.width / 2 - 10) {
-      if (this.breedSlot1 >= 0 && this.breedSlot2 >= 0) {
-        sendBreedStart(this.breedSlot1, this.breedSlot2);
-        this.breedSlot1 = -1;
-        this.breedSlot2 = -1;
+      if (this.breedCodex1 >= 0 && this.breedCodex2 >= 0) {
+        sendBreedStart(this.breedCodex1, this.breedCodex2);
+        this.breedCodex1 = -1;
+        this.breedCodex2 = -1;
       }
       return true;
     }
@@ -144,21 +141,19 @@ export default class AnimalPenPanel {
       return true;
     }
 
-    // Clear selection (click empty area)
-    this.breedSlot1 = -1;
-    this.breedSlot2 = -1;
+    this.breedCodex1 = -1;
+    this.breedCodex2 = -1;
     return true;
   }
 
-  _handleTrainClick(mx, my, contentY, inventory, sendTrain) {
-    // Pet list area
+  _handleTrainClick(mx, my, contentY, sendTrain) {
     const listY = contentY + 10;
     const rowH = 24;
 
     for (let i = 0; i < this.petSlots.length; i++) {
       const ry = listY + i * rowH - this.scrollOffset;
       if (my >= ry && my < ry + rowH && mx >= this.x + 10 && mx < this.x + this.width - 10) {
-        this.trainSlot = this.petSlots[i].slotIdx;
+        this.trainCodex = this.petSlots[i].codexIndex;
         return true;
       }
     }
@@ -166,8 +161,8 @@ export default class AnimalPenPanel {
     // Train button
     const btnY = this.y + this.height - 36;
     if (my >= btnY && my <= btnY + 26 && mx >= this.x + 20 && mx < this.x + this.width - 20) {
-      if (this.trainSlot >= 0) {
-        sendTrain(this.trainSlot);
+      if (this.trainCodex >= 0) {
+        sendTrain(this.trainCodex);
       }
       return true;
     }
@@ -191,13 +186,13 @@ export default class AnimalPenPanel {
     }
   }
 
-  refresh(inventory) {
+  refresh(petCodex) {
     if (this.visible) {
-      this._refreshPetSlots(inventory);
+      this._refreshPetSlots(petCodex);
     }
   }
 
-  render(ctx, inventory) {
+  render(ctx) {
     if (!this.visible) return;
 
     // Background
@@ -238,22 +233,21 @@ export default class AnimalPenPanel {
     ctx.clip();
 
     if (this.tab === TAB_BREED) {
-      this._renderBreedTab(ctx, contentY, inventory);
+      this._renderBreedTab(ctx, contentY);
     } else {
-      this._renderTrainTab(ctx, contentY, inventory);
+      this._renderTrainTab(ctx, contentY);
     }
 
     ctx.restore();
   }
 
-  _renderBreedTab(ctx, contentY, inventory) {
-    // Selected pair display
+  _renderBreedTab(ctx, contentY) {
     ctx.fillStyle = '#aaa';
     ctx.font = '11px monospace';
     ctx.textAlign = 'left';
 
-    const slot1Name = this._getPetName(this.breedSlot1, inventory);
-    const slot2Name = this._getPetName(this.breedSlot2, inventory);
+    const slot1Name = this._getCodexPetName(this.breedCodex1);
+    const slot2Name = this._getCodexPetName(this.breedCodex2);
 
     ctx.fillStyle = '#d4a574';
     ctx.fillText('Parent 1:', this.x + 10, contentY + 14);
@@ -265,20 +259,16 @@ export default class AnimalPenPanel {
     ctx.fillStyle = slot2Name ? '#fff' : '#555';
     ctx.fillText(slot2Name || '(click to select)', this.x + 80, contentY + 30);
 
-    // Cost
     ctx.fillStyle = '#888';
     ctx.font = '10px monospace';
     ctx.fillText('Cost: 5 Raw Meat, 5 Berries', this.x + 10, contentY + 46);
 
-    // Pet list
     const listY = contentY + 60;
     this._renderPetList(ctx, listY);
 
-    // Breed / Collect buttons
     const btnY = this.y + this.height - 60;
 
-    // Breed button
-    const canBreed = this.breedSlot1 >= 0 && this.breedSlot2 >= 0;
+    const canBreed = this.breedCodex1 >= 0 && this.breedCodex2 >= 0;
     ctx.fillStyle = canBreed ? '#5C3310' : '#2A1A0A';
     ctx.fillRect(this.x + 20, btnY, this.width / 2 - 30, 26);
     ctx.strokeStyle = canBreed ? '#d4a574' : '#444';
@@ -289,7 +279,6 @@ export default class AnimalPenPanel {
     ctx.textAlign = 'center';
     ctx.fillText('Breed', this.x + 20 + (this.width / 2 - 30) / 2, btnY + 17);
 
-    // Collect button
     ctx.fillStyle = '#1A3A1A';
     ctx.fillRect(this.x + this.width / 2 + 10, btnY, this.width / 2 - 30, 26);
     ctx.strokeStyle = '#2ecc71';
@@ -299,14 +288,12 @@ export default class AnimalPenPanel {
     ctx.fillText('Collect', this.x + this.width / 2 + 10 + (this.width / 2 - 30) / 2, btnY + 17);
   }
 
-  _renderTrainTab(ctx, contentY, inventory) {
-    // Selected pet + cost display
-    const selectedPet = this._getPetData(this.trainSlot, inventory);
+  _renderTrainTab(ctx, contentY) {
+    const selectedPet = this._getCodexPetData(this.trainCodex);
     const listY = contentY + 10;
 
     this._renderPetList(ctx, listY);
 
-    // Info area at bottom
     const infoY = this.y + this.height - 80;
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.fillRect(this.x + 5, infoY, this.width - 10, 40);
@@ -332,9 +319,8 @@ export default class AnimalPenPanel {
       ctx.fillText('Select a pet to train', this.x + 10, infoY + 20);
     }
 
-    // Train button
     const btnY = this.y + this.height - 36;
-    const canTrain = this.trainSlot >= 0;
+    const canTrain = this.trainCodex >= 0;
     ctx.fillStyle = canTrain ? '#1A2A4A' : '#1A1A2A';
     ctx.fillRect(this.x + 20, btnY, this.width - 40, 26);
     ctx.strokeStyle = canTrain ? '#3498db' : '#444';
@@ -354,10 +340,9 @@ export default class AnimalPenPanel {
       const ry = startY + i * rowH - this.scrollOffset;
       if (ry < this.y + 30 || ry > this.y + this.height - 90) continue;
 
-      const isSelected = pet.slotIdx === this.breedSlot1 || pet.slotIdx === this.breedSlot2 || pet.slotIdx === this.trainSlot;
+      const isSelected = pet.codexIndex === this.breedCodex1 || pet.codexIndex === this.breedCodex2 || pet.codexIndex === this.trainCodex;
       const isHover = i === this.hoverIndex;
 
-      // Row background
       if (isSelected) {
         ctx.fillStyle = 'rgba(212, 165, 116, 0.2)';
         ctx.fillRect(this.x + 8, ry, this.width - 16, rowH - 2);
@@ -366,14 +351,12 @@ export default class AnimalPenPanel {
         ctx.fillRect(this.x + 8, ry, this.width - 16, rowH - 2);
       }
 
-      // Pet color dot
       const petDef = PET_DB[pet.petId];
       ctx.fillStyle = petDef?.color || '#888';
       ctx.beginPath();
       ctx.arc(this.x + 20, ry + rowH / 2 - 1, 5, 0, Math.PI * 2);
       ctx.fill();
 
-      // Name + level
       ctx.fillStyle = pet.fainted ? '#666' : '#fff';
       ctx.font = '11px monospace';
       ctx.textAlign = 'left';
@@ -381,7 +364,6 @@ export default class AnimalPenPanel {
       if (pet.fainted) label += ' [Fainted]';
       ctx.fillText(label, this.x + 30, ry + rowH / 2 + 3);
 
-      // HP
       ctx.fillStyle = '#888';
       ctx.textAlign = 'right';
       ctx.fillText(`${pet.currentHp ?? 0}/${pet.maxHp ?? 0}`, this.x + this.width - 14, ry + rowH / 2 + 3);
@@ -391,22 +373,19 @@ export default class AnimalPenPanel {
       ctx.fillStyle = '#555';
       ctx.font = '11px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('No pets in inventory', this.x + this.width / 2, startY + 20);
+      ctx.fillText('No pets in codex', this.x + this.width / 2, startY + 20);
     }
   }
 
-  _getPetName(slotIdx, inventory) {
-    if (slotIdx < 0 || !inventory?.slots) return null;
-    const s = inventory.slots[slotIdx];
-    if (!s || s.itemId !== 'pet_item') return null;
-    const data = s.extraData || s;
-    return `${data.nickname || data.petId} Lv.${data.level || 1}`;
+  _getCodexPetName(codexIdx) {
+    if (codexIdx < 0) return null;
+    const pet = this.petSlots.find(p => p.codexIndex === codexIdx);
+    if (!pet) return null;
+    return `${pet.nickname} Lv.${pet.level}`;
   }
 
-  _getPetData(slotIdx, inventory) {
-    if (slotIdx < 0 || !inventory?.slots) return null;
-    const s = inventory.slots[slotIdx];
-    if (!s || s.itemId !== 'pet_item') return null;
-    return s.extraData || s;
+  _getCodexPetData(codexIdx) {
+    if (codexIdx < 0) return null;
+    return this.petSlots.find(p => p.codexIndex === codexIdx) || null;
   }
 }
