@@ -778,6 +778,22 @@ export default class Game {
       this.fishmongerPanel.end(data);
       this.inFishmonger = false;
     };
+
+    // Connection loss — reset any active minigame panels
+    this.network.onDisconnect = () => {
+      if (this.inSorting || this.sortingPanel.visible) {
+        this.sortingPanel.close();
+        this.inSorting = false;
+      }
+      if (this.inAlchemy || this.alchemyPanel.visible) {
+        this.alchemyPanel.close();
+        this.inAlchemy = false;
+      }
+      if (this.inFishmonger || this.fishmongerPanel.visible) {
+        this.fishmongerPanel.close();
+        this.inFishmonger = false;
+      }
+    };
   }
 
   start() {
