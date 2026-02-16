@@ -515,201 +515,189 @@ export default class GameServer {
   }
 
   broadcastState() {
-    // Build all entity states (players + enemies)
-    const allStates = {};
+    // --- Phase 1: Build spatial index of all entities by chunk ---
+    const entityChunks = new Map(); // "cx,cy" -> [entity, ...]
 
-    // Players
-    const playerEntities = this.entityManager.getByTag('player');
-    for (const entity of playerEntities) {
+    const addToChunkIndex = (entity) => {
       const pos = entity.getComponent(PositionComponent);
-      const pc = entity.getComponent(PlayerComponent);
-      const name = entity.getComponent(NameComponent);
-      const vel = entity.getComponent(VelocityComponent);
-      const health = entity.getComponent(HealthComponent);
+      if (!pos) return;
+      const cx = Math.floor(pos.x / CHUNK_PIXEL_SIZE);
+      const cy = Math.floor(pos.y / CHUNK_PIXEL_SIZE);
+      const key = `${cx},${cy}`;
+      let list = entityChunks.get(key);
+      if (!list) {
+        list = [];
+        entityChunks.set(key, list);
+      }
+      list.push(entity);
+    };
 
-      const stats = entity.getComponent(StatsComponent);
-
-      allStates[entity.id] = {
-        id: entity.id,
-        type: 'player',
-        name: name ? name.name : 'Unknown',
-        color: pc.color,
-        x: pos.x,
-        y: pos.y,
-        velocityX: vel ? vel.dx : 0,
-        velocityY: vel ? vel.dy : 0,
-        facing: pc.facing,
-        hp: health ? health.current : 0,
-        maxHp: health ? health.max : 0,
-        level: stats ? stats.level : 1,
-        mounted: pc.mounted || false,
-      };
+    // Index all broadcastable entity types by chunk
+    const tags = ['player', 'enemy', 'horse', 'resource', 'npc', 'station', 'projectile', 'damage_zone'];
+    for (const tag of tags) {
+      const entities = this.entityManager.getByTag(tag);
+      for (const entity of entities) {
+        addToChunkIndex(entity);
+      }
     }
 
-    // Enemies (only those near players)
-    const enemyEntities = this.entityManager.getByTag('enemy');
-    for (const entity of enemyEntities) {
-      const pos = entity.getComponent(PositionComponent);
-      const name = entity.getComponent(NameComponent);
-      const vel = entity.getComponent(VelocityComponent);
-      const health = entity.getComponent(HealthComponent);
-      const ai = entity.getComponent(AIComponent);
-      const col = entity.getComponent(ColliderComponent);
+    // --- Phase 2: Serialize entity state (cached per entity per tick) ---
+    const stateCache = new Map(); // entityId -> state object
 
-      allStates[entity.id] = {
-        id: entity.id,
-        type: 'enemy',
-        name: name ? name.name : 'Enemy',
-        color: entity.enemyConfig ? entity.enemyConfig.color : '#e74c3c',
-        size: col ? col.width : 24,
-        x: pos.x,
-        y: pos.y,
-        velocityX: vel ? vel.dx : 0,
-        velocityY: vel ? vel.dy : 0,
-        hp: health ? health.current : 0,
-        maxHp: health ? health.max : 0,
-        aiState: ai ? ai.state : 'idle',
-        isBoss: entity.isBoss || false,
-        enemyId: entity.enemyConfig ? entity.enemyConfig.id : null,
-      };
-    }
+    const serializeEntity = (entity) => {
+      let state = stateCache.get(entity.id);
+      if (state) return state;
 
-    // Horse entities
-    const horseEntities = this.entityManager.getByTag('horse');
-    for (const entity of horseEntities) {
-      const pos = entity.getComponent(PositionComponent);
-      const name = entity.getComponent(NameComponent);
-      const vel = entity.getComponent(VelocityComponent);
-      const col = entity.getComponent(ColliderComponent);
-      const horse = entity.getComponent(HorseComponent);
+      if (entity.hasTag('player')) {
+        const pos = entity.getComponent(PositionComponent);
+        const pc = entity.getComponent(PlayerComponent);
+        const name = entity.getComponent(NameComponent);
+        const vel = entity.getComponent(VelocityComponent);
+        const health = entity.getComponent(HealthComponent);
+        const stats = entity.getComponent(StatsComponent);
+        state = {
+          id: entity.id, type: 'player',
+          name: name ? name.name : 'Unknown', color: pc.color,
+          x: pos.x, y: pos.y,
+          velocityX: vel ? vel.dx : 0, velocityY: vel ? vel.dy : 0,
+          facing: pc.facing,
+          hp: health ? health.current : 0, maxHp: health ? health.max : 0,
+          level: stats ? stats.level : 1, mounted: pc.mounted || false,
+        };
+      } else if (entity.hasTag('enemy')) {
+        const pos = entity.getComponent(PositionComponent);
+        const name = entity.getComponent(NameComponent);
+        const vel = entity.getComponent(VelocityComponent);
+        const health = entity.getComponent(HealthComponent);
+        const ai = entity.getComponent(AIComponent);
+        const col = entity.getComponent(ColliderComponent);
+        state = {
+          id: entity.id, type: 'enemy',
+          name: name ? name.name : 'Enemy',
+          color: entity.enemyConfig ? entity.enemyConfig.color : '#e74c3c',
+          size: col ? col.width : 24,
+          x: pos.x, y: pos.y,
+          velocityX: vel ? vel.dx : 0, velocityY: vel ? vel.dy : 0,
+          hp: health ? health.current : 0, maxHp: health ? health.max : 0,
+          aiState: ai ? ai.state : 'idle',
+          isBoss: entity.isBoss || false,
+          enemyId: entity.enemyConfig ? entity.enemyConfig.id : null,
+        };
+      } else if (entity.hasTag('horse')) {
+        const pos = entity.getComponent(PositionComponent);
+        const name = entity.getComponent(NameComponent);
+        const vel = entity.getComponent(VelocityComponent);
+        const col = entity.getComponent(ColliderComponent);
+        const horse = entity.getComponent(HorseComponent);
+        state = {
+          id: entity.id, type: 'horse',
+          name: name ? name.name : 'Horse',
+          color: entity.horseConfig ? entity.horseConfig.color : '#8B6C42',
+          size: col ? col.width : 30,
+          x: pos.x, y: pos.y,
+          velocityX: vel ? vel.dx : 0, velocityY: vel ? vel.dy : 0,
+          tamed: horse ? horse.tamed : false,
+          ownerId: horse ? horse.ownerId : null,
+          mounted: horse ? horse.mounted : false,
+        };
+      } else if (entity.hasTag('resource')) {
+        const pos = entity.getComponent(PositionComponent);
+        const name = entity.getComponent(NameComponent);
+        const health = entity.getComponent(HealthComponent);
+        const col = entity.getComponent(ColliderComponent);
+        const resNode = entity.getComponent(ResourceNodeComponent);
+        state = {
+          id: entity.id, type: 'resource',
+          name: name ? name.name : 'Resource',
+          color: entity.resourceData?.color || '#8B4513',
+          size: col ? col.width : 24,
+          x: pos.x, y: pos.y,
+          hp: health ? health.current : 0, maxHp: health ? health.max : 0,
+          resourceId: resNode ? resNode.resourceId : null,
+          tool: resNode ? resNode.tool : 'none',
+        };
+      } else if (entity.hasTag('npc')) {
+        const pos = entity.getComponent(PositionComponent);
+        const name = entity.getComponent(NameComponent);
+        const col = entity.getComponent(ColliderComponent);
+        const npc = entity.getComponent(NPCComponent);
+        const health = entity.getComponent(HealthComponent);
+        state = {
+          id: entity.id, type: 'npc',
+          name: name ? name.name : 'NPC',
+          color: entity.npcData?.color || '#d4a574',
+          size: col ? col.width : 26,
+          x: pos.x, y: pos.y,
+          npcType: npc ? npc.npcType : 'quest_giver',
+          npcId: npc ? npc.npcId : null,
+          hp: health ? health.current : 0, maxHp: health ? health.max : 0,
+        };
+      } else if (entity.hasTag('station')) {
+        const pos = entity.getComponent(PositionComponent);
+        const name = entity.getComponent(NameComponent);
+        const col = entity.getComponent(ColliderComponent);
+        const sc = entity.getComponent(CraftingStationComponent);
+        state = {
+          id: entity.id, type: 'station',
+          name: name ? name.name : 'Station',
+          color: sc && STATION_DB[sc.stationId] ? STATION_DB[sc.stationId].color : '#8B6914',
+          size: col ? col.width : 40,
+          x: pos.x, y: pos.y,
+          stationId: sc ? sc.stationId : null,
+          stationLevel: sc ? sc.level : 1,
+          isChest: sc && STATION_DB[sc.stationId] ? !!STATION_DB[sc.stationId].isChest : false,
+          altarActive: entity.altarState === 'summoning' || false,
+        };
+      } else if (entity.hasTag('projectile')) {
+        const pos = entity.getComponent(PositionComponent);
+        const vel = entity.getComponent(VelocityComponent);
+        const proj = entity.getComponent(ProjectileComponent);
+        state = {
+          id: entity.id, type: 'projectile',
+          projectileType: proj ? proj.projectileType : 'arrow',
+          x: pos.x, y: pos.y,
+          velocityX: vel ? vel.dx : 0, velocityY: vel ? vel.dy : 0,
+        };
+      } else if (entity.hasTag('damage_zone')) {
+        const pos = entity.getComponent(PositionComponent);
+        const zone = entity.getComponent(DamageZoneComponent);
+        state = {
+          id: entity.id, type: 'damage_zone',
+          zoneType: zone.zoneType,
+          x: pos.x, y: pos.y, radius: zone.radius,
+        };
+      }
 
-      allStates[entity.id] = {
-        id: entity.id,
-        type: 'horse',
-        name: name ? name.name : 'Horse',
-        color: entity.horseConfig ? entity.horseConfig.color : '#8B6C42',
-        size: col ? col.width : 30,
-        x: pos.x,
-        y: pos.y,
-        velocityX: vel ? vel.dx : 0,
-        velocityY: vel ? vel.dy : 0,
-        tamed: horse ? horse.tamed : false,
-        ownerId: horse ? horse.ownerId : null,
-        mounted: horse ? horse.mounted : false,
-      };
-    }
+      if (state) stateCache.set(entity.id, state);
+      return state;
+    };
 
-    // Resource entities
-    const resourceEntities = this.entityManager.getByTag('resource');
-    for (const entity of resourceEntities) {
-      const pos = entity.getComponent(PositionComponent);
-      const name = entity.getComponent(NameComponent);
-      const health = entity.getComponent(HealthComponent);
-      const col = entity.getComponent(ColliderComponent);
-      const resNode = entity.getComponent(ResourceNodeComponent);
-
-      allStates[entity.id] = {
-        id: entity.id,
-        type: 'resource',
-        name: name ? name.name : 'Resource',
-        color: entity.resourceData?.color || '#8B4513',
-        size: col ? col.width : 24,
-        x: pos.x,
-        y: pos.y,
-        hp: health ? health.current : 0,
-        maxHp: health ? health.max : 0,
-        resourceId: resNode ? resNode.resourceId : null,
-        tool: resNode ? resNode.tool : 'none',
-      };
-    }
-
-    // NPC entities
-    const npcEntities = this.entityManager.getByTag('npc');
-    for (const entity of npcEntities) {
-      const pos = entity.getComponent(PositionComponent);
-      const name = entity.getComponent(NameComponent);
-      const col = entity.getComponent(ColliderComponent);
-      const npc = entity.getComponent(NPCComponent);
-      const health = entity.getComponent(HealthComponent);
-
-      allStates[entity.id] = {
-        id: entity.id,
-        type: 'npc',
-        name: name ? name.name : 'NPC',
-        color: entity.npcData?.color || '#d4a574',
-        size: col ? col.width : 26,
-        x: pos.x,
-        y: pos.y,
-        npcType: npc ? npc.npcType : 'quest_giver',
-        npcId: npc ? npc.npcId : null,
-        hp: health ? health.current : 0,
-        maxHp: health ? health.max : 0,
-      };
-    }
-
-    // Station entities
-    const stationEntities = this.entityManager.getByTag('station');
-    for (const entity of stationEntities) {
-      const pos = entity.getComponent(PositionComponent);
-      const name = entity.getComponent(NameComponent);
-      const col = entity.getComponent(ColliderComponent);
-      const sc = entity.getComponent(CraftingStationComponent);
-
-      allStates[entity.id] = {
-        id: entity.id,
-        type: 'station',
-        name: name ? name.name : 'Station',
-        color: sc && STATION_DB[sc.stationId] ? STATION_DB[sc.stationId].color : '#8B6914',
-        size: col ? col.width : 40,
-        x: pos.x,
-        y: pos.y,
-        stationId: sc ? sc.stationId : null,
-        stationLevel: sc ? sc.level : 1,
-        isChest: sc && STATION_DB[sc.stationId] ? !!STATION_DB[sc.stationId].isChest : false,
-        altarActive: entity.altarState === 'summoning' || false,
-      };
-    }
-
-    // Projectile entities
-    const projectileEntities = this.entityManager.getByTag('projectile');
-    for (const entity of projectileEntities) {
-      const pos = entity.getComponent(PositionComponent);
-      const vel = entity.getComponent(VelocityComponent);
-      const proj = entity.getComponent(ProjectileComponent);
-
-      allStates[entity.id] = {
-        id: entity.id,
-        type: 'projectile',
-        projectileType: proj ? proj.projectileType : 'arrow',
-        x: pos.x,
-        y: pos.y,
-        velocityX: vel ? vel.dx : 0,
-        velocityY: vel ? vel.dy : 0,
-      };
-    }
-
-    // Damage zone entities
-    const zoneEntities = this.entityManager.getByTag('damage_zone');
-    for (const entity of zoneEntities) {
-      const pos = entity.getComponent(PositionComponent);
-      const zone = entity.getComponent(DamageZoneComponent);
-
-      allStates[entity.id] = {
-        id: entity.id,
-        type: 'damage_zone',
-        zoneType: zone.zoneType,
-        x: pos.x,
-        y: pos.y,
-        radius: zone.radius,
-      };
-    }
-
+    // --- Phase 3: Per-player AOI broadcast ---
     for (const player of this.players.values()) {
-      const entity = this.entityManager.get(player.id);
-      if (!entity) continue;
+      const playerEntity = this.entityManager.get(player.id);
+      if (!playerEntity) continue;
 
-      const pc = entity.getComponent(PlayerComponent);
-      const delta = this.computeDelta(player.lastSentState, allStates);
+      const playerPos = playerEntity.getComponent(PositionComponent);
+      const pc = playerEntity.getComponent(PlayerComponent);
+      const pcx = Math.floor(playerPos.x / CHUNK_PIXEL_SIZE);
+      const pcy = Math.floor(playerPos.y / CHUNK_PIXEL_SIZE);
+
+      // Gather visible entities from chunks within VIEW_DISTANCE
+      const visibleStates = {};
+      for (let dy = -VIEW_DISTANCE; dy <= VIEW_DISTANCE; dy++) {
+        for (let dx = -VIEW_DISTANCE; dx <= VIEW_DISTANCE; dx++) {
+          const key = `${pcx + dx},${pcy + dy}`;
+          const entities = entityChunks.get(key);
+          if (!entities) continue;
+          for (const entity of entities) {
+            const state = serializeEntity(entity);
+            if (state) visibleStates[entity.id] = state;
+          }
+        }
+      }
+
+      // Compute delta against this player's last sent state
+      const delta = this.computeDelta(player.lastSentState, visibleStates);
 
       if (delta) {
         player.emit(MSG.GAME_STATE_DELTA, {
@@ -720,7 +708,8 @@ export default class GameServer {
         });
       }
 
-      player.lastSentState = JSON.parse(JSON.stringify(allStates));
+      // Store by reference — state objects are freshly created each tick
+      player.lastSentState = visibleStates;
     }
   }
 
@@ -733,12 +722,14 @@ export default class GameServer {
     const removed = [];
     let hasChanges = false;
 
-    for (const [id, entity] of Object.entries(current)) {
-      if (!prev[id]) {
-        updated[id] = entity;
+    for (const id in current) {
+      const curr = current[id];
+      const old = prev[id];
+      if (!old) {
+        updated[id] = curr;
         hasChanges = true;
       } else {
-        const changes = this.diffEntity(prev[id], entity);
+        const changes = this.diffEntity(old, curr);
         if (changes) {
           updated[id] = changes;
           updated[id].id = id;
@@ -747,7 +738,7 @@ export default class GameServer {
       }
     }
 
-    for (const id of Object.keys(prev)) {
+    for (const id in prev) {
       if (!current[id]) {
         removed.push(id);
         hasChanges = true;
@@ -760,8 +751,8 @@ export default class GameServer {
 
   diffEntity(prev, curr) {
     let diff = null;
-    for (const key of Object.keys(curr)) {
-      if (JSON.stringify(prev[key]) !== JSON.stringify(curr[key])) {
+    for (const key in curr) {
+      if (prev[key] !== curr[key]) {
         if (!diff) diff = {};
         diff[key] = curr[key];
       }

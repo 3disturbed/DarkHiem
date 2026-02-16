@@ -4,7 +4,7 @@ export const CHUNK_SIZE = 16;
 export const CHUNK_PIXEL_SIZE = TILE_SIZE * CHUNK_SIZE; // 512
 export const TICK_RATE = 20;
 export const TICK_MS = 1000 / TICK_RATE; // 50ms
-export const MAX_PLAYERS = 32;
+export const MAX_PLAYERS = 100;
 export const VIEW_DISTANCE = 3; // chunks around player
 
 export const PLAYER_SPEED = 160; // pixels per second
