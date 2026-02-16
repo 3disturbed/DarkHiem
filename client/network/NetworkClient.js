@@ -86,6 +86,9 @@ export default class NetworkClient {
     // Pet codex
     this.onPetCodexUpdate = null;
 
+    // Connection lifecycle
+    this.onDisconnect = null;
+
     // PVP pet battle callbacks
     this.onPvpChallenge = null;
     this.onPvpChallengeTimeout = null;
@@ -133,6 +136,7 @@ export default class NetworkClient {
     this.socket.on('disconnect', () => {
       this.connected = false;
       console.log('[Network] Disconnected');
+      if (this.onDisconnect) this.onDisconnect();
     });
 
     this.socket.on(MSG.PLAYER_JOIN, (data) => {

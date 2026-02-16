@@ -893,6 +893,9 @@ export default class GameServer {
     // Clean up fishmonger state
     this.fishmongerHandler.removePlayer(playerConn.id);
 
+    // Clean up sorting state
+    this.sortingHandler.removePlayer(playerConn.id);
+
     // Save player data before destroying entity
     await this.savePlayer(playerConn);
 
