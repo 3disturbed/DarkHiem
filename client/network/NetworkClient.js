@@ -83,6 +83,9 @@ export default class NetworkClient {
     this.onFishmongerStart = null;
     this.onFishmongerEnd = null;
 
+    // Pet codex
+    this.onPetCodexUpdate = null;
+
     // PVP pet battle callbacks
     this.onPvpChallenge = null;
     this.onPvpChallengeTimeout = null;
@@ -291,8 +294,8 @@ export default class NetworkClient {
     this.socket.on(MSG.PET_CAPTURE_RESULT, (data) => {
       if (this.onPetCaptureResult) this.onPetCaptureResult(data);
     });
-    this.socket.on(MSG.PET_TEAM_UPDATE, (data) => {
-      if (this.onPetTeamUpdate) this.onPetTeamUpdate(data);
+    this.socket.on(MSG.PET_CODEX_UPDATE, (data) => {
+      if (this.onPetCodexUpdate) this.onPetCodexUpdate(data);
     });
     this.socket.on(MSG.PET_BATTLE_START, (data) => {
       if (this.onPetBattleStart) this.onPetBattleStart(data);
@@ -598,14 +601,19 @@ export default class NetworkClient {
     this.socket.emit(MSG.PET_CAPTURE);
   }
 
-  sendPetTeamSet(slotIndex, teamIndex) {
+  sendPetTeamSet(codexIndex, teamIndex) {
     if (!this.connected) return;
-    this.socket.emit(MSG.PET_TEAM_SET, { slotIndex, teamIndex });
+    this.socket.emit(MSG.PET_TEAM_SET, { codexIndex, teamIndex });
   }
 
-  sendPetHeal(healItemId, petSlotIndex) {
+  sendPetHeal(healItemId, codexIndex) {
     if (!this.connected) return;
-    this.socket.emit(MSG.PET_HEAL, { healItemId, petSlotIndex });
+    this.socket.emit(MSG.PET_HEAL, { healItemId, codexIndex });
+  }
+
+  sendPetRename(codexIndex, newName) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.PET_RENAME, { codexIndex, newName });
   }
 
   sendPetBattleAction(action) {
@@ -613,9 +621,9 @@ export default class NetworkClient {
     this.socket.emit(MSG.PET_BATTLE_ACTION, action);
   }
 
-  sendPetBreedStart(pet1Slot, pet2Slot) {
+  sendPetBreedStart(pet1Codex, pet2Codex) {
     if (!this.connected) return;
-    this.socket.emit(MSG.PET_BREED_START, { pet1Slot, pet2Slot });
+    this.socket.emit(MSG.PET_BREED_START, { pet1Codex, pet2Codex });
   }
 
   sendPetBreedCollect() {
@@ -623,9 +631,9 @@ export default class NetworkClient {
     this.socket.emit(MSG.PET_BREED_COLLECT, {});
   }
 
-  sendPetTrain(petSlot) {
+  sendPetTrain(codexIndex) {
     if (!this.connected) return;
-    this.socket.emit(MSG.PET_TRAIN, { petSlot });
+    this.socket.emit(MSG.PET_TRAIN, { codexIndex });
   }
 
   sendMailAccept(type, npcId) {

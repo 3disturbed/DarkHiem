@@ -6,7 +6,7 @@ import NPCComponent from '../../ecs/components/NPCComponent.js';
 import NameComponent from '../../ecs/components/NameComponent.js';
 import QuestComponent from '../../ecs/components/QuestComponent.js';
 import InventoryComponent from '../../ecs/components/InventoryComponent.js';
-import EquipmentComponent from '../../ecs/components/EquipmentComponent.js';
+import PlayerComponent from '../../ecs/components/PlayerComponent.js';
 
 export default class DialogHandler {
   constructor(gameServer) {
@@ -204,7 +204,8 @@ export default class DialogHandler {
 
   _healAllPets(player, entity) {
     const inv = entity.getComponent(InventoryComponent);
-    if (!inv) return;
+    const pc = entity.getComponent(PlayerComponent);
+    if (!inv || !pc) return;
 
     const HEAL_COST = 100;
     const gold = inv.countItem('gold');
@@ -213,33 +214,16 @@ export default class DialogHandler {
       return;
     }
 
-    // Check if any pets need healing
+    // Check if any codex pets need healing
     let healed = 0;
-    for (let i = 0; i < inv.slotCount; i++) {
-      const slot = inv.slots[i];
-      if (!slot || slot.itemId !== 'pet_item') continue;
-      const petData = slot.extraData || slot;
-      if (!petData.petId) continue;
+    for (const petData of pc.petCodex) {
+      if (!petData || !petData.petId) continue;
       const stats = getPetStats(petData.petId, petData.level || 1);
       const maxHp = stats.hp + (petData.bonusStats || 0);
       if (petData.fainted || petData.currentHp < maxHp) {
         petData.fainted = false;
         petData.currentHp = maxHp;
         petData.maxHp = maxHp;
-        healed++;
-      }
-    }
-
-    // Also heal equipped pet weapon
-    const equip = entity.getComponent(EquipmentComponent);
-    const weapon = equip?.getEquipped('weapon');
-    if (weapon?.isPet && weapon?.petId) {
-      const stats = getPetStats(weapon.petId, weapon.level || 1);
-      const maxHp = stats.hp + (weapon.bonusStats || 0);
-      if (weapon.fainted || weapon.currentHp < maxHp) {
-        weapon.fainted = false;
-        weapon.currentHp = maxHp;
-        weapon.maxHp = maxHp;
         healed++;
       }
     }
@@ -251,6 +235,7 @@ export default class DialogHandler {
 
     inv.removeItem('gold', HEAL_COST);
     player.emit(MSG.INVENTORY_UPDATE, { slots: inv.serialize().slots });
+    player.emit(MSG.PET_CODEX_UPDATE, { petCodex: pc.petCodex, petTeam: pc.petTeam });
     player.emit(MSG.CHAT_RECEIVE, { message: `All pets healed and revived! (-${HEAL_COST}g)`, sender: 'Astrid' });
   }
 

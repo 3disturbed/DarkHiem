@@ -56,19 +56,6 @@ export default class EquipmentComponent extends Component {
           upgradeXp: item.upgradeXp || 0,
         };
         if (item.rodParts) entry.rodParts = item.rodParts;
-        if (item.isPet) {
-          entry.isPet = true;
-          entry.petId = item.petId;
-          entry.nickname = item.nickname;
-          entry.level = item.level;
-          entry.xp = item.xp;
-          entry.currentHp = item.currentHp;
-          entry.maxHp = item.maxHp;
-          entry.learnedSkills = item.learnedSkills;
-          entry.fainted = item.fainted;
-          entry.isRare = item.isRare;
-          entry.bonusStats = item.bonusStats;
-        }
         data[slot] = entry;
       } else {
         data[slot] = null;

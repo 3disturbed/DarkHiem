@@ -110,8 +110,8 @@ export default class CombatHandler {
     if (equip) {
       const weapon = equip.getEquipped('weapon');
       if (weapon) {
-        // Pet battle weapons (trainer whistle or captured pet)
-        if (weapon.isPet || weapon.petBattle) {
+        // Pet battle weapons (trainer whistle)
+        if (weapon.petBattle) {
           this._tryStartPetBattle(player, entity);
           return;
         }
@@ -410,14 +410,6 @@ export default class CombatHandler {
     const petHandler = this.gameServer.petHandler;
     if (petHandler && petHandler.finalizePetCapture) {
       petHandler.finalizePetCapture(playerConn, entity, nearest, petDef);
-    } else {
-      // Fallback: remove enemy and give generic pet item
-      this.gameServer.entityManager.remove(nearest.id);
-      const inv = entity.getComponent(InventoryComponent);
-      if (inv) {
-        inv.addItem('pet_item', 1, { petId: enemyId, level: 1, currentHp: petDef.baseHp || 50, maxHp: petDef.baseHp || 50 });
-        playerConn.emit(MSG.INVENTORY_UPDATE, inv.serialize());
-      }
     }
 
     // Consume the cage weapon
