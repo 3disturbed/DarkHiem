@@ -92,13 +92,17 @@ export default class ShopPanel {
       const i = Math.floor(relY / ROW_H);
       if (i >= 0 && i < items.length) {
         // Check if clicking buy/sell button area
-        const btnX = this.x + this.width - 60;
-        if (mx >= btnX) {
+        const btnX = this.x + this.width - 55;
+        if (mx >= btnX && mx < btnX + 44) {
           if (this.tab === 'buy') {
-            return { action: 'buy', itemId: items[i].itemId, count: 1 };
+            const goldCount = this._countGold(inventory);
+            if (goldCount >= items[i].price) {
+              return { action: 'buy', itemId: items[i].itemId, count: 1 };
+            }
           } else {
             return { action: 'sell', slotIndex: items[i].slotIndex, count: 1 };
           }
+          return null;
         }
         this.selectedIndex = i;
         return null;

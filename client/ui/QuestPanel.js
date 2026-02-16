@@ -67,7 +67,7 @@ export default class QuestPanel {
         // Check if clicking accept/complete button area (bottom-right of entry)
         const btnX = this.x + this.width - 90;
         const btnY = qy + 52;
-        if (mx >= btnX && my >= btnY && my < btnY + 22) {
+        if (mx >= btnX && mx < btnX + 78 && my >= btnY && my < btnY + 20) {
           if (quest.state === 'available') {
             return { action: 'accept', questId: quest.id };
           } else if (quest.state === 'ready') {
