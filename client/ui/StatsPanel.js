@@ -146,9 +146,9 @@ export default class StatsPanel {
       // + button if stat points available
       if (playerStats.statPoints > 0) {
         const btnX = this.x + this.width - PANEL_PAD - 18;
-        const btnY = y + 2;
         const btnW = 18;
         const btnH = 16;
+        const btnY = y + Math.floor((LINE_HEIGHT - btnH) / 2);
 
         ctx.fillStyle = '#3a5';
         ctx.fillRect(btnX, btnY, btnW, btnH);
@@ -159,7 +159,7 @@ export default class StatsPanel {
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 12px monospace';
         ctx.textAlign = 'center';
-        ctx.fillText('+', btnX + btnW / 2, btnY + 13);
+        ctx.fillText('+', btnX + btnW / 2, btnY + 12);
 
         this.buttonRects[stat] = { x: btnX, y: btnY, w: btnW, h: btnH };
       }

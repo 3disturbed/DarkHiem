@@ -124,14 +124,13 @@ export default class AnimalPenPanel {
       }
     }
 
-    // Breed button
+    // Breed button (only respond when both parents selected)
     const btnY = this.y + this.height - 60;
-    if (my >= btnY && my <= btnY + 26 && mx >= this.x + 20 && mx < this.x + this.width / 2 - 10) {
-      if (this.breedCodex1 >= 0 && this.breedCodex2 >= 0) {
-        sendBreedStart(this.breedCodex1, this.breedCodex2);
-        this.breedCodex1 = -1;
-        this.breedCodex2 = -1;
-      }
+    if (this.breedCodex1 >= 0 && this.breedCodex2 >= 0 &&
+        my >= btnY && my <= btnY + 26 && mx >= this.x + 20 && mx < this.x + this.width / 2 - 10) {
+      sendBreedStart(this.breedCodex1, this.breedCodex2);
+      this.breedCodex1 = -1;
+      this.breedCodex2 = -1;
       return true;
     }
 
