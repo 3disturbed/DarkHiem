@@ -2,7 +2,7 @@
   "quests": [
     {
       "id": "quest_welcome",
-      "name": "Welcome to Darkheim",
+      "name": "Welcome to NordFolk",
       "description": "Speak with Elder Thorvald to learn about the village and its plight.",
       "giverNpcId": "elder_thorvald",
       "turnInNpcId": "elder_thorvald",

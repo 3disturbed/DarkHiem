@@ -12,7 +12,7 @@
           ]
         },
         "about_town": {
-          "text": "This is Darkheim, the last settlement of the living. Beyond our walls, monsters roam freely. We need brave warriors to push back the darkness.",
+          "text": "This is NordFolk, the last settlement of the living. Beyond our walls, monsters roam freely. We need brave warriors to push back the darkness.",
           "choices": [
             { "text": "I'll help.", "action": "show_quests" },
             { "text": "Farewell.", "action": "close" }
@@ -154,7 +154,7 @@
       "startNode": "greeting",
       "nodes": {
         "greeting": {
-          "text": "Halt! I am Captain Eira of the Darkheim Guard. The wilds grow more dangerous by the day. If you've got steel in your spine, I could use your help.",
+          "text": "Halt! I am Captain Eira of the NordFolk Guard. The wilds grow more dangerous by the day. If you've got steel in your spine, I could use your help.",
           "choices": [
             { "text": "What do you need?", "action": "show_quests" },
             { "text": "What's the situation?", "nextNode": "situation" },
@@ -174,7 +174,7 @@
       "startNode": "greeting",
       "nodes": {
         "greeting": {
-          "text": "Well met, traveler! I'm Astrid, stablemaster of Darkheim. If you've a mind for horses, you've come to the right place. The wild ones roam the meadow -- magnificent beasts, but they won't be tamed easily.",
+          "text": "Well met, traveler! I'm Astrid, stablemaster of NordFolk. If you've a mind for horses, you've come to the right place. The wild ones roam the meadow -- magnificent beasts, but they won't be tamed easily.",
           "choices": [
             { "text": "How do I get a horse?", "nextNode": "about_horses" },
             { "text": "Heal my pets (100g)", "action": "heal_pets" },
@@ -198,7 +198,7 @@
       "startNode": "greeting",
       "nodes": {
         "greeting": {
-          "text": "Hail, citizen! I'm Halfdan, the town surveyor. Darkheim is expanding, and we've opened four prime corner plots for development. Interested in buying land?",
+          "text": "Hail, citizen! I'm Halfdan, the town surveyor. NordFolk is expanding, and we've opened four prime corner plots for development. Interested in buying land?",
           "choices": [
             { "text": "Tell me about the plots.", "nextNode": "about_plots" },
             { "text": "I'd like to buy a plot.", "nextNode": "buy_menu" },
@@ -259,7 +259,7 @@
       "startNode": "greeting",
       "nodes": {
         "greeting": {
-          "text": "Hail, traveler! I'm Postmaster Paul. The mail never stops in Darkheim. Need a job, or want to help sort packages?",
+          "text": "Hail, traveler! I'm Postmaster Paul. The mail never stops in NordFolk. Need a job, or want to help sort packages?",
           "choices": [
             { "text": "I'd like a delivery job.", "action": "show_mail_jobs" },
             { "text": "Any packages to collect?", "action": "show_collection_jobs" },

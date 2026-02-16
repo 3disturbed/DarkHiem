@@ -100,12 +100,12 @@ async function boot() {
   await gameServer.init();
 
   httpServer.listen(PORT, () => {
-    console.log(`[Darkheim] Server running on http://localhost:${PORT}`);
+    console.log(`[NordFolk] Server running on http://localhost:${PORT}`);
     gameServer.start();
   });
 }
 
 boot().catch((err) => {
-  console.error('[Darkheim] Failed to start:', err);
+  console.error('[NordFolk] Failed to start:', err);
   process.exit(1);
 });
