@@ -104,6 +104,13 @@ export default class ShopPanel {
           }
           return null;
         }
+        // Sell All button (sell tab, stacks > 1)
+        if (this.tab === 'sell' && items[i].count > 1) {
+          const allBtnX = this.x + this.width - 102;
+          if (mx >= allBtnX && mx < allBtnX + 40) {
+            return { action: 'sell', slotIndex: items[i].slotIndex, count: items[i].count };
+          }
+        }
         this.selectedIndex = i;
         return null;
       }
@@ -267,7 +274,8 @@ export default class ShopPanel {
       ctx.fillStyle = '#f1c40f';
       ctx.font = '10px monospace';
       ctx.textAlign = 'right';
-      ctx.fillText(`${item.price}g`, this.x + this.width - 65, itemY + 18);
+      const priceX = (this.tab === 'sell' && item.count > 1) ? this.x + this.width - 110 : this.x + this.width - 65;
+      ctx.fillText(`${item.price}g`, priceX, itemY + 18);
 
       // Buy/Sell button
       const btnX = this.x + this.width - 55;
@@ -282,6 +290,20 @@ export default class ShopPanel {
       ctx.font = 'bold 10px monospace';
       ctx.textAlign = 'center';
       ctx.fillText(btnLabel, btnX + 22, itemY + 19);
+
+      // Sell All button for stacks > 1
+      if (this.tab === 'sell' && item.count > 1) {
+        const allBtnX = this.x + this.width - 102;
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.fillRect(allBtnX, itemY + 3, 40, 24);
+        ctx.strokeStyle = '#e67e22';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(allBtnX, itemY + 3, 40, 24);
+        ctx.fillStyle = '#e67e22';
+        ctx.font = 'bold 9px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('All', allBtnX + 20, itemY + 19);
+      }
     }
 
     ctx.restore(); // end clip

@@ -12,9 +12,9 @@ export const BASIC_ATTACK_AP = 2;
 
 // Wild encounter enemy count by creature tier
 export const ENCOUNTER_SCALING = {
-  0: [1, 1],    // Meadow: always 1
-  1: [1, 2],    // Dark Forest: 1-2
-  2: [2, 2],    // Swamp: always 2
+  0: [2, 2],    // Meadow: always 2
+  1: [2, 2],    // Dark Forest: always 2
+  2: [2, 3],    // Swamp: 2-3
   3: [2, 3],    // Mountain: 2-3
   4: [3, 3],    // Volcanic: always 3
 };
@@ -47,7 +47,7 @@ export const CAGE_TIERS = {
   obsidian_cage: 4, // all creatures
 };
 
-// 15 capturable creatures
+// 29 capturable creatures
 export const PET_DB = {
   // ============================================================
   //  MEADOW (tier 0)
@@ -75,6 +75,46 @@ export const PET_DB = {
     skills: ['power_strike', 'war_cry', 'iron_skin', 'berserker_rage', 'execute'],
     color: '#8B6914',
     description: 'Tough and aggressive. Charges into battle headfirst.',
+  },
+  meadow_skeleton: {
+    id: 'meadow_skeleton', name: 'Skeleton', tier: 0,
+    baseStats: { hp: 45, attack: 11, defense: 7, speed: 10, special: 8 },
+    growthPerLevel: { hp: 5, attack: 1.4, defense: 1.0, speed: 1.0, special: 1.0 },
+    skills: ['power_strike', 'precision_strike', 'life_steal', 'execute', 'evasion'],
+    color: '#d5d5c8',
+    description: 'A rattling pile of bones. Hits harder than it looks.',
+  },
+  bramblethorn: {
+    id: 'bramblethorn', name: 'Bramblethorn', tier: 0,
+    baseStats: { hp: 55, attack: 7, defense: 12, speed: 6, special: 10 },
+    growthPerLevel: { hp: 7, attack: 0.8, defense: 1.6, speed: 0.4, special: 1.2 },
+    skills: ['thorns', 'barkskin', 'venom_strike', 'rejuvenation', 'tranquility'],
+    color: '#5a8f3c',
+    description: 'A thorny plant creature. Punishes attackers passively.',
+  },
+  cave_bat: {
+    id: 'cave_bat', name: 'Cave Bat', tier: 0,
+    baseStats: { hp: 35, attack: 9, defense: 4, speed: 20, special: 7 },
+    growthPerLevel: { hp: 4, attack: 1.2, defense: 0.6, speed: 1.8, special: 0.8 },
+    skills: ['shadow_step', 'evasion', 'precision_strike', 'life_steal', 'crimson_drain'],
+    color: '#4a3a5c',
+    description: 'Blindingly fast. Swoops in and vanishes.',
+  },
+  cave_spider: {
+    id: 'cave_spider', name: 'Cave Spider', tier: 0,
+    baseStats: { hp: 42, attack: 10, defense: 6, speed: 14, special: 9 },
+    growthPerLevel: { hp: 5, attack: 1.3, defense: 0.8, speed: 1.2, special: 1.0 },
+    skills: ['venom_strike', 'precision_strike', 'evasion', 'shadow_step', 'execute'],
+    color: '#3d3d3d',
+    description: 'Venomous and relentless. Weakens prey over time.',
+  },
+  wild_horse: {
+    id: 'wild_horse', name: 'Wild Horse', tier: 0,
+    baseStats: { hp: 60, attack: 8, defense: 9, speed: 16, special: 5 },
+    growthPerLevel: { hp: 7, attack: 1.0, defense: 1.2, speed: 1.6, special: 0.6 },
+    skills: ['evasion', 'iron_skin', 'war_cry', 'fortify', 'whirlwind'],
+    color: '#b8860b',
+    description: 'Swift and sturdy. Hard to pin down.',
   },
 
   // ============================================================
@@ -104,6 +144,30 @@ export const PET_DB = {
     color: '#2ecc71',
     description: 'Immensely tough. A walking fortress.',
   },
+  shadow_lurker: {
+    id: 'shadow_lurker', name: 'Shadow Lurker', tier: 1,
+    baseStats: { hp: 45, attack: 12, defense: 6, speed: 16, special: 14 },
+    growthPerLevel: { hp: 5, attack: 1.4, defense: 0.8, speed: 1.4, special: 1.8 },
+    skills: ['shadow_step', 'precision_strike', 'crimson_drain', 'life_steal', 'execute'],
+    color: '#2c2c3e',
+    description: 'Strikes from the shadows. Deadly and elusive.',
+  },
+  deep_troll: {
+    id: 'deep_troll', name: 'Deep Troll', tier: 1,
+    baseStats: { hp: 100, attack: 16, defense: 14, speed: 5, special: 6 },
+    growthPerLevel: { hp: 14, attack: 2.0, defense: 1.8, speed: 0.3, special: 0.6 },
+    skills: ['power_strike', 'cleave', 'berserker_rage', 'iron_skin', 'whirlwind'],
+    color: '#1a7a42',
+    description: 'A massive troll from the deep woods. Overwhelms with brute strength.',
+  },
+  forest_guardian: {
+    id: 'forest_guardian', name: 'Forest Guardian', tier: 1,
+    baseStats: { hp: 70, attack: 8, defense: 12, speed: 8, special: 16 },
+    growthPerLevel: { hp: 8, attack: 1.0, defense: 1.4, speed: 0.6, special: 2.0 },
+    skills: ['barkskin', 'rejuvenation', 'thorns', 'divine_shield', 'tranquility'],
+    color: '#3e7a25',
+    description: 'An ancient protector. Shields allies and outlasts foes.',
+  },
 
   // ============================================================
   //  SWAMP (tier 2)
@@ -131,6 +195,22 @@ export const PET_DB = {
     skills: ['frostbolt', 'frozen_prison', 'ice_nova', 'static_field', 'blizzard'],
     color: '#2980b9',
     description: 'A phantom of frost and lightning. Untouchable speed.',
+  },
+  slime_beast: {
+    id: 'slime_beast', name: 'Slime Beast', tier: 2,
+    baseStats: { hp: 110, attack: 10, defense: 16, speed: 5, special: 10 },
+    growthPerLevel: { hp: 14, attack: 1.2, defense: 2.0, speed: 0.3, special: 1.2 },
+    skills: ['venom_strike', 'barkskin', 'thorns', 'rejuvenation', 'blood_ritual'],
+    color: '#6b8e23',
+    description: 'A hulking mass of slime. Poisons and outlasts everything.',
+  },
+  blind_crawler: {
+    id: 'blind_crawler', name: 'Blind Crawler', tier: 2,
+    baseStats: { hp: 60, attack: 14, defense: 8, speed: 14, special: 12 },
+    growthPerLevel: { hp: 6, attack: 1.6, defense: 1.0, speed: 1.2, special: 1.6 },
+    skills: ['precision_strike', 'shadow_step', 'venom_strike', 'execute', 'evasion'],
+    color: '#8b6969',
+    description: 'Senses vibrations. Strikes with uncanny precision.',
   },
 
   // ============================================================
@@ -160,6 +240,22 @@ export const PET_DB = {
     color: '#95a5a6',
     description: 'An ancient construct of living stone. Nearly unbreakable.',
   },
+  crystal_beetle: {
+    id: 'crystal_beetle', name: 'Crystal Beetle', tier: 3,
+    baseStats: { hp: 70, attack: 10, defense: 18, speed: 12, special: 14 },
+    growthPerLevel: { hp: 7, attack: 1.2, defense: 2.2, speed: 1.0, special: 1.6 },
+    skills: ['iron_skin', 'fortify', 'static_field', 'thorns', 'divine_shield'],
+    color: '#a0d2db',
+    description: 'A crystalline carapace reflects attacks. Beautiful and dangerous.',
+  },
+  ice_golem: {
+    id: 'ice_golem', name: 'Ice Golem', tier: 3,
+    baseStats: { hp: 110, attack: 14, defense: 20, speed: 5, special: 12 },
+    growthPerLevel: { hp: 14, attack: 1.6, defense: 2.6, speed: 0.3, special: 1.4 },
+    skills: ['frostbolt', 'frozen_prison', 'iron_skin', 'blizzard', 'fortify'],
+    color: '#b0e0e6',
+    description: 'A frozen colossus. Slows and shatters its enemies.',
+  },
 
   // ============================================================
   //  VOLCANIC (tier 4)
@@ -187,6 +283,22 @@ export const PET_DB = {
     skills: ['firebolt', 'iron_skin', 'flame_wave', 'fortify', 'meteor'],
     color: '#d35400',
     description: 'The ultimate tank. Forged in volcanic fire.',
+  },
+  fire_bat: {
+    id: 'fire_bat', name: 'Fire Bat', tier: 4,
+    baseStats: { hp: 50, attack: 14, defense: 6, speed: 22, special: 20 },
+    growthPerLevel: { hp: 5, attack: 1.6, defense: 0.8, speed: 1.8, special: 2.6 },
+    skills: ['firebolt', 'ignite', 'shadow_step', 'evasion', 'storm_call'],
+    color: '#ff4500',
+    description: 'A blazing fiend. Scorches enemies before they can react.',
+  },
+  magma_worm: {
+    id: 'magma_worm', name: 'Magma Worm', tier: 4,
+    baseStats: { hp: 90, attack: 16, defense: 14, speed: 8, special: 18 },
+    growthPerLevel: { hp: 10, attack: 2.0, defense: 1.6, speed: 0.6, special: 2.4 },
+    skills: ['flame_wave', 'ignite', 'meteor', 'power_strike', 'berserker_rage'],
+    color: '#cc3300',
+    description: 'Burrows through molten rock. Erupts with devastating force.',
   },
 };
 

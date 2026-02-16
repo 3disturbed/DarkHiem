@@ -45,15 +45,27 @@ export default class PetBattleManager {
     const enemyId = enemyConfig?.id;
     if (!enemyId || !PET_DB[enemyId]) return false;
 
-    const tier = PET_DB[enemyId].tier;
+    const enemyTier = PET_DB[enemyId].tier;
 
-    // Build enemy team with encounter scaling
-    const scaling = ENCOUNTER_SCALING[tier] || [1, 1];
+    // Scale to highest tier between player team and enemy
+    let playerMaxTier = 0;
+    for (const pet of teamPets) {
+      const def = PET_DB[pet.petId];
+      if (def && def.tier > playerMaxTier) playerMaxTier = def.tier;
+    }
+    const tier = Math.max(enemyTier, playerMaxTier);
+
+    // Build enemy team with encounter scaling based on effective tier
+    const scaling = ENCOUNTER_SCALING[tier] || [2, 2];
     const enemyCount = scaling[0] + Math.floor(Math.random() * (scaling[1] - scaling[0] + 1));
     const wildTeam = [];
 
-    // First enemy: the creature attacked
-    const firstLevel = getWildPetLevel(enemyId);
+    // Level range based on effective tier (not enemy's native tier)
+    const minLevel = tier * 5 + 1;
+    const maxLevel = Math.min((tier + 1) * 5, PET_MAX_LEVEL);
+
+    // First enemy: the creature attacked, scaled to effective tier
+    const firstLevel = minLevel + Math.floor(Math.random() * (maxLevel - minLevel + 1));
     const firstStats = getPetStats(enemyId, firstLevel);
     wildTeam.push({
       petId: enemyId,
@@ -65,11 +77,11 @@ export default class PetBattleManager {
       fainted: false,
     });
 
-    // Additional enemies: random same-tier
-    const sameTierPets = Object.keys(PET_DB).filter(id => PET_DB[id].tier === tier);
+    // Additional enemies: random same-tier as the attacked creature
+    const sameTierPets = Object.keys(PET_DB).filter(id => PET_DB[id].tier === enemyTier);
     for (let i = 1; i < enemyCount; i++) {
       const randomId = sameTierPets[Math.floor(Math.random() * sameTierPets.length)];
-      const level = getWildPetLevel(randomId);
+      const level = minLevel + Math.floor(Math.random() * (maxLevel - minLevel + 1));
       const stats = getPetStats(randomId, level);
       wildTeam.push({
         petId: randomId,
