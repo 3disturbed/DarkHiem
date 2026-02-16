@@ -19,6 +19,11 @@ export default class PetHandler {
     router.register(MSG.PET_CAPTURE, (player) => this.handleCapture(player));
     router.register(MSG.PET_TEAM_SET, (player, data) => this.handleTeamSet(player, data));
     router.register(MSG.PET_HEAL, (player, data) => this.handleHeal(player, data));
+    router.register(MSG.PET_RENAME, (player, data) => this.handleRename(player, data));
+  }
+
+  _emitCodexUpdate(playerConn, pc) {
+    playerConn.emit(MSG.PET_CODEX_UPDATE, { petCodex: pc.petCodex, petTeam: pc.petTeam });
   }
 
   handleCapture(playerConn) {
@@ -81,12 +86,6 @@ export default class PetHandler {
       return;
     }
 
-    // Check inventory space
-    if (inventory.isFull()) {
-      playerConn.emit(MSG.CHAT_RECEIVE, { message: 'Inventory is full.', sender: 'System' });
-      return;
-    }
-
     // Consume cage
     inventory.removeItem(cage.itemId, 1);
 
@@ -96,9 +95,9 @@ export default class PetHandler {
     // Determine if this is a rare variant
     const isRare = target.entity.isPassiveVariant || false;
 
-    // Generate pet item with extraData
+    // Generate pet data and push to codex
     const stats = getPetStats(enemyId, 1);
-    const extraData = {
+    const petData = {
       petId: enemyId,
       nickname: isRare ? `★ ${petDef.name}` : petDef.name,
       level: 1,
@@ -111,22 +110,18 @@ export default class PetHandler {
       bonusStats: 0,
     };
 
-    inventory.addItem('pet_item', 1, extraData);
+    pc.petCodex.push(petData);
+    const codexIndex = pc.petCodex.length - 1;
 
     // Auto-assign to first empty team slot
-    const addedSlotIdx = inventory.slots.findIndex(s =>
-      s && s.itemId === 'pet_item' && s.petId === enemyId && s.xp === 0 && s.level === 1
-    );
-    if (addedSlotIdx !== -1) {
-      const emptyTeamSlot = pc.petTeam.indexOf(null);
-      if (emptyTeamSlot !== -1) {
-        pc.petTeam[emptyTeamSlot] = addedSlotIdx;
-        playerConn.emit(MSG.PET_TEAM_UPDATE, { petTeam: pc.petTeam });
-      }
+    const emptyTeamSlot = pc.petTeam.indexOf(null);
+    if (emptyTeamSlot !== -1) {
+      pc.petTeam[emptyTeamSlot] = codexIndex;
     }
 
     // Send updates
     playerConn.emit(MSG.INVENTORY_UPDATE, { slots: inventory.serialize().slots });
+    this._emitCodexUpdate(playerConn, pc);
     playerConn.emit(MSG.PET_CAPTURE_RESULT, { success: true, petId: enemyId, isRare });
     playerConn.emit(MSG.CHAT_RECEIVE, {
       message: `Captured a ${isRare ? '★ rare ' : ''}${petDef.name}!`,
@@ -139,53 +134,50 @@ export default class PetHandler {
     if (!entity) return;
 
     const pc = entity.getComponent(PlayerComponent);
-    const inventory = entity.getComponent(InventoryComponent);
-    if (!pc || !inventory) return;
+    if (!pc) return;
 
-    const { slotIndex, teamIndex } = data;
+    const { codexIndex, teamIndex } = data;
     if (teamIndex < 0 || teamIndex >= 3) return;
 
-    if (slotIndex === null || slotIndex === -1) {
+    if (codexIndex === null || codexIndex === -1) {
       // Remove from team
       pc.petTeam[teamIndex] = null;
     } else {
-      // Validate slot has a pet_item
-      const slot = inventory.slots[slotIndex];
-      if (!slot || slot.itemId !== 'pet_item') return;
+      // Validate codex entry exists
+      if (codexIndex < 0 || codexIndex >= pc.petCodex.length || !pc.petCodex[codexIndex]) return;
 
-      // Don't assign same slot to multiple team positions
+      // Don't assign same codex entry to multiple team positions
       for (let i = 0; i < pc.petTeam.length; i++) {
-        if (pc.petTeam[i] === slotIndex) {
+        if (pc.petTeam[i] === codexIndex) {
           pc.petTeam[i] = null;
         }
       }
 
-      pc.petTeam[teamIndex] = slotIndex;
+      pc.petTeam[teamIndex] = codexIndex;
     }
 
-    playerConn.emit(MSG.PET_TEAM_UPDATE, { petTeam: pc.petTeam });
+    this._emitCodexUpdate(playerConn, pc);
   }
 
   handleHeal(playerConn, data) {
     const entity = this.gameServer.getPlayerEntity(playerConn.id);
     if (!entity) return;
 
+    const pc = entity.getComponent(PlayerComponent);
     const inventory = entity.getComponent(InventoryComponent);
-    if (!inventory) return;
+    if (!pc || !inventory) return;
 
-    const { healItemId, petSlotIndex } = data;
+    const { healItemId, codexIndex } = data;
 
     // Validate heal item
     const healItem = ITEM_DB[healItemId];
     if (!healItem || !healItem.effect?.petHeal) return;
     if (inventory.countItem(healItemId) < 1) return;
 
-    // Validate pet slot
-    const petSlot = inventory.slots[petSlotIndex];
-    if (!petSlot || petSlot.itemId !== 'pet_item') return;
-
-    const petData = petSlot.extraData || petSlot;
-    if (!petData.petId) return;
+    // Validate codex entry
+    if (codexIndex < 0 || codexIndex >= pc.petCodex.length) return;
+    const petData = pc.petCodex[codexIndex];
+    if (!petData || !petData.petId) return;
 
     const stats = getPetStats(petData.petId, petData.level || 1);
     const maxHp = stats.hp + (petData.bonusStats || 0);
@@ -200,23 +192,37 @@ export default class PetHandler {
     inventory.removeItem(healItemId, 1);
 
     playerConn.emit(MSG.INVENTORY_UPDATE, { slots: inventory.serialize().slots });
+    this._emitCodexUpdate(playerConn, pc);
     playerConn.emit(MSG.CHAT_RECEIVE, {
       message: `Healed ${petData.nickname || petData.petId} for ${healAmount} HP.`,
       sender: 'System',
     });
   }
 
+  handleRename(playerConn, data) {
+    const entity = this.gameServer.getPlayerEntity(playerConn.id);
+    if (!entity) return;
+
+    const pc = entity.getComponent(PlayerComponent);
+    if (!pc) return;
+
+    const { codexIndex, newName } = data;
+    if (codexIndex < 0 || codexIndex >= pc.petCodex.length) return;
+    const petData = pc.petCodex[codexIndex];
+    if (!petData) return;
+
+    // Sanitize name
+    const sanitized = (newName || '').trim().slice(0, 20);
+    if (!sanitized) return;
+
+    petData.nickname = sanitized;
+    this._emitCodexUpdate(playerConn, pc);
+  }
+
   // Called by CombatHandler when a cage weapon successfully captures a creature
   finalizePetCapture(playerConn, entity, targetEnemy, petDef) {
     const pc = entity.getComponent(PlayerComponent);
-    const inventory = entity.getComponent(InventoryComponent);
-    if (!pc || !inventory) return;
-
-    // Check inventory space
-    if (inventory.isFull()) {
-      playerConn.emit(MSG.CHAT_RECEIVE, { message: 'Inventory is full.', sender: 'System' });
-      return;
-    }
+    if (!pc) return;
 
     const enemyId = targetEnemy.enemyConfig?.id;
 
@@ -226,9 +232,9 @@ export default class PetHandler {
     // Determine if this is a rare variant
     const isRare = targetEnemy.isPassiveVariant || false;
 
-    // Generate pet item with extraData
+    // Generate pet data and push to codex
     const stats = getPetStats(enemyId, 1);
-    const extraData = {
+    const petData = {
       petId: enemyId,
       nickname: isRare ? `★ ${petDef.name}` : petDef.name,
       level: 1,
@@ -241,22 +247,17 @@ export default class PetHandler {
       bonusStats: 0,
     };
 
-    inventory.addItem('pet_item', 1, extraData);
+    pc.petCodex.push(petData);
+    const codexIndex = pc.petCodex.length - 1;
 
     // Auto-assign to first empty team slot
-    const addedSlotIdx = inventory.slots.findIndex(s =>
-      s && s.itemId === 'pet_item' && s.petId === enemyId && s.xp === 0 && s.level === 1
-    );
-    if (addedSlotIdx !== -1) {
-      const emptyTeamSlot = pc.petTeam.indexOf(null);
-      if (emptyTeamSlot !== -1) {
-        pc.petTeam[emptyTeamSlot] = addedSlotIdx;
-        playerConn.emit(MSG.PET_TEAM_UPDATE, { petTeam: pc.petTeam });
-      }
+    const emptyTeamSlot = pc.petTeam.indexOf(null);
+    if (emptyTeamSlot !== -1) {
+      pc.petTeam[emptyTeamSlot] = codexIndex;
     }
 
     // Send updates
-    playerConn.emit(MSG.INVENTORY_UPDATE, { slots: inventory.serialize().slots });
+    this._emitCodexUpdate(playerConn, pc);
     playerConn.emit(MSG.PET_CAPTURE_RESULT, { success: true, petId: enemyId, isRare });
   }
 

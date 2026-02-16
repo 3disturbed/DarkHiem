@@ -21,7 +21,7 @@ const TRAIN_COSTS = {
 export default class PetBreedingManager {
   constructor(gameServer) {
     this.gameServer = gameServer;
-    // Active breeding sessions: playerId -> { pet1SlotIdx, pet2SlotIdx, petId, startTime, stationEntityId, parentLevels, eitherRare }
+    // Active breeding sessions: playerId -> { petId, startTime, stationEntityId, parentLevels, eitherRare, parentSkills }
     this.activeBreedings = new Map();
   }
 
@@ -53,19 +53,16 @@ export default class PetBreedingManager {
       return;
     }
 
-    const slot1Idx = data.pet1Slot;
-    const slot2Idx = data.pet2Slot;
-    if (slot1Idx === undefined || slot2Idx === undefined || slot1Idx === slot2Idx) return;
+    const pet1Codex = data.pet1Codex;
+    const pet2Codex = data.pet2Codex;
+    if (pet1Codex === undefined || pet2Codex === undefined || pet1Codex === pet2Codex) return;
 
-    const slot1 = inv.slots[slot1Idx];
-    const slot2 = inv.slots[slot2Idx];
-    if (!slot1 || !slot2 || slot1.itemId !== 'pet_item' || slot2.itemId !== 'pet_item') {
+    const pet1 = pc.petCodex[pet1Codex];
+    const pet2 = pc.petCodex[pet2Codex];
+    if (!pet1 || !pet2) {
       playerConn.emit(MSG.CHAT_RECEIVE, { message: 'Select two pets to breed.', sender: 'System' });
       return;
     }
-
-    const pet1 = slot1.extraData || slot1;
-    const pet2 = slot2.extraData || slot2;
 
     // Must be same species
     if (pet1.petId !== pet2.petId) {
@@ -79,25 +76,41 @@ export default class PetBreedingManager {
       return;
     }
 
-    // Consume materials and pets
+    // Consume materials
     inv.removeItem('raw_meat', 5);
     inv.removeItem('berry', 5);
-    inv.removeFromSlot(slot1Idx, 1);
-    inv.removeFromSlot(slot2Idx, 1);
 
     // Merge parent skills (union of both parents' learned skills)
     const parentSkills = [...new Set([...(pet1.learnedSkills || []), ...(pet2.learnedSkills || [])])];
+    const parentLevels = (pet1.level || 1) + (pet2.level || 1);
+    const eitherRare = pet1.isRare || pet2.isRare;
+    const petId = pet1.petId;
+
+    // Remove parents from codex (higher index first to avoid shifting issues)
+    const toRemove = [pet1Codex, pet2Codex].sort((a, b) => b - a);
+    for (const idx of toRemove) {
+      pc.petCodex.splice(idx, 1);
+      // Fix petTeam references after splice
+      for (let t = 0; t < pc.petTeam.length; t++) {
+        if (pc.petTeam[t] === idx) {
+          pc.petTeam[t] = null;
+        } else if (pc.petTeam[t] !== null && pc.petTeam[t] > idx) {
+          pc.petTeam[t]--;
+        }
+      }
+    }
 
     this.activeBreedings.set(playerConn.id, {
-      petId: pet1.petId,
+      petId,
       startTime: Date.now(),
       stationEntityId: penEntity.id,
-      parentLevels: (pet1.level || 1) + (pet2.level || 1),
-      eitherRare: pet1.isRare || pet2.isRare,
+      parentLevels,
+      eitherRare,
       parentSkills,
     });
 
     playerConn.emit(MSG.INVENTORY_UPDATE, { slots: inv.serialize().slots });
+    playerConn.emit(MSG.PET_CODEX_UPDATE, { petCodex: pc.petCodex, petTeam: pc.petTeam });
     playerConn.emit(MSG.CHAT_RECEIVE, { message: 'Breeding started! Collect in 5 minutes.', sender: 'System' });
   }
 
@@ -120,8 +133,8 @@ export default class PetBreedingManager {
     const entity = this.gameServer.getPlayerEntity(playerConn.id);
     if (!entity) return;
 
-    const inv = entity.getComponent(InventoryComponent);
-    if (!inv) return;
+    const pc = entity.getComponent(PlayerComponent);
+    if (!pc) return;
 
     // Generate baby pet
     const petDef = PET_DB[breeding.petId];
@@ -146,7 +159,7 @@ export default class PetBreedingManager {
       inheritedSkills.push(...fallback);
     }
 
-    const extraData = {
+    const petData = {
       petId: breeding.petId,
       nickname: petDef.name,
       level: 1,
@@ -159,10 +172,10 @@ export default class PetBreedingManager {
       bonusStats,
     };
 
-    inv.addItem('pet_item', 1, extraData);
+    pc.petCodex.push(petData);
     this.activeBreedings.delete(playerConn.id);
 
-    playerConn.emit(MSG.INVENTORY_UPDATE, { slots: inv.serialize().slots });
+    playerConn.emit(MSG.PET_CODEX_UPDATE, { petCodex: pc.petCodex, petTeam: pc.petTeam });
     playerConn.emit(MSG.CHAT_RECEIVE, {
       message: `A baby ${petDef.name} was born!${isRare ? ' It\'s a rare variant!' : ''}${bonusStats > 0 ? ` (+${bonusStats} bonus stats)` : ''}`,
       sender: 'System',
@@ -185,17 +198,14 @@ export default class PetBreedingManager {
       return;
     }
 
-    const slotIdx = data.petSlot;
-    if (slotIdx === undefined) return;
+    const codexIndex = data.codexIndex;
+    if (codexIndex === undefined) return;
 
-    const slot = inv.slots[slotIdx];
-    if (!slot || slot.itemId !== 'pet_item') {
+    const petData = pc.petCodex[codexIndex];
+    if (!petData || !petData.petId) {
       playerConn.emit(MSG.CHAT_RECEIVE, { message: 'Select a pet to train.', sender: 'System' });
       return;
     }
-
-    const petData = slot.extraData || slot;
-    if (!petData.petId) return;
 
     if (petData.level >= PET_MAX_LEVEL) {
       playerConn.emit(MSG.CHAT_RECEIVE, { message: 'Pet is already max level!', sender: 'System' });
@@ -255,6 +265,7 @@ export default class PetBreedingManager {
     }
 
     playerConn.emit(MSG.INVENTORY_UPDATE, { slots: inv.serialize().slots });
+    playerConn.emit(MSG.PET_CODEX_UPDATE, { petCodex: pc.petCodex, petTeam: pc.petTeam });
 
     let msg = `Training complete! +${xpNeeded} XP`;
     if (leveledUp) msg += ` → Level ${petData.level}!`;

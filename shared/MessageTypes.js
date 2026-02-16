@@ -160,6 +160,8 @@ export const MSG = {
   PET_BREED_START:    'pet:breed:start',
   PET_BREED_COLLECT:  'pet:breed:collect',
   PET_TRAIN:          'pet:train',
+  PET_CODEX_UPDATE:   'pet:codex:update',
+  PET_RENAME:         'pet:rename',
 
   // Mail system
   MAIL_JOBS:          'mail:jobs',

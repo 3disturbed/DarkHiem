@@ -1,7 +1,6 @@
 import { MSG } from '../../shared/MessageTypes.js';
 import TeamBattle from './TeamBattle.js';
 import PlayerComponent from '../ecs/components/PlayerComponent.js';
-import InventoryComponent from '../ecs/components/InventoryComponent.js';
 import NameComponent from '../ecs/components/NameComponent.js';
 
 const CHALLENGE_TIMEOUT_MS = 15000;
@@ -234,16 +233,13 @@ export default class PvPBattleManager {
     if (!entity) return null;
 
     const pc = entity.getComponent(PlayerComponent);
-    const inv = entity.getComponent(InventoryComponent);
-    if (!pc || !inv) return null;
+    if (!pc) return null;
 
     const teamPets = [];
-    for (const slotIdx of pc.petTeam) {
-      if (slotIdx === null || slotIdx === undefined) continue;
-      const slot = inv.slots[slotIdx];
-      if (!slot || slot.itemId !== 'pet_item') continue;
-      const petData = slot.extraData || slot;
-      if (!petData.petId || petData.fainted) continue;
+    for (const codexIdx of pc.petTeam) {
+      if (codexIdx === null || codexIdx === undefined) continue;
+      const petData = pc.petCodex[codexIdx];
+      if (!petData || !petData.petId || petData.fainted) continue;
       teamPets.push(petData);
     }
     return teamPets;

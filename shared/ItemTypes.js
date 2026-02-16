@@ -1187,13 +1187,6 @@ export const ITEM_DB = {
     statBonuses: { baseDamage: 0 }, tier: 0, rarity: 'uncommon', gemSlots: 0,
     description: 'A carved bone whistle. Equip and attack a creature to start a pet battle using your team.',
   },
-  pet_item: {
-    id: 'pet_item', name: 'Captured Pet', type: 'equipment', slot: 'weapon',
-    isPet: true, stackable: false,
-    statBonuses: { baseDamage: 0 }, tier: 0, rarity: 'common', gemSlots: 0,
-    description: 'A captured creature. Equip to initiate pet battles.',
-  },
-
   // --- Pet Consumables ---
   pet_salve: {
     id: 'pet_salve', name: 'Pet Salve', type: 'consumable', stackable: true, maxStack: 20,

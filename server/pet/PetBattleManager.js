@@ -4,14 +4,13 @@ import TeamBattle from './TeamBattle.js';
 import PlayerComponent from '../ecs/components/PlayerComponent.js';
 import InventoryComponent from '../ecs/components/InventoryComponent.js';
 import HealthComponent from '../ecs/components/HealthComponent.js';
-import EquipmentComponent from '../ecs/components/EquipmentComponent.js';
 
 let battleIdCounter = 0;
 
 export default class PetBattleManager {
   constructor(gameServer) {
     this.gameServer = gameServer;
-    this.activeBattles = new Map(); // playerId -> { battle, playerConn, usedEquippedWeapon }
+    this.activeBattles = new Map(); // playerId -> { battle, playerConn }
   }
 
   register(router) {
@@ -23,31 +22,17 @@ export default class PetBattleManager {
     if (!entity) return false;
 
     const pc = entity.getComponent(PlayerComponent);
-    const inventory = entity.getComponent(InventoryComponent);
-    if (!pc || !inventory) return false;
+    if (!pc) return false;
 
     if (pc.activeBattle || this.activeBattles.has(playerConn.id)) return false;
 
-    // Collect player team
+    // Collect player team from codex
     const teamPets = [];
-    let usedEquippedWeapon = false;
-    for (const slotIdx of pc.petTeam) {
-      if (slotIdx === null || slotIdx === undefined) continue;
-      const slot = inventory.slots[slotIdx];
-      if (!slot || slot.itemId !== 'pet_item') continue;
-      const petData = slot.extraData || slot;
-      if (!petData.petId || petData.fainted) continue;
+    for (const codexIdx of pc.petTeam) {
+      if (codexIdx === null || codexIdx === undefined) continue;
+      const petData = pc.petCodex[codexIdx];
+      if (!petData || !petData.petId || petData.fainted) continue;
       teamPets.push(petData);
-    }
-
-    // Fallback: equipped weapon
-    if (teamPets.length === 0) {
-      const equip = entity.getComponent(EquipmentComponent);
-      const weapon = equip?.getEquipped('weapon');
-      if (weapon?.isPet && weapon?.petId && !weapon.fainted) {
-        teamPets.push(weapon);
-        usedEquippedWeapon = true;
-      }
     }
 
     if (teamPets.length === 0) {
@@ -104,7 +89,7 @@ export default class PetBattleManager {
     const battleId = `pve_${battleIdCounter++}`;
     const battle = new TeamBattle(battleId, teamPets, wildTeam, { mode: 'pve' });
 
-    const session = { battle, playerConn, usedEquippedWeapon };
+    const session = { battle, playerConn };
     this.activeBattles.set(playerConn.id, session);
     pc.activeBattle = battle;
 
@@ -187,12 +172,11 @@ export default class PetBattleManager {
   }
 
   _endBattle(playerConn, session) {
-    const { battle, usedEquippedWeapon } = session;
+    const { battle } = session;
     const entity = this.gameServer.getPlayerEntity(playerConn.id);
     if (!entity) return;
 
     const pc = entity.getComponent(PlayerComponent);
-    const inventory = entity.getComponent(InventoryComponent);
 
     let xpGained = 0;
     const levelUps = [];
@@ -204,18 +188,17 @@ export default class PetBattleManager {
         xpGained += getBattleXpReward(enemy.petId, enemy.level);
       }
 
-      // Award XP to ALL surviving player pets
-      if (pc && inventory && !usedEquippedWeapon) {
+      // Award XP to ALL surviving player pets via codex
+      if (pc) {
         for (let i = 0; i < battle.teams.a.length; i++) {
           const battlePet = battle.teams.a[i];
           if (battlePet.fainted) continue;
 
-          const slotIdx = pc.petTeam[i];
-          if (slotIdx === null || slotIdx === undefined) continue;
-          const slot = inventory.slots[slotIdx];
-          if (!slot || slot.itemId !== 'pet_item') continue;
+          const codexIdx = pc.petTeam[i];
+          if (codexIdx === null || codexIdx === undefined) continue;
+          const petData = pc.petCodex[codexIdx];
+          if (!petData) continue;
 
-          const petData = slot.extraData || slot;
           petData.xp = (petData.xp || 0) + xpGained;
 
           while (petData.level < PET_MAX_LEVEL) {
@@ -241,48 +224,16 @@ export default class PetBattleManager {
           }
         }
       }
-
-      // Equipped weapon fallback XP
-      if (usedEquippedWeapon) {
-        const equip = entity?.getComponent(EquipmentComponent);
-        const weapon = equip?.getEquipped('weapon');
-        if (weapon?.isPet && weapon?.petId && battle.teams.a.length > 0) {
-          const battlePet = battle.teams.a[0];
-          weapon.currentHp = battlePet.currentHp;
-          weapon.fainted = battlePet.fainted;
-          weapon.xp = (weapon.xp || 0) + xpGained;
-          while ((weapon.level || 1) < PET_MAX_LEVEL) {
-            const needed = getXpForLevel((weapon.level || 1) + 1);
-            if (weapon.xp >= needed) {
-              weapon.xp -= needed;
-              weapon.level = (weapon.level || 1) + 1;
-              levelUps.push({ petId: weapon.petId, newLevel: weapon.level });
-              const newStats = getPetStats(weapon.petId, weapon.level);
-              weapon.maxHp = newStats.hp + (weapon.bonusStats || 0);
-              weapon.currentHp = weapon.maxHp;
-              if (PET_SKILL_UNLOCK_LEVELS.includes(weapon.level)) {
-                if (!weapon.learnedSkills) weapon.learnedSkills = [];
-                const newSkill = getRandomNewSkill(weapon.petId, weapon.learnedSkills);
-                if (newSkill) {
-                  weapon.learnedSkills.push(newSkill);
-                  newSkills.push(newSkill);
-                }
-              }
-            } else break;
-          }
-        }
-      }
     }
 
-    // Sync pet HP back to inventory
-    if (pc && inventory && !usedEquippedWeapon) {
+    // Sync pet HP back to codex
+    if (pc) {
       for (let i = 0; i < battle.teams.a.length; i++) {
-        const slotIdx = pc.petTeam[i];
-        if (slotIdx === null || slotIdx === undefined) continue;
-        const slot = inventory.slots[slotIdx];
-        if (!slot || slot.itemId !== 'pet_item') continue;
+        const codexIdx = pc.petTeam[i];
+        if (codexIdx === null || codexIdx === undefined) continue;
+        const petData = pc.petCodex[codexIdx];
+        if (!petData) continue;
 
-        const petData = slot.extraData || slot;
         const battlePet = battle.teams.a[i];
         if (battlePet) {
           petData.currentHp = battlePet.currentHp;
@@ -293,14 +244,14 @@ export default class PetBattleManager {
 
     // Capture one random defeated wild creature on win
     let captured = false;
-    if (battle.result === 'win_a' && inventory && pc) {
+    if (battle.result === 'win_a' && pc) {
       const defeated = battle.teams.b.filter(u => u.fainted);
-      if (defeated.length > 0 && !inventory.isFull()) {
+      if (defeated.length > 0) {
         const chosen = defeated[Math.floor(Math.random() * defeated.length)];
         const petDef = PET_DB[chosen.petId];
         if (petDef) {
           const stats = getPetStats(chosen.petId, chosen.level);
-          const extraData = {
+          const petData = {
             petId: chosen.petId,
             nickname: petDef.name,
             level: chosen.level,
@@ -312,18 +263,13 @@ export default class PetBattleManager {
             isRare: false,
             bonusStats: 0,
           };
-          inventory.addItem('pet_item', 1, extraData);
+          pc.petCodex.push(petData);
           captured = true;
 
-          const addedSlotIdx = inventory.slots.findIndex(s =>
-            s && s.itemId === 'pet_item' && s.petId === chosen.petId && s.level === chosen.level && s.xp === 0
-          );
-          if (addedSlotIdx !== -1) {
-            const emptyTeamSlot = pc.petTeam.indexOf(null);
-            if (emptyTeamSlot !== -1) {
-              pc.petTeam[emptyTeamSlot] = addedSlotIdx;
-              playerConn.emit(MSG.PET_TEAM_UPDATE, { petTeam: pc.petTeam });
-            }
+          const codexIndex = pc.petCodex.length - 1;
+          const emptyTeamSlot = pc.petTeam.indexOf(null);
+          if (emptyTeamSlot !== -1) {
+            pc.petTeam[emptyTeamSlot] = codexIndex;
           }
 
           playerConn.emit(MSG.CHAT_RECEIVE, {
@@ -331,11 +277,6 @@ export default class PetBattleManager {
             sender: 'System',
           });
         }
-      } else if (defeated.length > 0 && inventory.isFull()) {
-        playerConn.emit(MSG.CHAT_RECEIVE, {
-          message: `Inventory full — could not capture.`,
-          sender: 'System',
-        });
       }
     }
 
@@ -352,8 +293,8 @@ export default class PetBattleManager {
       captured,
     });
 
-    if (inventory) {
-      playerConn.emit(MSG.INVENTORY_UPDATE, { slots: inventory.serialize().slots });
+    if (pc) {
+      playerConn.emit(MSG.PET_CODEX_UPDATE, { petCodex: pc.petCodex, petTeam: pc.petTeam });
     }
   }
 
