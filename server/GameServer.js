@@ -1,4 +1,4 @@
-import { TICK_MS, TICK_RATE, CHUNK_PIXEL_SIZE } from '../shared/Constants.js';
+import { TICK_MS, TICK_RATE, CHUNK_PIXEL_SIZE, VIEW_DISTANCE } from '../shared/Constants.js';
 import { MSG } from '../shared/MessageTypes.js';
 import MessageRouter from './network/MessageRouter.js';
 import MovementHandler from './network/handlers/MovementHandler.js';
