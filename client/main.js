@@ -43,18 +43,40 @@ function redirectToLanding() {
 
 function startGame() {
   const canvas = document.getElementById('game');
+  const splashBar = document.getElementById('splash-bar');
+  const splashText = document.getElementById('splash-text');
+  const splash = document.getElementById('splash');
 
-  Promise.all([
-    tileSprites.load(),
-    stationSprites.load(),
-    enemySprites.load(),
-    npcSprites.load(),
-    playerSprites.load(),
-    skillSprites.load(),
-    itemSprites.load(),
-  ]).then(() => {
+  // Track sprite loading progress
+  const loaders = [
+    { name: 'Tiles', fn: () => tileSprites.load() },
+    { name: 'Stations', fn: () => stationSprites.load() },
+    { name: 'Enemies', fn: () => enemySprites.load() },
+    { name: 'NPCs', fn: () => npcSprites.load() },
+    { name: 'Players', fn: () => playerSprites.load() },
+    { name: 'Skills', fn: () => skillSprites.load() },
+    { name: 'Items', fn: () => itemSprites.load() },
+  ];
+
+  let loaded = 0;
+  const total = loaders.length;
+
+  Promise.all(loaders.map(l =>
+    l.fn().then(() => {
+      loaded++;
+      const pct = Math.round((loaded / total) * 100);
+      if (splashBar) splashBar.style.width = pct + '%';
+      if (splashText) splashText.textContent = `Loading ${l.name}... ${pct}%`;
+    })
+  )).then(() => {
+    if (splashText) splashText.textContent = 'Starting...';
     const game = new Game(canvas);
     game.start();
+    // Fade out splash
+    if (splash) {
+      splash.classList.add('fade-out');
+      setTimeout(() => splash.remove(), 700);
+    }
   });
 
   // Fullscreen button for mobile - only show on touch devices when not fullscreen

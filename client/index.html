@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>Darkheim</title>
+  <title>NordFolk Online</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0f; }
     canvas {
       display: block;
       width: 100%;
@@ -36,9 +36,58 @@
     #fullscreen-btn:active {
       background: rgba(255,255,255,0.2);
     }
+    #splash {
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      background: #0a0a0f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.6s ease;
+    }
+    #splash.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #splash img {
+      max-width: min(480px, 85vw);
+      height: auto;
+    }
+    #splash .loading-bar-track {
+      width: min(320px, 60vw);
+      height: 6px;
+      background: #1a1a2e;
+      border-radius: 3px;
+      margin-top: 32px;
+      overflow: hidden;
+    }
+    #splash .loading-bar-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #c9a84c, #e8d48b);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+    #splash .loading-text {
+      margin-top: 14px;
+      color: #666;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 0.8rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
   </style>
 </head>
 <body>
+  <div id="splash">
+    <img src="/client/NordFolkLogo.png" alt="NordFolk Online">
+    <div class="loading-bar-track">
+      <div class="loading-bar-fill" id="splash-bar"></div>
+    </div>
+    <div class="loading-text" id="splash-text">Loading...</div>
+  </div>
   <canvas id="game"></canvas>
   <button id="fullscreen-btn" aria-label="Fullscreen">&#x26F6;</button>
   <script src="/socket.io/socket.io.js"></script>
