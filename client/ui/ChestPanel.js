@@ -1,4 +1,5 @@
 import { ITEM_DB } from '../../shared/ItemTypes.js';
+import itemSprites from '../entities/ItemSprites.js';
 
 const COLS = 5;
 const SLOT_SIZE = 36;
@@ -242,15 +243,22 @@ export default class ChestPanel {
       const slot = slots[i];
       if (slot) {
         const def = ITEM_DB[slot.itemId];
-        // Item color swatch
-        ctx.fillStyle = def ? (def.gemColor || def.color || '#aaa') : '#888';
-        ctx.fillRect(sx + 4, sy + 4, SLOT_SIZE - 8, SLOT_SIZE - 8);
+        const icon = itemSprites.get(slot.itemId);
+        if (icon) {
+          ctx.drawImage(icon, sx + 2, sy + 2, SLOT_SIZE - 4, SLOT_SIZE - 4);
+        } else {
+          // Fallback color swatch if sprite not loaded
+          ctx.fillStyle = def ? (def.gemColor || def.color || '#aaa') : '#888';
+          ctx.fillRect(sx + 4, sy + 4, SLOT_SIZE - 8, SLOT_SIZE - 8);
+        }
 
         // Count
         if (slot.count > 1) {
-          ctx.fillStyle = '#fff';
+          ctx.fillStyle = '#000';
           ctx.font = 'bold 9px monospace';
           ctx.textAlign = 'right';
+          ctx.fillText(slot.count, sx + SLOT_SIZE - 2, sy + SLOT_SIZE - 2);
+          ctx.fillStyle = '#fff';
           ctx.fillText(slot.count, sx + SLOT_SIZE - 3, sy + SLOT_SIZE - 3);
         }
       }
