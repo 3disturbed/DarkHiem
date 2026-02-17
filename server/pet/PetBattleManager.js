@@ -1,20 +1,17 @@
 import { MSG } from '../../shared/MessageTypes.js';
-import { PET_DB, getPetStats, getRandomPetSkills, getRandomNewSkill, getWildPetLevel, getXpForLevel, PET_MAX_LEVEL, PET_SKILL_UNLOCK_LEVELS, getBattleXpReward, ENCOUNTER_SCALING } from '../../shared/PetTypes.js';
-import TeamBattle from './TeamBattle.js';
+import { PET_DB, getPetStats, getRandomPetSkills, getRandomNewSkill, getXpForLevel, PET_MAX_LEVEL, PET_SKILL_UNLOCK_LEVELS, getBattleXpReward, ENCOUNTER_SCALING } from '../../shared/PetTypes.js';
 import PlayerComponent from '../ecs/components/PlayerComponent.js';
-import InventoryComponent from '../ecs/components/InventoryComponent.js';
-import HealthComponent from '../ecs/components/HealthComponent.js';
 
 let battleIdCounter = 0;
 
 export default class PetBattleManager {
   constructor(gameServer) {
     this.gameServer = gameServer;
-    this.activeBattles = new Map(); // playerId -> { battle, playerConn }
+    this.activeBattles = new Map(); // playerId -> { playerConn, wildTeam, teamPetsCount, battleId }
   }
 
   register(router) {
-    router.register(MSG.PET_BATTLE_ACTION, (player, data) => this.handleAction(player, data));
+    router.register(MSG.PET_BATTLE_REPORT, (player, data) => this.handleReport(player, data));
   }
 
   startBattle(playerConn, enemyEntity) {
@@ -60,7 +57,7 @@ export default class PetBattleManager {
     const enemyCount = scaling[0] + Math.floor(Math.random() * (scaling[1] - scaling[0] + 1));
     const wildTeam = [];
 
-    // Level range based on effective tier (not enemy's native tier)
+    // Level range based on effective tier
     const minLevel = tier * 5 + 1;
     const maxLevel = Math.min((tier + 1) * 5, PET_MAX_LEVEL);
 
@@ -97,190 +94,139 @@ export default class PetBattleManager {
     // Remove enemy from world
     this.gameServer.entityManager.remove(enemyEntity.id);
 
-    // Create team battle
+    // Track session — no TeamBattle instance on server
     const battleId = `pve_${battleIdCounter++}`;
-    const battle = new TeamBattle(battleId, teamPets, wildTeam, { mode: 'pve' });
-
-    const session = { battle, playerConn };
+    const session = { playerConn, wildTeam, teamPetsCount: teamPets.length, battleId };
     this.activeBattles.set(playerConn.id, session);
-    pc.activeBattle = battle;
+    pc.activeBattle = battleId;
 
-    // Start the first unit's turn (don't use advanceTurn — that skips index 0)
-    const turnState = battle.startUnitTurn();
-
-    // Send battle start with first turn info merged
-    const startState = battle.getFullState();
-    playerConn.emit(MSG.PET_BATTLE_START, startState);
-
-    if (!turnState || battle.ended) {
-      if (battle.ended) this._endBattle(playerConn, session);
-      return true;
-    }
-
-    // Send the first turn state
-    const current = battle.getCurrentUnit();
-    playerConn.emit(MSG.PET_BATTLE_STATE, turnState);
-
-    // If the first unit is an enemy, auto-resolve AI
-    if (current && current.team === 'b') {
-      const aiResults = battle.resolveAITurn();
-      for (const r of aiResults) {
-        playerConn.emit(MSG.PET_BATTLE_RESULT, { ...r, isEnemyTurn: true });
-      }
-      if (battle.ended) {
-        this._endBattle(playerConn, session);
-        return true;
-      }
-      this._advanceToNextTurn(playerConn.id);
-    }
+    // Send raw team data to client — client creates TeamBattle locally
+    playerConn.emit(MSG.PET_BATTLE_START, {
+      battleId,
+      mode: 'pve',
+      teamA: teamPets.map(p => ({
+        petId: p.petId,
+        nickname: p.nickname,
+        level: p.level,
+        xp: p.xp || 0,
+        currentHp: p.currentHp,
+        maxHp: p.maxHp,
+        learnedSkills: p.learnedSkills || [],
+        fainted: p.fainted || false,
+        isRare: p.isRare || false,
+        tierUp: p.tierUp || 0,
+        bonusStats: p.bonusStats || 0,
+      })),
+      teamB: wildTeam,
+    });
 
     return true;
   }
 
-  handleAction(playerConn, data) {
+  handleReport(playerConn, data) {
     const session = this.activeBattles.get(playerConn.id);
     if (!session) return;
-    const { battle } = session;
-    if (battle.ended) return;
 
-    const current = battle.getCurrentUnit();
-    if (!current) return;
-
-    // Only accept actions for player's units (team 'a')
-    if (current.team !== 'a') return;
-
-    const result = battle.executeAction(data);
-    if (!result) return;
-
-    // Send result to client
-    playerConn.emit(MSG.PET_BATTLE_RESULT, result);
-
-    if (battle.ended) {
-      this._endBattle(playerConn, session);
-      return;
-    }
-
-    // If player still has AP, send updated state (stay on their turn)
-    if (battle.ap > 0) {
-      return;
-    }
-
-    // Turn ended — advance
-    this._advanceToNextTurn(playerConn.id);
-  }
-
-  _advanceToNextTurn(playerId) {
-    const session = this.activeBattles.get(playerId);
-    if (!session) return;
-    const { battle, playerConn } = session;
-
-    const turnState = battle.advanceTurn();
-    if (!turnState || battle.ended) {
-      if (battle.ended) this._endBattle(playerConn, session);
-      return;
-    }
-
-    const current = battle.getCurrentUnit();
-    if (!current) return;
-
-    // Send turn state to client
-    playerConn.emit(MSG.PET_BATTLE_STATE, turnState);
-
-    // If it's an enemy unit (team 'b'), auto-resolve with AI
-    if (current.team === 'b') {
-      // Small delay so client can show enemy turn
-      const aiResults = battle.resolveAITurn();
-      for (const r of aiResults) {
-        playerConn.emit(MSG.PET_BATTLE_RESULT, { ...r, isEnemyTurn: true });
-      }
-
-      if (battle.ended) {
-        this._endBattle(playerConn, session);
-        return;
-      }
-
-      // Continue to next turn
-      this._advanceToNextTurn(playerId);
-    }
-    // If player's unit, wait for their actions
-  }
-
-  _endBattle(playerConn, session) {
-    const { battle } = session;
     const entity = this.gameServer.getPlayerEntity(playerConn.id);
     if (!entity) return;
-
     const pc = entity.getComponent(PlayerComponent);
 
+    // Extract report data
+    const result = data.result; // 'win_a', 'win_b', 'flee', 'stalemate'
+    const petHpStates = data.petHpStates; // [{ currentHp, fainted }, ...] for team A
+
+    // Basic validation
+    if (!['win_a', 'win_b', 'flee', 'stalemate'].includes(result)) {
+      this._cleanup(playerConn, pc);
+      return;
+    }
+
+    if (!Array.isArray(petHpStates) || petHpStates.length !== session.teamPetsCount) {
+      this._cleanup(playerConn, pc);
+      return;
+    }
+
+    for (const hp of petHpStates) {
+      if (typeof hp.currentHp !== 'number' || hp.currentHp < 0) {
+        this._cleanup(playerConn, pc);
+        return;
+      }
+    }
+
+    // Process rewards
     let xpGained = 0;
     const levelUps = [];
     let newSkills = [];
 
-    if (battle.result === 'win_a') {
-      // Calculate XP from all defeated enemies
-      for (const enemy of battle.teams.b) {
+    if (result === 'win_a') {
+      // Calculate XP from all wild enemies
+      for (const enemy of session.wildTeam) {
         xpGained += getBattleXpReward(enemy.petId, enemy.level);
       }
 
-      // Award XP to ALL surviving player pets via codex
+      // Award XP to surviving player pets via codex
       if (pc) {
-        for (let i = 0; i < battle.teams.a.length; i++) {
-          const battlePet = battle.teams.a[i];
-          if (battlePet.fainted) continue;
-
+        let hpIdx = 0;
+        for (let i = 0; i < pc.petTeam.length; i++) {
           const codexIdx = pc.petTeam[i];
           if (codexIdx === null || codexIdx === undefined) continue;
           const petData = pc.petCodex[codexIdx];
-          if (!petData) continue;
+          if (!petData || !petData.petId || petData.fainted) { hpIdx++; continue; }
 
-          petData.xp = (petData.xp || 0) + xpGained;
+          // Only award XP to non-fainted pets (per client report)
+          if (hpIdx < petHpStates.length && !petHpStates[hpIdx].fainted) {
+            petData.xp = (petData.xp || 0) + xpGained;
 
-          while (petData.level < PET_MAX_LEVEL) {
-            const needed = getXpForLevel(petData.level + 1);
-            if (petData.xp >= needed) {
-              petData.xp -= needed;
-              petData.level++;
-              levelUps.push({ petId: petData.petId, newLevel: petData.level });
+            while (petData.level < PET_MAX_LEVEL) {
+              const needed = getXpForLevel(petData.level + 1);
+              if (petData.xp >= needed) {
+                petData.xp -= needed;
+                petData.level++;
+                levelUps.push({ petId: petData.petId, newLevel: petData.level });
 
-              const newStats = getPetStats(petData.petId, petData.level, petData.tierUp || 0);
-              petData.maxHp = newStats.hp + (petData.bonusStats || 0);
-              petData.currentHp = petData.maxHp;
+                const newStats = getPetStats(petData.petId, petData.level, petData.tierUp || 0);
+                petData.maxHp = newStats.hp + (petData.bonusStats || 0);
+                petData.currentHp = petData.maxHp;
 
-              if (PET_SKILL_UNLOCK_LEVELS.includes(petData.level)) {
-                const newSkill = getRandomNewSkill(petData.petId, petData.learnedSkills || []);
-                if (newSkill) {
-                  if (!petData.learnedSkills) petData.learnedSkills = [];
-                  petData.learnedSkills.push(newSkill);
-                  newSkills.push(newSkill);
+                if (PET_SKILL_UNLOCK_LEVELS.includes(petData.level)) {
+                  const newSkill = getRandomNewSkill(petData.petId, petData.learnedSkills || []);
+                  if (newSkill) {
+                    if (!petData.learnedSkills) petData.learnedSkills = [];
+                    petData.learnedSkills.push(newSkill);
+                    newSkills.push(newSkill);
+                  }
                 }
-              }
-            } else break;
+              } else break;
+            }
           }
+          hpIdx++;
         }
       }
     }
 
-    // Sync pet HP back to codex
+    // Sync pet HP back to codex from client report
     if (pc) {
-      for (let i = 0; i < battle.teams.a.length; i++) {
+      let hpIdx = 0;
+      for (let i = 0; i < pc.petTeam.length; i++) {
         const codexIdx = pc.petTeam[i];
         if (codexIdx === null || codexIdx === undefined) continue;
         const petData = pc.petCodex[codexIdx];
-        if (!petData) continue;
+        if (!petData || !petData.petId) { hpIdx++; continue; }
 
-        const battlePet = battle.teams.a[i];
-        if (battlePet) {
-          petData.currentHp = battlePet.currentHp;
-          petData.fainted = battlePet.fainted;
+        if (hpIdx < petHpStates.length) {
+          const reported = petHpStates[hpIdx];
+          // Clamp HP to valid range
+          petData.currentHp = Math.max(0, Math.min(petData.maxHp, reported.currentHp));
+          petData.fainted = reported.fainted || petData.currentHp <= 0;
         }
+        hpIdx++;
       }
     }
 
-    // Capture all defeated wild creatures on win
+    // Capture defeated wild creatures on win
     let captured = false;
-    if (battle.result === 'win_a' && pc) {
-      const defeated = battle.teams.b.filter(u => u.fainted);
-      for (const enemy of defeated) {
+    if (result === 'win_a' && pc) {
+      for (const enemy of session.wildTeam) {
         const petDef = PET_DB[enemy.petId];
         if (!petDef) continue;
         const stats = getPetStats(enemy.petId, enemy.level);
@@ -291,7 +237,7 @@ export default class PetBattleManager {
           xp: 0,
           currentHp: stats.hp,
           maxHp: stats.hp,
-          learnedSkills: [...enemy.skills],
+          learnedSkills: [...enemy.learnedSkills],
           fainted: false,
           isRare: false,
           bonusStats: 0,
@@ -313,12 +259,11 @@ export default class PetBattleManager {
     }
 
     // Clean up
-    this.activeBattles.delete(playerConn.id);
-    if (pc) pc.activeBattle = null;
+    this._cleanup(playerConn, pc);
 
-    // Send end
+    // Send end data
     playerConn.emit(MSG.PET_BATTLE_END, {
-      result: battle.result === 'win_a' ? 'win' : battle.result === 'flee' ? 'flee' : battle.result === 'stalemate' ? 'stalemate' : 'lose',
+      result: result === 'win_a' ? 'win' : result === 'flee' ? 'flee' : result === 'stalemate' ? 'stalemate' : 'lose',
       xpGained,
       levelUps,
       newSkills,
@@ -327,6 +272,21 @@ export default class PetBattleManager {
 
     if (pc) {
       playerConn.emit(MSG.PET_CODEX_UPDATE, { petCodex: pc.petCodex, petTeam: pc.petTeam });
+    }
+  }
+
+  _cleanup(playerConn, pc) {
+    this.activeBattles.delete(playerConn.id);
+    if (pc) pc.activeBattle = null;
+  }
+
+  removePlayer(playerId) {
+    const session = this.activeBattles.get(playerId);
+    if (session) {
+      this.activeBattles.delete(playerId);
+      const entity = this.gameServer.getPlayerEntity(playerId);
+      const pc = entity?.getComponent(PlayerComponent);
+      if (pc) pc.activeBattle = null;
     }
   }
 

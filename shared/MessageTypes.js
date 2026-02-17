@@ -156,6 +156,7 @@ export const MSG = {
   PET_BATTLE_ACTION:  'pet:battle:action',
   PET_BATTLE_RESULT:  'pet:battle:result',
   PET_BATTLE_END:     'pet:battle:end',
+  PET_BATTLE_REPORT:  'pet:battle:report',
   PET_TEAM_UPDATE:    'pet:team:update',
   PET_TEAM_SET:       'pet:team:set',
   PET_HEAL:           'pet:heal',

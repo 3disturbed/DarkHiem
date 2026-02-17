@@ -638,6 +638,11 @@ export default class NetworkClient {
     this.socket.emit(MSG.PET_BATTLE_ACTION, action);
   }
 
+  sendPetBattleReport(report) {
+    if (!this.connected) return;
+    this.socket.emit(MSG.PET_BATTLE_REPORT, report);
+  }
+
   sendPetBreedStart(pet1Codex, pet2Codex) {
     if (!this.connected) return;
     this.socket.emit(MSG.PET_BREED_START, { pet1Codex, pet2Codex });

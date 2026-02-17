@@ -1,6 +1,7 @@
 import enemySprites, { getAnimMeta } from '../entities/EnemySprites.js';
 import { PET_DB, STATUS_EFFECTS, AP_PER_TURN, BASIC_ATTACK_AP } from '../../shared/PetTypes.js';
 import { SKILL_DB, getTurnBasedSkill } from '../../shared/SkillTypes.js';
+import TeamBattle from '../../shared/TeamBattle.js';
 
 const MENU_MAIN = 'main';
 const MENU_SKILLS = 'skills';
@@ -45,6 +46,9 @@ export default class PetBattlePanel {
     this.ended = false;
     this.result = null;
 
+    this.battle = null;
+    this._reportSent = false;
+
     this.shakeTimers = {};
     this.flashTimers = {};
     this.enemyTurnTimer = 0;
@@ -74,20 +78,31 @@ export default class PetBattlePanel {
     this.lastHeight = 300;
   }
 
-  open(battleState) {
+  open(battleData) {
     this.active = true;
-    this.teams = battleState.teams;
-    this.initiativeOrder = battleState.initiativeOrder || [];
-    this.activeUnit = battleState.activeUnit;
-    this.ap = battleState.ap || AP_PER_TURN;
-    this.round = battleState.round || 1;
-    this.log = battleState.log || [];
-    this.ended = battleState.ended || false;
-    this.result = battleState.result;
+    this.battleEndData = null;
+    this.ended = false;
+    this.result = null;
+    this._reportSent = false;
+
+    // Create local TeamBattle instance — battle runs entirely on the client
+    this.battle = new TeamBattle(battleData.battleId, battleData.teamA, battleData.teamB, { mode: 'pve' });
+
+    // Start the first unit's turn
+    this.battle.startUnitTurn();
+
+    // Initialize panel state from battle
+    const fullState = this.battle.getFullState();
+    this.teams = fullState.teams;
+    this.initiativeOrder = fullState.initiativeOrder || [];
+    this.activeUnit = fullState.activeUnit;
+    this.ap = fullState.ap || AP_PER_TURN;
+    this.round = fullState.round || 1;
+    this.log = fullState.log || [];
+
     this.menuMode = MENU_MAIN;
     this.menuIndex = 0;
     this.pendingAction = null;
-    this.battleEndData = null;
 
     // Reset animation state
     this.animQueue = [];
@@ -103,11 +118,19 @@ export default class PetBattlePanel {
     this.endScreenTimer = 0;
     this.endScreenStarted = false;
     this._initDisplayHp();
+
+    // If first unit is an enemy, auto-resolve AI turn
+    const current = this.battle.getCurrentUnit();
+    if (current && current.team === 'b') {
+      this._resolveAITurnAndQueue();
+    }
   }
 
   close() {
     this.active = false;
     this.teams = null;
+    this.battle = null;
+    this._reportSent = false;
     this.battleEndData = null;
     this.ended = false;
     this.result = null;
@@ -116,6 +139,78 @@ export default class PetBattlePanel {
     this.isAnimating = false;
     this.endScreenTimer = 0;
     this.endScreenStarted = false;
+  }
+
+  // ═══════════════════════════════════════════════
+  // Local battle execution
+  // ═══════════════════════════════════════════════
+
+  executeLocalAction(action) {
+    if (!this.battle || this.battle.ended) return;
+
+    const result = this.battle.executeAction(action);
+    if (!result) return;
+
+    // Feed result into the existing animation system
+    this.handleResult(result);
+
+    if (this.battle.ended) {
+      this._localBattleEnded();
+      return;
+    }
+
+    // If player still has AP, stay on their turn
+    if (this.battle.ap > 0) {
+      this.ap = this.battle.ap;
+      return;
+    }
+
+    // Turn ended — advance
+    this._advanceLocalTurn();
+  }
+
+  _resolveAITurnAndQueue() {
+    const aiResults = this.battle.resolveAITurn();
+    for (const r of aiResults) {
+      this.handleResult({ ...r, isEnemyTurn: true });
+    }
+    if (this.battle.ended) {
+      this._localBattleEnded();
+      return;
+    }
+    this._advanceLocalTurn();
+  }
+
+  _advanceLocalTurn() {
+    const turnState = this.battle.advanceTurn();
+    if (!turnState || this.battle.ended) {
+      if (this.battle.ended) this._localBattleEnded();
+      return;
+    }
+
+    // Queue turn start animation
+    this.handleTurnStart(turnState);
+
+    const current = this.battle.getCurrentUnit();
+    if (current && current.team === 'b') {
+      this._resolveAITurnAndQueue();
+    }
+  }
+
+  _localBattleEnded() {
+    this.ended = true;
+    this.result = this.battle.result;
+  }
+
+  getBattleReport() {
+    if (!this.battle) return null;
+    return {
+      result: this.battle.result,
+      petHpStates: this.battle.teams.a.map(u => ({
+        currentHp: u.currentHp,
+        fainted: u.fainted,
+      })),
+    };
   }
 
   // ═══════════════════════════════════════════════

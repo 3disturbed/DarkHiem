@@ -858,6 +858,16 @@ export default class Game {
     // Pet battle takes over all input when active
     if (this.inPetBattle) {
       this.petBattlePanel.update(dt);
+
+      // Send battle report to server as soon as battle ends locally
+      if (this.petBattlePanel.ended && !this.petBattlePanel._reportSent) {
+        this.petBattlePanel._reportSent = true;
+        const report = this.petBattlePanel.getBattleReport();
+        if (report) {
+          this.network.sendPetBattleReport(report);
+        }
+      }
+
       const kb = this.input.keyboard;
       // Menu navigation via WASD/arrows (justPressed for discrete taps)
       if (kb.wasAnyJustPressed(['ArrowLeft', 'KeyA']) || actions.dpadLeft) this.petBattlePanel.selectDir(-1, 0);
@@ -869,8 +879,9 @@ export default class Game {
         if (this.petBattlePanel.ended || this.petBattlePanel.battleEndData) {
           this._closePetBattle();
         } else {
+          // Execute action locally — battle runs on the client
           this.petBattlePanel.confirm((action) => {
-            this.network.sendPetBattleAction(action);
+            this.petBattlePanel.executeLocalAction(action);
           });
         }
       }

@@ -1,5 +1,5 @@
 import { MSG } from '../../shared/MessageTypes.js';
-import TeamBattle from './TeamBattle.js';
+import TeamBattle from '../../shared/TeamBattle.js';
 import PlayerComponent from '../ecs/components/PlayerComponent.js';
 import NameComponent from '../ecs/components/NameComponent.js';
 

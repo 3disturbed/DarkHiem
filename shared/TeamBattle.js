@@ -1,5 +1,5 @@
-import { PET_DB, getPetStats, AP_PER_TURN, BASIC_ATTACK_AP, STATUS_EFFECTS, PET_FLEE_CHANCE, PET_MAX_TURNS } from '../../shared/PetTypes.js';
-import { getTurnBasedSkill } from '../../shared/SkillTypes.js';
+import { PET_DB, getPetStats, AP_PER_TURN, BASIC_ATTACK_AP, STATUS_EFFECTS, PET_FLEE_CHANCE, PET_MAX_TURNS } from './PetTypes.js';
+import { getTurnBasedSkill } from './SkillTypes.js';
 
 export default class TeamBattle {
   constructor(battleId, teamAPets, teamBPets, { mode = 'pve' } = {}) {
