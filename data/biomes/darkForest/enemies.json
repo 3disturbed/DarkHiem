@@ -130,6 +130,167 @@
       "deaggroRange": 288,
       "armor": 3,
       "knockback": 6
+    },
+    {
+      "id": "elder_treant",
+      "name": "Elder Treant",
+      "health": 200,
+      "damage": 25,
+      "speed": 35,
+      "armor": 10,
+      "xpReward": 45,
+      "drops": [
+        { "item": "living_bark", "chance": 0.6, "min": 1, "max": 3 },
+        { "item": "druidic_staff", "chance": 0.05, "min": 1, "max": 1 }
+      ],
+      "minGradient": 0.3,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.0,
+      "densityAtRight": 0.012,
+      "color": "#4a3728",
+      "size": 34,
+      "behavior": "caster",
+      "aggroRange": 144,
+      "deaggroRange": 288,
+      "leashRange": 320,
+      "casterSkills": [
+        {
+          "id": "treant_root",
+          "effectType": "debuff",
+          "castRange": 120,
+          "cooldown": 8,
+          "windup": 0.8,
+          "castChance": 0.35,
+          "debuffType": "enemy_root",
+          "debuffDuration": 2.5,
+          "effects": { "speedMod": 0 }
+        },
+        {
+          "id": "treant_heal",
+          "effectType": "self_heal",
+          "castRange": 9999,
+          "cooldown": 15,
+          "windup": 1.0,
+          "castChance": 0.5,
+          "hpThreshold": 0.5,
+          "healPercent": 0.15
+        }
+      ]
+    },
+    {
+      "id": "forest_sprite",
+      "name": "Forest Sprite",
+      "health": 30,
+      "damage": 8,
+      "speed": 85,
+      "xpReward": 12,
+      "drops": [
+        { "item": "sprite_dust", "chance": 0.5, "min": 1, "max": 2 }
+      ],
+      "minGradient": 0.2,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.01,
+      "densityAtRight": 0.04,
+      "color": "#7dcea0",
+      "size": 16,
+      "behavior": "caster",
+      "aggroRange": 160,
+      "deaggroRange": 288,
+      "casterSkills": [
+        {
+          "id": "sprite_bolt",
+          "effectType": "ranged_projectile",
+          "castRange": 140,
+          "cooldown": 3.5,
+          "windup": 0.4,
+          "castChance": 0.45,
+          "damage": 10,
+          "projectileType": "nature_bolt",
+          "projectileSpeed": 380
+        }
+      ]
+    },
+    {
+      "id": "shambling_mound",
+      "name": "Shambling Mound",
+      "health": 120,
+      "damage": 20,
+      "speed": 40,
+      "armor": 5,
+      "xpReward": 30,
+      "drops": [
+        { "item": "living_bark", "chance": 0.4, "min": 1, "max": 2 },
+        { "item": "tanglewood_bow", "chance": 0.03, "min": 1, "max": 1 }
+      ],
+      "minGradient": 0.3,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.0,
+      "densityAtRight": 0.02,
+      "color": "#6b8e23",
+      "size": 30,
+      "behavior": "caster",
+      "aggroRange": 128,
+      "deaggroRange": 256,
+      "casterSkills": [
+        {
+          "id": "poison_spore",
+          "effectType": "aoe_damage",
+          "castRange": 80,
+          "cooldown": 7,
+          "windup": 0.7,
+          "castChance": 0.4,
+          "damage": 8,
+          "radius": 64,
+          "dotType": "poison_spore",
+          "dotDuration": 5,
+          "dotDamage": 3
+        }
+      ]
+    },
+    {
+      "id": "druid_spirit",
+      "name": "Druid Spirit",
+      "health": 45,
+      "damage": 15,
+      "speed": 55,
+      "xpReward": 22,
+      "drops": [
+        { "item": "sprite_dust", "chance": 0.4, "min": 1, "max": 1 },
+        { "item": "rootweave_gloves", "chance": 0.04, "min": 1, "max": 1 }
+      ],
+      "minGradient": 0.4,
+      "maxGradient": 1.0,
+      "densityAtLeft": 0.0,
+      "densityAtRight": 0.025,
+      "color": "#a8d8a8",
+      "size": 20,
+      "behavior": "caster",
+      "aggroRange": 160,
+      "deaggroRange": 288,
+      "casterSkills": [
+        {
+          "id": "spirit_nature_bolt",
+          "effectType": "ranged_projectile",
+          "castRange": 140,
+          "cooldown": 4,
+          "windup": 0.5,
+          "castChance": 0.4,
+          "damage": 12,
+          "projectileType": "nature_bolt",
+          "projectileSpeed": 360
+        },
+        {
+          "id": "spirit_slow",
+          "effectType": "debuff",
+          "castRange": 120,
+          "cooldown": 10,
+          "windup": 0.6,
+          "castChance": 0.3,
+          "debuffType": "enemy_slow",
+          "debuffDuration": 4,
+          "effects": { "speedMod": 0.6 }
+        }
+      ]
     }
   ]
 }
