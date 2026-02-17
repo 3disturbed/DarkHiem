@@ -14,6 +14,7 @@ export default class StructureSpawnSystem extends System {
     this.spawnTimer = 0;
     this.spawnedStructures = new Map(); // chunkKey -> Set of structureIndex
     this.structureEntities = new Map(); // "chunkKey:index" -> entityId
+    this.pendingRegistrations = [];    // newly discovered stations to add to global registry
   }
 
   spawnStructures(entityManager, worldManager) {
@@ -70,6 +71,15 @@ export default class StructureSpawnSystem extends System {
           entityManager.add(entity);
           spawned.add(i);
           this.structureEntities.set(`${chunkKey}:${i}`, entity.id);
+
+          // Notify global registry of this station
+          this.pendingRegistrations.push({
+            key: `${chunkKey}:${i}`,
+            x: structData.x,
+            y: structData.y,
+            stationId: structData.stationId,
+            name: def.name,
+          });
         }
       }
     }

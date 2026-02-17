@@ -89,6 +89,9 @@ export default class NetworkClient {
     // Connection lifecycle
     this.onDisconnect = null;
 
+    // Station list (global registry)
+    this.onStationList = null;
+
     // PVP pet battle callbacks
     this.onPvpChallenge = null;
     this.onPvpChallengeTimeout = null;
@@ -355,6 +358,11 @@ export default class NetworkClient {
     });
     this.socket.on(MSG.FISHMONGER_END, (data) => {
       if (this.onFishmongerEnd) this.onFishmongerEnd(data);
+    });
+
+    // Station list (global registry)
+    this.socket.on(MSG.STATION_LIST, (data) => {
+      if (this.onStationList) this.onStationList(data);
     });
 
     // PVP pet battle

@@ -110,13 +110,21 @@ export default class PvPBattleManager {
     const nameA = this._getPlayerName(playerAId);
     const nameB = this._getPlayerName(playerBId);
 
+    // Start the first unit's turn (don't use advanceTurn — that skips index 0)
+    const turnState = battle.startUnitTurn();
+
     // Send battle start to both
     const startState = battle.getFullState();
     connA.emit(MSG.PVP_BATTLE_START, { ...startState, myTeam: 'a', opponentName: nameB });
     connB.emit(MSG.PVP_BATTLE_START, { ...startState, myTeam: 'b', opponentName: nameA });
 
-    // Start first turn
-    this._advanceToNextTurn(session);
+    if (!turnState || battle.ended) {
+      if (battle.ended) this._endBattle(session);
+      return;
+    }
+
+    // Send first turn state to both players
+    this._broadcastTurnState(session, turnState);
   }
 
   handleAction(playerConn, data) {

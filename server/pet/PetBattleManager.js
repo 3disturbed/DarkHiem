@@ -105,12 +105,34 @@ export default class PetBattleManager {
     this.activeBattles.set(playerConn.id, session);
     pc.activeBattle = battle;
 
-    // Send battle start
+    // Start the first unit's turn (don't use advanceTurn — that skips index 0)
+    const turnState = battle.startUnitTurn();
+
+    // Send battle start with first turn info merged
     const startState = battle.getFullState();
     playerConn.emit(MSG.PET_BATTLE_START, startState);
 
-    // Start the first unit's turn
-    this._advanceToNextTurn(playerConn.id);
+    if (!turnState || battle.ended) {
+      if (battle.ended) this._endBattle(playerConn, session);
+      return true;
+    }
+
+    // Send the first turn state
+    const current = battle.getCurrentUnit();
+    playerConn.emit(MSG.PET_BATTLE_STATE, turnState);
+
+    // If the first unit is an enemy, auto-resolve AI
+    if (current && current.team === 'b') {
+      const aiResults = battle.resolveAITurn();
+      for (const r of aiResults) {
+        playerConn.emit(MSG.PET_BATTLE_RESULT, { ...r, isEnemyTurn: true });
+      }
+      if (battle.ended) {
+        this._endBattle(playerConn, session);
+        return true;
+      }
+      this._advanceToNextTurn(playerConn.id);
+    }
 
     return true;
   }

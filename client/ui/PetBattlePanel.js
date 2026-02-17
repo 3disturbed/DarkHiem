@@ -65,6 +65,10 @@ export default class PetBattlePanel {
     this.attackerGlow = null;  // { team, index, color }
     this.cardLunge = {};       // 'team_index' -> { dx, dy }
 
+    // End screen animation
+    this.endScreenTimer = 0;
+    this.endScreenStarted = false;
+
     // Cached render dimensions
     this.lastWidth = 400;
     this.lastHeight = 300;
@@ -96,6 +100,8 @@ export default class PetBattlePanel {
     this.screenFlash = null;
     this.attackerGlow = null;
     this.cardLunge = {};
+    this.endScreenTimer = 0;
+    this.endScreenStarted = false;
     this._initDisplayHp();
   }
 
@@ -108,6 +114,8 @@ export default class PetBattlePanel {
     this.animQueue = [];
     this.currentAnim = null;
     this.isAnimating = false;
+    this.endScreenTimer = 0;
+    this.endScreenStarted = false;
   }
 
   // ═══════════════════════════════════════════════
@@ -239,6 +247,72 @@ export default class PetBattlePanel {
     }
 
     this.isAnimating = this.currentAnim !== null || this.animQueue.length > 0;
+
+    // ── End screen effects ──
+    if (this.ended && !this.isAnimating) {
+      const resultKey = this._getResultKey();
+
+      if (!this.endScreenStarted) {
+        this.endScreenStarted = true;
+        this.endScreenTimer = 0;
+
+        if (resultKey === 'win') {
+          this.screenFlash = { color: '#f1c40f', alpha: 0.5, timer: 0.6, maxTimer: 0.6 };
+          // Initial confetti burst
+          const w = this.lastWidth;
+          const h = this.lastHeight;
+          const colors = ['#f1c40f', '#e74c3c', '#3498db', '#2ecc71', '#9b59b6', '#e67e22', '#fff'];
+          for (let i = 0; i < 40; i++) {
+            this.particles.push({
+              x: w / 2 + (Math.random() - 0.5) * w * 0.4,
+              y: h * 0.4,
+              vx: (Math.random() - 0.5) * 120,
+              vy: -60 - Math.random() * 80,
+              color: colors[Math.floor(Math.random() * colors.length)],
+              size: 2 + Math.random() * 4,
+              life: 2 + Math.random() * 2, maxLife: 4, gravity: 50,
+            });
+          }
+        } else if (resultKey === 'lose') {
+          this.screenFlash = { color: '#c0392b', alpha: 0.35, timer: 0.5, maxTimer: 0.5 };
+        } else if (resultKey === 'flee') {
+          this.screenFlash = { color: '#f39c12', alpha: 0.3, timer: 0.3, maxTimer: 0.3 };
+        }
+      }
+
+      this.endScreenTimer += dt;
+
+      // Continuous confetti for victory
+      if (resultKey === 'win' && this.endScreenTimer < 8) {
+        const colors = ['#f1c40f', '#e74c3c', '#3498db', '#2ecc71', '#9b59b6', '#e67e22'];
+        if (Math.random() < 0.35) {
+          this.particles.push({
+            x: Math.random() * this.lastWidth,
+            y: -4,
+            vx: (Math.random() - 0.5) * 25,
+            vy: 30 + Math.random() * 40,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            size: 2 + Math.random() * 3,
+            life: 3 + Math.random() * 2, maxLife: 5, gravity: 8,
+          });
+        }
+      }
+
+      // Slow red embers for defeat
+      if (resultKey === 'lose' && this.endScreenTimer < 6) {
+        if (Math.random() < 0.15) {
+          this.particles.push({
+            x: Math.random() * this.lastWidth,
+            y: this.lastHeight + 4,
+            vx: (Math.random() - 0.5) * 10,
+            vy: -15 - Math.random() * 20,
+            color: Math.random() < 0.5 ? '#c0392b' : '#e74c3c',
+            size: 1.5 + Math.random() * 2,
+            life: 2 + Math.random() * 2, maxLife: 4, gravity: -3,
+          });
+        }
+      }
+    }
   }
 
   // ═══════════════════════════════════════════════
@@ -778,6 +852,9 @@ export default class PetBattlePanel {
 
     if (this.ended && !this.isAnimating) {
       this._renderEndScreen(ctx, width, height, menuY, menuH);
+      // Re-render particles on top of overlay so confetti is visible
+      this._renderParticles(ctx);
+      this._renderScreenFlash(ctx, width, height);
     } else if (this.isAnimating) {
       this._renderAnimStatus(ctx, width, menuY, menuH);
     } else if (this.activeUnit?.team === 'b') {
@@ -1261,56 +1338,145 @@ export default class PetBattlePanel {
   }
 
   _renderEndScreen(ctx, width, height, menuY, menuH) {
-    ctx.font = 'bold 18px monospace';
+    const t = this.endScreenTimer;
+    const resultKey = this._getResultKey();
+    const resultText = { win: 'VICTORY!', lose: 'Defeat...', flee: 'Got Away!', stalemate: 'Stalemate' };
+    const resultColor = { win: '#2ecc71', lose: '#e74c3c', flee: '#f39c12', stalemate: '#95a5a6' };
+    const title = resultText[resultKey] || 'Battle Over';
+    const titleColor = resultColor[resultKey] || '#fff';
+
+    // ── Full-screen tinted overlay ──
+    const overlayAlpha = Math.min(0.55, t * 1.5);
+    ctx.globalAlpha = overlayAlpha;
+    if (resultKey === 'win') {
+      ctx.fillStyle = '#0a1a0a';
+    } else if (resultKey === 'lose') {
+      ctx.fillStyle = '#1a0808';
+    } else {
+      ctx.fillStyle = '#1a1a08';
+    }
+    ctx.fillRect(0, 0, width, height);
+    ctx.globalAlpha = 1;
+
+    // ── Title glow halo (victory only) ──
+    const titleY = menuY + 26;
+    if (resultKey === 'win') {
+      const glowPulse = 0.4 + 0.6 * Math.sin(t * 3.5);
+      const glowRadius = 45 + glowPulse * 20;
+
+      const grad = ctx.createRadialGradient(width / 2, titleY - 4, 0, width / 2, titleY - 4, glowRadius);
+      grad.addColorStop(0, `rgba(241, 196, 15, ${0.18 + glowPulse * 0.1})`);
+      grad.addColorStop(0.5, `rgba(46, 204, 113, ${0.08 + glowPulse * 0.05})`);
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(width / 2 - glowRadius, titleY - 4 - glowRadius, glowRadius * 2, glowRadius * 2);
+    }
+
+    // ── Animated title text ──
+    const scaleIn = Math.min(1, t / 0.35);
+    const eased = 1 - Math.pow(1 - scaleIn, 3); // ease-out cubic
+    const bounce = t > 0.35 ? Math.sin((t - 0.35) * 4) * 2.5 * Math.max(0, 1 - (t - 0.35)) : 0;
+    const fontSize = Math.round(22 * eased);
+
     ctx.textAlign = 'center';
 
-    let resultKey = this.battleEndData?.result || this.result || 'win';
-    if (resultKey === 'win_a') resultKey = 'win';
-    if (resultKey === 'win_b') resultKey = 'lose';
+    // Shadow
+    ctx.font = `bold ${fontSize}px monospace`;
+    ctx.fillStyle = '#000';
+    ctx.fillText(title, width / 2 + 2, titleY + bounce + 2);
 
-    const resultText = { win: 'Victory!', lose: 'Defeat...', flee: 'Got Away!', stalemate: 'Stalemate' };
-    const resultColor = { win: '#2ecc71', lose: '#e74c3c', flee: '#f39c12', stalemate: '#95a5a6' };
+    // Colored text
+    ctx.fillStyle = titleColor;
+    ctx.fillText(title, width / 2, titleY + bounce);
 
-    ctx.fillStyle = resultColor[resultKey] || '#fff';
-    ctx.fillText(resultText[resultKey] || 'Battle Over', width / 2, menuY + 24);
+    // Bright highlight stroke on victory
+    if (resultKey === 'win' && fontSize > 0) {
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 0.5;
+      ctx.strokeText(title, width / 2, titleY + bounce);
+    }
 
-    let infoY = menuY + 44;
+    // ── Staggered info lines ──
+    let infoY = menuY + 50;
+    const stagger = 0.3;
+    let slot = 0;
 
-    if (this.battleEndData) {
-      if (resultKey === 'win' && this.battleEndData.xpGained) {
+    if (this.battleEndData && (resultKey === 'win' || resultKey === 'flee')) {
+      // XP
+      if (this.battleEndData.xpGained) {
+        const a = this._fadeIn(t, 0.6 + slot * stagger);
+        ctx.globalAlpha = a;
         ctx.fillStyle = '#f1c40f';
-        ctx.font = '13px monospace';
+        ctx.font = 'bold 13px monospace';
         ctx.fillText(`+${this.battleEndData.xpGained} XP to surviving pets`, width / 2, infoY);
-        infoY += 16;
+        infoY += 18;
+        slot++;
+      }
 
-        if (this.battleEndData.levelUps?.length > 0) {
-          ctx.fillText(`Level Up! (${this.battleEndData.levelUps.length} pet${this.battleEndData.levelUps.length > 1 ? 's' : ''})`, width / 2, infoY);
-          infoY += 16;
-        }
+      // Level Ups
+      if (this.battleEndData.levelUps?.length > 0) {
+        const a = this._fadeIn(t, 0.6 + slot * stagger);
+        ctx.globalAlpha = a;
+        const lvPulse = 0.85 + 0.15 * Math.sin(t * 6);
+        const lvSize = Math.round(14 * lvPulse);
+        ctx.font = `bold ${lvSize}px monospace`;
+        ctx.fillStyle = '#f1c40f';
+        const count = this.battleEndData.levelUps.length;
+        ctx.fillText(`LEVEL UP! (${count} pet${count > 1 ? 's' : ''})`, width / 2, infoY);
+        infoY += 18;
+        slot++;
+      }
 
-        if (this.battleEndData.newSkills?.length > 0) {
-          ctx.fillStyle = '#9b59b6';
-          const skillNames = this.battleEndData.newSkills.map(s => SKILL_DB[s]?.name || s).join(', ');
-          ctx.fillText(`Learned: ${skillNames}`, width / 2, infoY);
-          infoY += 16;
-        }
+      // New Skills
+      if (this.battleEndData.newSkills?.length > 0) {
+        const a = this._fadeIn(t, 0.6 + slot * stagger);
+        ctx.globalAlpha = a;
+        ctx.font = 'bold 12px monospace';
+        ctx.fillStyle = '#9b59b6';
+        const names = this.battleEndData.newSkills.map(s => SKILL_DB[s]?.name || s).join(', ');
+        ctx.fillText(`Learned: ${names}`, width / 2, infoY);
+        infoY += 18;
+        slot++;
+      }
 
-        if (this.battleEndData.captured) {
-          ctx.fillStyle = '#3498db';
-          ctx.fillText('Wild creature captured!', width / 2, infoY);
-          infoY += 16;
-        }
+      // Captured
+      if (this.battleEndData.captured) {
+        const a = this._fadeIn(t, 0.6 + slot * stagger);
+        ctx.globalAlpha = a;
+        const capPulse = 0.8 + 0.2 * Math.sin(t * 5);
+        ctx.font = `bold ${Math.round(13 * capPulse)}px monospace`;
+        ctx.fillStyle = '#3498db';
+        ctx.fillText('Wild creature captured!', width / 2, infoY);
+        infoY += 18;
+        slot++;
       }
     }
 
-    ctx.fillStyle = '#aaa';
+    // ── Continue prompt (pulsing) ──
+    const promptDelay = 1.2 + slot * stagger;
+    const promptAlpha = this._fadeIn(t, promptDelay);
+    const promptPulse = 0.5 + 0.5 * Math.sin(t * 3);
+    ctx.globalAlpha = promptAlpha * (0.55 + promptPulse * 0.45);
+    ctx.fillStyle = '#ddd';
     ctx.font = '11px monospace';
-    ctx.fillText('Press SPACE or ESC to continue', width / 2, infoY + 4);
+    ctx.fillText('Press SPACE or ESC to continue', width / 2, infoY + 8);
+    ctx.globalAlpha = 1;
   }
 
   // ═══════════════════════════════════════════════
   // Helpers
   // ═══════════════════════════════════════════════
+
+  _getResultKey() {
+    let key = this.battleEndData?.result || this.result || 'win';
+    if (key === 'win_a') key = 'win';
+    if (key === 'win_b') key = 'lose';
+    return key;
+  }
+
+  _fadeIn(t, delay) {
+    return Math.min(1, Math.max(0, (t - delay) / 0.3));
+  }
 
   _getCardCenter(team, index) {
     const w = this.lastWidth;

@@ -65,7 +65,8 @@ export default class Game {
     this.remotePlayers = new Map(); // id -> {name, color, x, y, hp, maxHp, facing}
     this.enemies = new Map(); // id -> entity state from server
     this.resources = new Map(); // id -> resource entity state
-    this.stations = new Map(); // id -> station entity state
+    this.stations = new Map(); // id -> station entity state (AOI-local)
+    this.allStations = new Map(); // id -> {x, y, stationId, name} (global registry from server)
     this.npcs = new Map();     // id -> npc entity state
     this.wildHorses = new Map(); // id -> wild horse entity state
     this.projectiles = new Map(); // id -> projectile entity state
@@ -741,6 +742,21 @@ export default class Game {
       }
     };
 
+    // Station list (global registry — all discovered stations, even distant)
+    this.network.onStationList = (data) => {
+      if (data.stations) {
+        // Full list on join
+        this.allStations.clear();
+        for (const s of data.stations) {
+          this.allStations.set(s.id, { x: s.x, y: s.y, stationId: s.stationId, name: s.name });
+        }
+      } else if (data.add) {
+        // Single addition broadcast
+        const s = data.add;
+        this.allStations.set(s.id, { x: s.x, y: s.y, stationId: s.stationId, name: s.name });
+      }
+    };
+
     // Mail system callbacks
     this.network.onMailJobs = (data) => {
       this.mailJobPanel.position(this.renderer.logicalWidth, this.renderer.logicalHeight);
@@ -1219,7 +1235,7 @@ export default class Game {
         if (this.worldMap.dragging) {
           // Mouse released — check for click (not drag)
           const r = this.renderer;
-          const result = this.worldMap.handleClick(uiMX, uiMY, r.logicalWidth, r.logicalHeight, this.localPlayer, this.stations);
+          const result = this.worldMap.handleClick(uiMX, uiMY, r.logicalWidth, r.logicalHeight, this.localPlayer, this.allStations);
           if (result && result.action === 'travel') {
             this.network.sendStationTravel(result.x, result.y);
             this.worldMap.close();
@@ -2080,11 +2096,11 @@ export default class Game {
     // Minimap (always visible when not in world map)
     if (!this.worldMap.visible) {
       this.minimap.position(r.logicalWidth);
-      this.minimap.render(ctx, this.worldManager, this.exploredChunks, this.localPlayer, this.remotePlayers, this.stations);
+      this.minimap.render(ctx, this.worldManager, this.exploredChunks, this.localPlayer, this.remotePlayers, this.allStations);
     }
 
     // World map (full-screen overlay)
-    this.worldMap.render(ctx, r.logicalWidth, r.logicalHeight, this.exploredChunks, this.biomeCache, this.localPlayer, this.remotePlayers, this.stations, this.worldManager);
+    this.worldMap.render(ctx, r.logicalWidth, r.logicalHeight, this.exploredChunks, this.biomeCache, this.localPlayer, this.remotePlayers, this.allStations, this.worldManager);
 
     // Pet battle overlay (renders on top of everything except death screen)
     if (this.inPetBattle) {

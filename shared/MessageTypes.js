@@ -135,6 +135,7 @@ export const MSG = {
   // Town recall / travel
   TOWN_RECALL:        'player:recall',
   STATION_TRAVEL:     'station:travel',
+  STATION_LIST:       'station:list',
 
   // Horse
   HORSE_CAPTURE:      'horse:capture',

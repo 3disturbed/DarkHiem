@@ -367,6 +367,17 @@ export default class GameServer {
         stationEntity.structureChunkKey = chunkKey;
         stationEntity.structureIndex = idx;
         this.structureSpawnSystem.trackSpawned(chunkKey, idx, stationEntity.id);
+
+        // Add to global station registry for map display
+        if (this.stationRegistry) {
+          const regKey = `${chunkKey}:${idx}`;
+          const entry = { x: placeX, y: placeY, stationId, name: stationDef?.name || stationId };
+          this.stationRegistry.set(regKey, entry);
+          // Broadcast to all players
+          for (const [, conn] of this.players) {
+            conn.emit(MSG.STATION_LIST, { add: { id: regKey, ...entry } });
+          }
+        }
       }
     }
 
@@ -478,6 +489,9 @@ export default class GameServer {
     await this.townManager.init();
     this.townManager.spawnNPCs(this.entityManager);
 
+    // Global station registry — persists across chunk load/unload for map display
+    this.stationRegistry = new Map(); // "chunkKey:idx" -> { x, y, stationId, name }
+
     console.log('[GameServer] ECS + Combat + AI + Resources + Crafting + Town initialized');
   }
 
@@ -522,6 +536,21 @@ export default class GameServer {
 
     // Destroy marked entities
     this.entityManager.flushDestroyed();
+
+    // Register newly discovered stations into global registry
+    if (this.structureSpawnSystem && this.stationRegistry) {
+      const pending = this.structureSpawnSystem.pendingRegistrations;
+      for (const s of pending) {
+        if (!this.stationRegistry.has(s.key)) {
+          this.stationRegistry.set(s.key, { x: s.x, y: s.y, stationId: s.stationId, name: s.name });
+          // Broadcast this addition to all connected players
+          for (const [, conn] of this.players) {
+            conn.emit(MSG.STATION_LIST, { add: { id: s.key, x: s.x, y: s.y, stationId: s.stationId, name: s.name } });
+          }
+        }
+      }
+      pending.length = 0;
+    }
 
     // Passive pet healing: every 5 seconds (100 ticks at 20 TPS), heal 2% max HP
     if (this.tickCount % 100 === 0) {
@@ -904,6 +933,15 @@ export default class GameServer {
         hotbar: skillComp.hotbar,
         cooldowns: skillComp.cooldowns,
       });
+    }
+
+    // Send global station list for map display
+    if (this.stationRegistry && this.stationRegistry.size > 0) {
+      const stations = [];
+      for (const [id, s] of this.stationRegistry) {
+        stations.push({ id, x: s.x, y: s.y, stationId: s.stationId, name: s.name });
+      }
+      playerConn.emit(MSG.STATION_LIST, { stations });
     }
 
     // Notify others
