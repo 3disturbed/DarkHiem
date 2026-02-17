@@ -236,6 +236,26 @@ export const ITEM_DB = {
     description: 'A light and fast pine bow.',
   },
 
+  // --- Dark Forest Drops (Druid/Nature) ---
+  druidic_staff: {
+    id: 'druidic_staff', name: 'Druidic Staff', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.1, range: 80, weaponType: 'staff', projectileType: 'nature_bolt',
+    statBonuses: { baseDamage: 24, vit: 6, end: 2 }, tier: 2, rarity: 'rare', gemSlots: 2,
+    description: 'A living staff that hums with nature magic.',
+  },
+  tanglewood_bow: {
+    id: 'tanglewood_bow', name: 'Tanglewood Bow', type: 'equipment', slot: 'weapon',
+    attackSpeed: 0.9, range: 96, weaponType: 'bow', projectileType: 'arrow',
+    statBonuses: { baseDamage: 22, dex: 4, lck: 2 }, tier: 2, rarity: 'rare', gemSlots: 2,
+    description: 'Arrows from this bow trail thorny vines.',
+  },
+  rootweave_gloves: {
+    id: 'rootweave_gloves', name: 'Rootweave Gloves', type: 'equipment', slot: 'weapon',
+    attackSpeed: 3.0, range: 24,
+    statBonuses: { baseDamage: 14, dex: 4, vit: 3 }, tier: 2, rarity: 'rare', gemSlots: 2,
+    description: 'Living root wraps that strike with nature fury.',
+  },
+
   // --- Silver (new) ---
   silver_mace: {
     id: 'silver_mace', name: 'Silver Mace', type: 'equipment', slot: 'weapon',
@@ -296,6 +316,26 @@ export const ITEM_DB = {
     attackSpeed: 1.1, range: 100, weaponType: 'bow', projectileType: 'arrow',
     statBonuses: { baseDamage: 30, dex: 5 }, tier: 3, rarity: 'epic', gemSlots: 2,
     description: 'An elegantly crafted fine wood bow.',
+  },
+
+  // --- Swamp Drops (Voodoo/Witch) ---
+  witchwood_wand: {
+    id: 'witchwood_wand', name: 'Witchwood Wand', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.4, range: 80, weaponType: 'staff', projectileType: 'shadow_bolt',
+    statBonuses: { baseDamage: 36, lck: 6, dex: 3 }, tier: 3, rarity: 'epic', gemSlots: 2,
+    description: 'A twisted wand crackling with dark hexes.',
+  },
+  shrunken_head_mace: {
+    id: 'shrunken_head_mace', name: 'Shrunken Head Mace', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.0, range: 36,
+    statBonuses: { baseDamage: 46, str: 4, lck: 4, critChance: 0.08 }, tier: 3, rarity: 'epic', gemSlots: 2,
+    description: 'A grisly mace adorned with shrunken heads.',
+  },
+  cursed_bone_axe: {
+    id: 'cursed_bone_axe', name: 'Cursed Bone Axe', type: 'equipment', slot: 'weapon',
+    attackSpeed: 1.1, range: 40,
+    statBonuses: { baseDamage: 50, str: 6, vit: -2 }, tier: 3, rarity: 'epic', gemSlots: 2,
+    description: 'An axe carved from cursed bone. Power at a cost.',
   },
 
   // --- Obsidian (new) ---
@@ -965,6 +1005,26 @@ export const ITEM_DB = {
   rabbit_foot: {
     id: 'rabbit_foot', name: 'Rabbit Foot', type: 'material', rarity: 'uncommon', stackable: true, maxStack: 10,
     description: 'A lucky rabbit foot.',
+  },
+
+  // --- Dark Forest enemy drops ---
+  living_bark: {
+    id: 'living_bark', name: 'Living Bark', type: 'material', stackable: true, maxStack: 50,
+    description: 'Bark that still pulses with life.',
+  },
+  sprite_dust: {
+    id: 'sprite_dust', name: 'Sprite Dust', type: 'material', stackable: true, maxStack: 50,
+    description: 'Shimmering dust from a forest sprite.',
+  },
+
+  // --- Swamp enemy drops ---
+  hex_fetish: {
+    id: 'hex_fetish', name: 'Hex Fetish', type: 'material', stackable: true, maxStack: 50,
+    description: 'A small totem imbued with dark power.',
+  },
+  voodoo_doll: {
+    id: 'voodoo_doll', name: 'Voodoo Doll', type: 'material', rarity: 'rare', stackable: true, maxStack: 20,
+    description: 'A crude doll pierced with pins. Radiates malice.',
   },
 
   // --- Swamp raw ---

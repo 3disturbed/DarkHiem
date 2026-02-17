@@ -46,6 +46,7 @@ export default class EnemySpawner {
               enemyId: entry.id,
               x: worldX,
               y: worldY,
+              spawnRadius: entry.spawnRadius || 64,
               config: entry,
             });
           }

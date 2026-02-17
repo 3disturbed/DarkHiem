@@ -209,6 +209,28 @@ export default class CombatResolver {
         });
       }
     }
+
+    // Armor debuff on hit (e.g. Shadow Bolt)
+    if (proj.armorDebuff && targetSE) {
+      targetSE.addEffect({
+        type: 'armor_debuff_proj',
+        duration: proj.armorDebuff.duration,
+        armorFlat: proj.armorDebuff.armorFlat,
+      });
+    }
+
+    // DoT on hit (e.g. Spirit Fire)
+    if (proj.dotOnHit && targetSE) {
+      const targetHealth = target.getComponent(HealthComponent);
+      const dotDmg = targetHealth ? targetHealth.max * proj.dotOnHit.percent : 0;
+      if (dotDmg > 0) {
+        targetSE.addEffect({
+          type: 'dot_proj',
+          duration: proj.dotOnHit.duration,
+          tickDamage: dotDmg,
+        });
+      }
+    }
   }
 
   // Process an enemy attacking a player

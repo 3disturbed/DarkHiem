@@ -29,16 +29,18 @@ export default class ProjectileSystem extends System {
         continue;
       }
 
-      // Hit detection: check for enemies within 12px of projectile position
-      const enemies = HitDetector.queryArea(
+      // Hit detection: determine target layer based on projectile owner
+      const owner = entityManager.get(proj.ownerId);
+      const targetLayer = owner && owner.hasTag('enemy') ? 'player' : 'enemy';
+      const targets = HitDetector.queryArea(
         entityManager, pos.x, pos.y, 12,
-        proj.ownerId, 'enemy'
+        proj.ownerId, targetLayer
       );
 
-      if (enemies.length > 0) {
-        // Hit the nearest enemy
+      if (targets.length > 0) {
+        // Hit the nearest target
         if (context.combatResolver) {
-          context.combatResolver.applyProjectileDamage(proj, pos, enemies[0]);
+          context.combatResolver.applyProjectileDamage(proj, pos, targets[0]);
         }
         proj.hit = true;
         entityManager.remove(entity.id);

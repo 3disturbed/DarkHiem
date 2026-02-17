@@ -4,7 +4,8 @@ import PositionComponent from '../components/PositionComponent.js';
 import PlayerComponent from '../components/PlayerComponent.js';
 import AIComponent from '../components/AIComponent.js';
 import NameComponent from '../components/NameComponent.js';
-import { CHUNK_PIXEL_SIZE, VIEW_DISTANCE } from '../../../shared/Constants.js';
+import { CHUNK_PIXEL_SIZE, VIEW_DISTANCE, CHUNK_SIZE, TILE_SIZE } from '../../../shared/Constants.js';
+import { WATER_TILE_IDS } from '../../../shared/TileTypes.js';
 import { PET_DB, PET_PASSIVE_VARIANT_CHANCE } from '../../../shared/PetTypes.js';
 
 const SPAWN_CHECK_INTERVAL = 5; // seconds between spawn checks
@@ -87,7 +88,9 @@ export default class SpawnSystem extends System {
         const toSpawn = Math.min(MAX_ENEMIES_PER_CHUNK - currentEnemies, 2);
         const shuffled = [...enemySpawns].sort(() => Math.random() - 0.5);
         for (let i = 0; i < Math.min(toSpawn, shuffled.length); i++) {
-          const enemy = EntityFactory.createEnemy(shuffled[i]);
+          const sp = shuffled[i];
+          const spawnPos = this._getReachableSpawnPos(sp.x, sp.y, sp.spawnRadius || 64, worldManager);
+          const enemy = EntityFactory.createEnemy({ ...sp, x: spawnPos.x, y: spawnPos.y });
 
           // 5% chance to spawn as passive variant if creature is in PET_DB
           const enemyId = shuffled[i].config?.id;
@@ -116,5 +119,33 @@ export default class SpawnSystem extends System {
         }
       }
     }
+  }
+
+  _getReachableSpawnPos(centerX, centerY, radius, worldManager) {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Math.random() * radius;
+      const x = centerX + Math.cos(angle) * dist;
+      const y = centerY + Math.sin(angle) * dist;
+
+      // Check tile at this position
+      const cx = Math.floor(x / CHUNK_PIXEL_SIZE);
+      const cy = Math.floor(y / CHUNK_PIXEL_SIZE);
+      const chunk = worldManager.chunkManager.getChunk(cx, cy);
+      if (!chunk || !chunk.generated) continue;
+
+      const localX = Math.floor((x - cx * CHUNK_PIXEL_SIZE) / TILE_SIZE);
+      const localY = Math.floor((y - cy * CHUNK_PIXEL_SIZE) / TILE_SIZE);
+      const idx = localY * CHUNK_SIZE + localX;
+
+      if (localX < 0 || localX >= CHUNK_SIZE || localY < 0 || localY >= CHUNK_SIZE) continue;
+      if (chunk.solids && chunk.solids[idx]) continue;
+      if (chunk.tiles && WATER_TILE_IDS.has(chunk.tiles[idx])) continue;
+
+      return { x, y };
+    }
+
+    // Fallback to center if no valid position found
+    return { x: centerX, y: centerY };
   }
 }

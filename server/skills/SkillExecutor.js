@@ -158,6 +158,69 @@ export default class SkillExecutor {
       case SKILL.STORM_CALL:
         result = this.executeStormCall(entity, def, entityManager);
         break;
+      // Witch (Curse/Hex)
+      case SKILL.SHADOW_BOLT:
+        result = this.executeProjectileSkill(entity, def, entityManager, 'shadow_bolt', 500,
+          { armorDebuff: def.armorDebuffOnHit });
+        break;
+      case SKILL.HEX_OF_WEAKNESS:
+        result = this.executeHexOfWeakness(entity, def, entityManager);
+        break;
+      case SKILL.CACKLE:
+        result = this.executeCackle(entity, def, entityManager);
+        break;
+      case SKILL.WITCH_CURSE:
+        result = this.executeWitchCurse(entity, def, entityManager);
+        break;
+      case SKILL.NIGHTMARE:
+        result = this.executeNightmare(entity, def, entityManager);
+        break;
+      case SKILL.SOUL_SIPHON:
+        result = this.executeSoulSiphon(entity, def, entityManager);
+        break;
+      case SKILL.CAULDRON_BREW:
+        result = this.executeCauldronBrew(entity, def, entityManager);
+        break;
+      // Voodoo Witch Doctor
+      case SKILL.SPIRIT_WARD:
+        result = this.executeAoEBuff(entity, def, entityManager, 'skill_spirit_ward');
+        break;
+      case SKILL.VOODOO_CURSE:
+        result = this.executeVoodooCurse(entity, def, entityManager);
+        break;
+      case SKILL.HEX_TOTEM:
+        result = this.executeHexTotem(entity, def, entityManager);
+        break;
+      case SKILL.SPIRIT_FIRE:
+        result = this.executeProjectileSkill(entity, def, entityManager, 'spirit_fire', 480,
+          { dotOnHit: def.dotOnHit });
+        break;
+      case SKILL.BONE_ARMOR:
+        result = this.executeBoneArmor(entity, def);
+        break;
+      case SKILL.SPIRIT_WALK:
+        result = this.executeSpiritWalk(entity, def);
+        break;
+      case SKILL.PLAGUE_SWARM:
+        result = this.executePlagueSwarm(entity, def, entityManager);
+        break;
+      // Druid Additions
+      case SKILL.WRATH:
+        result = this.executeProjectileSkill(entity, def, entityManager, 'nature_bolt', 520);
+        break;
+      case SKILL.ENTANGLING_ROOTS:
+        result = this.executeEntanglingRoots(entity, def, entityManager);
+        break;
+      case SKILL.SWARM_OF_INSECTS:
+        result = this.executeSwarmOfInsects(entity, def, entityManager);
+        break;
+      // Blood Magic Additions
+      case SKILL.DARK_PACT:
+        result = this.executeDarkPact(entity, def, entityManager);
+        break;
+      case SKILL.BLOOD_SHIELD:
+        result = this.executeBloodShield(entity, def);
+        break;
       default:
         return { success: false, message: 'Unknown skill' };
     }
@@ -1304,5 +1367,523 @@ export default class SkillExecutor {
     entityManager.add(zone);
 
     return { success: true, skillId: def.id, type: 'area_zone' };
+  }
+
+  // --- Witch (Curse/Hex) ---
+
+  executeHexOfWeakness(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    if (!pos) return { success: false, message: 'Cannot cast' };
+
+    const target = HitDetector.findNearest(
+      entityManager, pos.x, pos.y, def.range || 120, entity.id, 'enemy'
+    );
+    if (!target) return { success: false, message: 'No target in range' };
+
+    const targetSE = target.getComponent(StatusEffectComponent);
+    if (!targetSE) return { success: false, message: 'No valid target' };
+
+    targetSE.addEffect({
+      type: 'hex_of_weakness',
+      duration: def.duration || 8,
+      damageMod: def.effects.damageMod,
+      speedMod: def.effects.speedMod,
+    });
+
+    return { success: true, skillId: def.id, type: 'debuff' };
+  }
+
+  executeCackle(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    if (!pos) return { success: false, message: 'Cannot cast' };
+
+    const targets = HitDetector.queryArea(
+      entityManager, pos.x, pos.y, def.range || 100, entity.id, 'enemy'
+    );
+
+    if (targets.length === 0) {
+      return { success: true, skillId: def.id, type: 'aoe_debuff', hits: 0 };
+    }
+
+    for (const target of targets) {
+      const se = target.getComponent(StatusEffectComponent);
+      if (se) {
+        se.addEffect({
+          type: 'cackle_debuff',
+          duration: def.duration || 8,
+          attackSpeedMod: def.effects.attackSpeedMod,
+          speedMod: def.effects.speedMod,
+        });
+      }
+    }
+
+    return { success: true, skillId: def.id, type: 'aoe_debuff', hits: targets.length };
+  }
+
+  executeWitchCurse(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    if (!pos) return { success: false, message: 'Cannot cast' };
+
+    const target = HitDetector.findNearest(
+      entityManager, pos.x, pos.y, def.range || 120, entity.id, 'enemy'
+    );
+    if (!target) return { success: false, message: 'No target in range' };
+
+    const targetHealth = target.getComponent(HealthComponent);
+    const targetSE = target.getComponent(StatusEffectComponent);
+    if (!targetHealth || !targetHealth.isAlive() || !targetSE) {
+      return { success: false, message: 'No valid target' };
+    }
+
+    const tickDmg = targetHealth.max * (def.dotPercent || 0.04);
+    targetSE.addEffect({
+      type: 'witch_curse',
+      duration: def.duration || 6,
+      tickDamage: tickDmg,
+      damageTakenMod: def.damageTakenMod || 1.25,
+    });
+
+    return { success: true, skillId: def.id, type: 'debuff' };
+  }
+
+  executeNightmare(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    if (!pos) return { success: false, message: 'Cannot cast' };
+
+    const targets = HitDetector.queryArea(
+      entityManager, pos.x, pos.y, def.range || 80, entity.id, 'enemy'
+    );
+
+    if (targets.length === 0) {
+      return { success: true, skillId: def.id, type: 'aoe_control', hits: 0 };
+    }
+
+    for (const target of targets) {
+      const se = target.getComponent(StatusEffectComponent);
+      const health = target.getComponent(HealthComponent);
+      if (se) {
+        se.addEffect({
+          type: 'nightmare_fear',
+          duration: def.fearDuration || 3,
+          speedMod: 1.3,
+        });
+        if (health && health.isAlive()) {
+          const tickDmg = health.max * (def.dotPercent || 0.05);
+          se.addEffect({
+            type: 'nightmare_dot',
+            duration: def.fearDuration || 3,
+            tickDamage: tickDmg,
+          });
+        }
+      }
+    }
+
+    return { success: true, skillId: def.id, type: 'aoe_control', hits: targets.length };
+  }
+
+  executeSoulSiphon(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    const combat = entity.getComponent(CombatComponent);
+    const health = entity.getComponent(HealthComponent);
+    if (!pos || !combat || !health) return { success: false, message: 'Cannot cast' };
+
+    const range = def.range || 120;
+    const jumps = def.jumps || 3;
+    const falloff = def.falloff || 0.1;
+
+    const mult = this.getScaleMult(entity, def);
+    let currentDamage = Math.round(combat.damage * mult);
+
+    const hitIds = new Set();
+    let currentX = pos.x;
+    let currentY = pos.y;
+    let totalDamage = 0;
+
+    for (let i = 0; i < jumps; i++) {
+      const candidates = HitDetector.queryArea(
+        entityManager, currentX, currentY, range, entity.id, 'enemy'
+      );
+
+      let best = null;
+      let bestDist = Infinity;
+      for (const c of candidates) {
+        if (hitIds.has(c.id)) continue;
+        const ch = c.getComponent(HealthComponent);
+        if (!ch || !ch.isAlive()) continue;
+        const cp = c.getComponent(PositionComponent);
+        const dx = cp.x - currentX;
+        const dy = cp.y - currentY;
+        const d = dx * dx + dy * dy;
+        if (d < bestDist) { bestDist = d; best = c; }
+      }
+
+      if (!best) break;
+
+      hitIds.add(best.id);
+      this.combatResolver.applyDamage(entity, best, currentDamage);
+      totalDamage += currentDamage;
+
+      const bestPos = best.getComponent(PositionComponent);
+      currentX = bestPos.x;
+      currentY = bestPos.y;
+
+      currentDamage = Math.round(currentDamage * (1 - falloff));
+    }
+
+    // Heal caster for percentage of total damage dealt
+    if (totalDamage > 0) {
+      const healAmount = Math.round(totalDamage * (def.healPercent || 0.5));
+      const actual = health.heal(healAmount);
+      if (actual > 0) {
+        this.combatResolver.damageEvents.push({
+          targetId: entity.id,
+          attackerId: entity.id,
+          damage: actual,
+          isCrit: false,
+          x: pos.x, y: pos.y,
+          killed: false,
+          isHeal: true,
+        });
+      }
+    }
+
+    if (hitIds.size === 0) return { success: false, message: 'No target in range' };
+    return { success: true, skillId: def.id, type: 'chain', hits: hitIds.size };
+  }
+
+  executeCauldronBrew(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    if (!pos) return { success: false, message: 'Cannot cast' };
+
+    let impactX = pos.x, impactY = pos.y;
+    const nearest = HitDetector.findNearest(
+      entityManager, pos.x, pos.y, def.range || 160, entity.id, 'enemy'
+    );
+    if (nearest) {
+      const tp = nearest.getComponent(PositionComponent);
+      impactX = tp.x;
+      impactY = tp.y;
+    } else {
+      const pc = entity.getComponent(PlayerComponent);
+      if (pc) {
+        switch (pc.facing) {
+          case 'up': impactY -= 80; break;
+          case 'down': impactY += 80; break;
+          case 'left': impactX -= 80; break;
+          case 'right': impactX += 80; break;
+        }
+      }
+    }
+
+    const zone = EntityFactory.createDamageZone(
+      entity.id, impactX, impactY,
+      def.zoneRadius || 80, def.zoneTickDmg || 0.06,
+      def.zoneDuration || 10, def.zoneType || 'poison',
+      def.zoneSlowPct || 0.3
+    );
+    entityManager.add(zone);
+
+    return { success: true, skillId: def.id, type: 'area_zone' };
+  }
+
+  // --- Voodoo Witch Doctor ---
+
+  executeVoodooCurse(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    if (!pos) return { success: false, message: 'Cannot cast' };
+
+    const target = HitDetector.findNearest(
+      entityManager, pos.x, pos.y, def.range || 120, entity.id, 'enemy'
+    );
+    if (!target) return { success: false, message: 'No target in range' };
+
+    const targetHealth = target.getComponent(HealthComponent);
+    const targetSE = target.getComponent(StatusEffectComponent);
+    if (!targetHealth || !targetHealth.isAlive() || !targetSE) {
+      return { success: false, message: 'No valid target' };
+    }
+
+    const tickDmg = targetHealth.max * (def.dotPercent || 0.08);
+    targetSE.addEffect({
+      type: 'voodoo_curse',
+      duration: def.dotDuration || 8,
+      tickDamage: tickDmg,
+    });
+
+    // Also apply damage debuff
+    if (def.debuffEffects) {
+      targetSE.addEffect({
+        type: 'voodoo_curse_debuff',
+        duration: def.dotDuration || 8,
+        damageMod: def.debuffEffects.damageMod,
+      });
+    }
+
+    return { success: true, skillId: def.id, type: 'dot' };
+  }
+
+  executeHexTotem(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    if (!pos) return { success: false, message: 'Cannot cast' };
+
+    // Place zone at caster's position
+    const zone = EntityFactory.createDamageZone(
+      entity.id, pos.x, pos.y,
+      def.zoneRadius || 64, def.zoneTickDmg || 0.03,
+      def.zoneDuration || 12, def.zoneType || 'hex',
+      def.zoneSlowPct || 0.4
+    );
+    entityManager.add(zone);
+
+    return { success: true, skillId: def.id, type: 'area_zone' };
+  }
+
+  executeBoneArmor(entity, def) {
+    const se = entity.getComponent(StatusEffectComponent);
+    const health = entity.getComponent(HealthComponent);
+    if (!se || !health) return { success: false, message: 'Cannot cast' };
+
+    const mult = this.getScaleMult(entity, def);
+    const shieldAmount = Math.round(health.max * mult);
+
+    se.addEffect({
+      type: 'skill_bone_armor_shield',
+      duration: def.duration || 10,
+      shield: shieldAmount,
+    });
+
+    if (def.effects && def.effects.thornsReflect != null) {
+      se.addEffect({
+        type: 'skill_bone_armor_thorns',
+        duration: def.duration || 10,
+        thornsReflect: def.effects.thornsReflect,
+      });
+    }
+
+    return { success: true, skillId: def.id, type: 'buff', name: 'Bone Armor' };
+  }
+
+  executeSpiritWalk(entity, def) {
+    const pos = entity.getComponent(PositionComponent);
+    const se = entity.getComponent(StatusEffectComponent);
+    if (!pos || !se) return { success: false, message: 'Cannot cast' };
+
+    // Teleport in facing direction
+    const pc = entity.getComponent(PlayerComponent);
+    let dx = 0, dy = 0;
+    if (pc) {
+      switch (pc.facing) {
+        case 'up': dy = -1; break;
+        case 'down': dy = 1; break;
+        case 'left': dx = -1; break;
+        case 'right': dx = 1; break;
+      }
+    }
+    if (dx === 0 && dy === 0) dy = 1;
+
+    pos.x += dx * (def.distance || 100);
+    pos.y += dy * (def.distance || 100);
+
+    // Apply speed buff
+    if (def.effects && def.effects.speedMod) {
+      se.addEffect({
+        type: 'skill_spirit_walk',
+        duration: def.duration || 5,
+        speedMod: def.effects.speedMod,
+      });
+    }
+
+    return {
+      success: true, skillId: def.id, type: 'dash',
+      x: pos.x, y: pos.y,
+    };
+  }
+
+  executePlagueSwarm(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    if (!pos) return { success: false, message: 'Cannot cast' };
+
+    const targets = HitDetector.queryArea(
+      entityManager, pos.x, pos.y, def.range || 100, entity.id, 'enemy'
+    );
+
+    if (targets.length === 0) {
+      return { success: true, skillId: def.id, type: 'aoe_dot', hits: 0 };
+    }
+
+    for (const target of targets) {
+      const health = target.getComponent(HealthComponent);
+      const se = target.getComponent(StatusEffectComponent);
+      if (health && health.isAlive() && se) {
+        const tickDmg = health.max * (def.dotPercent || 0.05);
+        se.addEffect({
+          type: 'plague_swarm',
+          duration: def.dotDuration || 10,
+          tickDamage: tickDmg,
+        });
+      }
+    }
+
+    return { success: true, skillId: def.id, type: 'aoe_dot', hits: targets.length };
+  }
+
+  // --- Druid Additions ---
+
+  executeEntanglingRoots(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    if (!pos) return { success: false, message: 'Cannot cast' };
+
+    const targets = HitDetector.queryArea(
+      entityManager, pos.x, pos.y, def.range || 80, entity.id, 'enemy'
+    );
+
+    if (targets.length === 0) {
+      return { success: true, skillId: def.id, type: 'aoe_control', hits: 0 };
+    }
+
+    for (const target of targets) {
+      const se = target.getComponent(StatusEffectComponent);
+      const health = target.getComponent(HealthComponent);
+      if (se) {
+        se.addEffect({
+          type: 'root',
+          duration: def.rootDuration || 3,
+          speedMod: 0,
+        });
+        if (health && health.isAlive()) {
+          const tickDmg = health.max * (def.dotPercent || 0.03);
+          se.addEffect({
+            type: 'entangling_roots_dot',
+            duration: def.rootDuration || 3,
+            tickDamage: tickDmg,
+          });
+        }
+      }
+    }
+
+    return { success: true, skillId: def.id, type: 'aoe_control', hits: targets.length };
+  }
+
+  executeSwarmOfInsects(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    if (!pos) return { success: false, message: 'Cannot cast' };
+
+    let impactX = pos.x, impactY = pos.y;
+    const nearest = HitDetector.findNearest(
+      entityManager, pos.x, pos.y, def.range || 140, entity.id, 'enemy'
+    );
+    if (nearest) {
+      const tp = nearest.getComponent(PositionComponent);
+      impactX = tp.x;
+      impactY = tp.y;
+    } else {
+      const pc = entity.getComponent(PlayerComponent);
+      if (pc) {
+        switch (pc.facing) {
+          case 'up': impactY -= 80; break;
+          case 'down': impactY += 80; break;
+          case 'left': impactX -= 80; break;
+          case 'right': impactX += 80; break;
+        }
+      }
+    }
+
+    const zone = EntityFactory.createDamageZone(
+      entity.id, impactX, impactY,
+      def.zoneRadius || 72, def.zoneTickDmg || 0.04,
+      def.zoneDuration || 8, def.zoneType || 'nature',
+      def.zoneSlowPct || 0.2
+    );
+    entityManager.add(zone);
+
+    return { success: true, skillId: def.id, type: 'area_zone' };
+  }
+
+  // --- Blood Magic Additions ---
+
+  executeDarkPact(entity, def, entityManager) {
+    const pos = entity.getComponent(PositionComponent);
+    const health = entity.getComponent(HealthComponent);
+    if (!pos || !health || !health.isAlive()) return { success: false, message: 'Cannot cast' };
+
+    const target = HitDetector.findNearest(
+      entityManager, pos.x, pos.y, def.range || 120, entity.id, 'enemy'
+    );
+    if (!target) return { success: false, message: 'No target in range' };
+
+    const targetHealth = target.getComponent(HealthComponent);
+    if (!targetHealth || !targetHealth.isAlive()) {
+      return { success: false, message: 'No valid target' };
+    }
+
+    // Drain percentage of target's current HP
+    const pct = def.damagePercent || 0.20;
+    const dmg = Math.round(targetHealth.current * pct);
+    if (dmg <= 0) return { success: false, message: 'No damage' };
+
+    const actual = targetHealth.damage(dmg);
+    const tp = target.getComponent(PositionComponent);
+    this.combatResolver.damageEvents.push({
+      targetId: target.id,
+      attackerId: entity.id,
+      damage: actual,
+      isCrit: false,
+      x: tp ? tp.x : pos.x,
+      y: tp ? tp.y : pos.y,
+      killed: !targetHealth.isAlive(),
+    });
+
+    // Heal self for multiplied amount
+    const healAmount = Math.round(actual * (def.healMultiplier || 1.5));
+    const healed = health.heal(healAmount);
+    if (healed > 0) {
+      this.combatResolver.damageEvents.push({
+        targetId: entity.id,
+        attackerId: entity.id,
+        damage: healed,
+        isCrit: false,
+        x: pos.x, y: pos.y,
+        killed: false,
+        isHeal: true,
+      });
+    }
+
+    return { success: true, skillId: def.id, type: 'blood_drain', drained: actual };
+  }
+
+  executeBloodShield(entity, def) {
+    const health = entity.getComponent(HealthComponent);
+    const se = entity.getComponent(StatusEffectComponent);
+    if (!health || !se || !health.isAlive()) return { success: false, message: 'Cannot cast' };
+
+    const sacrificeAmount = Math.round(health.max * (def.sacrificePercent || 0.20));
+    if (health.current <= sacrificeAmount) {
+      return { success: false, message: 'Not enough HP' };
+    }
+
+    // Sacrifice HP
+    health.damage(sacrificeAmount);
+    const casterPos = entity.getComponent(PositionComponent);
+    if (casterPos) {
+      this.combatResolver.damageEvents.push({
+        targetId: entity.id,
+        attackerId: entity.id,
+        damage: sacrificeAmount,
+        isCrit: false,
+        x: casterPos.x, y: casterPos.y,
+        killed: false,
+        isBloodSacrifice: true,
+      });
+    }
+
+    // Apply shield
+    const shieldAmount = Math.round(health.max * (def.shieldPercent || 0.40));
+    se.addEffect({
+      type: 'skill_blood_shield',
+      duration: def.duration || 10,
+      shield: shieldAmount,
+    });
+
+    return { success: true, skillId: def.id, type: 'buff', name: 'Blood Shield' };
   }
 }

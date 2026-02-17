@@ -25,7 +25,7 @@ export default class AISystem extends System {
       if (ai.behavior === 'boss') {
         this.bossController.update(entity, ai, pos, vel, combat, entityManager, dt, context);
       } else {
-        this.controller.update(entity, ai, pos, vel, combat, entityManager, dt);
+        this.controller.update(entity, ai, pos, vel, combat, entityManager, dt, context);
       }
     }
   }

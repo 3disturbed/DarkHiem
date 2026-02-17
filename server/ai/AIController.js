@@ -5,6 +5,7 @@ import PatrolBehavior from './PatrolBehavior.js';
 import ChaseBehavior from './ChaseBehavior.js';
 import AttackBehavior from './AttackBehavior.js';
 import FleeBehavior from './FleeBehavior.js';
+import CasterBehavior from './CasterBehavior.js';
 
 export default class AIController {
   constructor() {
@@ -12,9 +13,10 @@ export default class AIController {
     this.chase = new ChaseBehavior();
     this.attack = new AttackBehavior();
     this.flee = new FleeBehavior();
+    this.caster = new CasterBehavior();
   }
 
-  update(entity, ai, pos, vel, combat, entityManager, dt) {
+  update(entity, ai, pos, vel, combat, entityManager, dt, context) {
     ai.stateTimer += dt;
 
     // Stun/freeze/root: skip all AI and zero velocity
@@ -22,6 +24,14 @@ export default class AIController {
     if (se && (se.hasEffect('stun') || se.hasEffect('freeze') || se.hasEffect('root'))) {
       vel.dx = 0;
       vel.dy = 0;
+      return;
+    }
+
+    // Fear: force flee from source
+    if (se && se.hasEffect('nightmare_fear')) {
+      const nearestPlayerForFear = this._findNearestPlayer(pos, entityManager);
+      this.flee.update(entity, ai, pos, vel, nearestPlayerForFear, dt);
+      this._applySlowEffect(se, vel);
       return;
     }
 
@@ -35,6 +45,13 @@ export default class AIController {
     // Guards target enemies instead of players
     if (ai.behavior === 'guard') {
       this._updateGuard(entity, ai, pos, vel, combat, entityManager, dt);
+      this._applySlowEffect(se, vel);
+      return;
+    }
+
+    // Caster enemies: ranged spellcasting + melee fallback
+    if (ai.behavior === 'caster') {
+      this._updateCaster(entity, ai, pos, vel, combat, entityManager, dt, context);
       this._applySlowEffect(se, vel);
       return;
     }
@@ -127,6 +144,107 @@ export default class AIController {
       case AI_STATE.RETURN:
         this._handleReturn(ai, pos, vel, distToHome, dt);
         break;
+      default:
+        this._transitionTo(ai, AI_STATE.IDLE);
+        break;
+    }
+  }
+
+  _updateCaster(entity, ai, pos, vel, combat, entityManager, dt, context) {
+    const nearestPlayer = this._findNearestPlayer(pos, entityManager);
+    const distToPlayer = nearestPlayer ? nearestPlayer.dist : Infinity;
+    const distToHome = Math.sqrt(
+      (pos.x - ai.homeX) ** 2 + (pos.y - ai.homeY) ** 2
+    );
+
+    // Get max cast range from skills
+    const maxCastRange = ai.casterSkills
+      ? Math.max(...ai.casterSkills.map(s => s.castRange || 120))
+      : ai.attackRange;
+
+    switch (ai.state) {
+      case AI_STATE.IDLE:
+        vel.dx = 0;
+        vel.dy = 0;
+        if (nearestPlayer && distToPlayer <= ai.aggroRange) {
+          ai.targetId = nearestPlayer.entity.id;
+          this._transitionTo(ai, AI_STATE.CHASE);
+        } else if (ai.stateTimer >= ai.idleDuration) {
+          this._transitionTo(ai, AI_STATE.PATROL);
+        }
+        break;
+
+      case AI_STATE.PATROL:
+        this.patrol.update(entity, ai, pos, vel, dt);
+        if (nearestPlayer && distToPlayer <= ai.aggroRange) {
+          ai.targetId = nearestPlayer.entity.id;
+          this._transitionTo(ai, AI_STATE.CHASE);
+        }
+        break;
+
+      case AI_STATE.CHASE:
+        if (!nearestPlayer || distToHome > ai.leashRange) {
+          ai.targetId = null;
+          this._transitionTo(ai, AI_STATE.RETURN);
+          break;
+        }
+        if (distToPlayer > ai.deaggroRange) {
+          ai.targetId = null;
+          this._transitionTo(ai, AI_STATE.RETURN);
+          break;
+        }
+
+        // Try to cast while chasing
+        if (this.caster.update(entity, ai, pos, vel, nearestPlayer, distToPlayer, entityManager, dt, context)) {
+          break; // Casting or winding up
+        }
+
+        // Stop at max cast range instead of running into melee
+        if (distToPlayer <= maxCastRange) {
+          vel.dx = 0;
+          vel.dy = 0;
+          // If close enough for melee too, transition to attack
+          if (combat && distToPlayer <= ai.attackRange && combat.canAttack()) {
+            this._transitionTo(ai, AI_STATE.ATTACK);
+          }
+        } else {
+          // Chase toward player
+          this.chase.update(entity, ai, pos, vel, nearestPlayer, dt);
+        }
+        break;
+
+      case AI_STATE.ATTACK:
+        if (!nearestPlayer || distToPlayer > ai.deaggroRange || distToHome > ai.leashRange) {
+          ai.targetId = null;
+          this._transitionTo(ai, AI_STATE.RETURN);
+          break;
+        }
+
+        // Try to cast first
+        if (this.caster.update(entity, ai, pos, vel, nearestPlayer, distToPlayer, entityManager, dt, context)) {
+          break;
+        }
+
+        // Fall back to melee attack
+        this.attack.update(entity, ai, pos, vel, combat, nearestPlayer, dt);
+
+        // Return to chase if player moves away
+        if (distToPlayer > ai.attackRange * 1.2) {
+          this._transitionTo(ai, AI_STATE.CHASE);
+        }
+        break;
+
+      case AI_STATE.FLEE:
+        this.flee.update(entity, ai, pos, vel, nearestPlayer, dt);
+        if (distToPlayer > ai.deaggroRange) {
+          this._transitionTo(ai, AI_STATE.RETURN);
+        }
+        break;
+
+      case AI_STATE.RETURN:
+        this._handleReturn(ai, pos, vel, distToHome, dt);
+        break;
+
       default:
         this._transitionTo(ai, AI_STATE.IDLE);
         break;

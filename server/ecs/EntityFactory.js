@@ -164,6 +164,12 @@ export default class EntityFactory {
     entity.addComponent(new StatusEffectComponent());
     entity.addComponent(new AnimationStateComponent());
 
+    // Caster enemies: store skills on AI and extend attack range to cast range
+    if (config.casterSkills) {
+      ai.casterSkills = config.casterSkills;
+      ai.attackRange = Math.max(ai.attackRange, ...config.casterSkills.map(s => s.castRange || 120));
+    }
+
     entity.isBoss = config.isBoss || false;
 
     entity.addTag('enemy');
@@ -307,6 +313,8 @@ export default class EntityFactory {
     if (extraEffects) {
       if (extraEffects.slowOnHit) proj.slowOnHit = extraEffects.slowOnHit;
       if (extraEffects.poisonOnHit) proj.poisonOnHit = extraEffects.poisonOnHit;
+      if (extraEffects.armorDebuff) proj.armorDebuff = extraEffects.armorDebuff;
+      if (extraEffects.dotOnHit) proj.dotOnHit = extraEffects.dotOnHit;
     }
     entity.addComponent(proj);
     entity.addTag('projectile');
