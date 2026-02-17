@@ -276,41 +276,39 @@ export default class PetBattleManager {
       }
     }
 
-    // Capture one random defeated wild creature on win
+    // Capture all defeated wild creatures on win
     let captured = false;
     if (battle.result === 'win_a' && pc) {
       const defeated = battle.teams.b.filter(u => u.fainted);
-      if (defeated.length > 0) {
-        const chosen = defeated[Math.floor(Math.random() * defeated.length)];
-        const petDef = PET_DB[chosen.petId];
-        if (petDef) {
-          const stats = getPetStats(chosen.petId, chosen.level);
-          const petData = {
-            petId: chosen.petId,
-            nickname: petDef.name,
-            level: chosen.level,
-            xp: 0,
-            currentHp: stats.hp,
-            maxHp: stats.hp,
-            learnedSkills: [...chosen.skills],
-            fainted: false,
-            isRare: false,
-            bonusStats: 0,
-          };
-          pc.petCodex.push(petData);
-          captured = true;
+      for (const enemy of defeated) {
+        const petDef = PET_DB[enemy.petId];
+        if (!petDef) continue;
+        const stats = getPetStats(enemy.petId, enemy.level);
+        const petData = {
+          petId: enemy.petId,
+          nickname: petDef.name,
+          level: enemy.level,
+          xp: 0,
+          currentHp: stats.hp,
+          maxHp: stats.hp,
+          learnedSkills: [...enemy.skills],
+          fainted: false,
+          isRare: false,
+          bonusStats: 0,
+        };
+        pc.petCodex.push(petData);
+        captured = true;
 
-          const codexIndex = pc.petCodex.length - 1;
-          const emptyTeamSlot = pc.petTeam.indexOf(null);
-          if (emptyTeamSlot !== -1) {
-            pc.petTeam[emptyTeamSlot] = codexIndex;
-          }
-
-          playerConn.emit(MSG.CHAT_RECEIVE, {
-            message: `Captured a ${petDef.name} (Lv.${chosen.level})!`,
-            sender: 'System',
-          });
+        const codexIndex = pc.petCodex.length - 1;
+        const emptyTeamSlot = pc.petTeam.indexOf(null);
+        if (emptyTeamSlot !== -1) {
+          pc.petTeam[emptyTeamSlot] = codexIndex;
         }
+
+        playerConn.emit(MSG.CHAT_RECEIVE, {
+          message: `Captured a ${petDef.name} (Lv.${enemy.level})!`,
+          sender: 'System',
+        });
       }
     }
 

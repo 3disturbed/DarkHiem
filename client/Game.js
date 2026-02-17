@@ -1341,7 +1341,12 @@ export default class Game {
     }
 
     // D-pad navigation for open panels
-    if (this.skillsOpen) {
+    if (this.chestOpen) {
+      if (actions.dpadUp) this.chestPanel.selectDir(0, -1, this.inventory);
+      if (actions.dpadDown) this.chestPanel.selectDir(0, 1, this.inventory);
+      if (actions.dpadLeft) this.chestPanel.selectDir(-1, 0, this.inventory);
+      if (actions.dpadRight) this.chestPanel.selectDir(1, 0, this.inventory);
+    } else if (this.skillsOpen) {
       if (actions.dpadUp) this.skillsPanel.selectPrev(this.skills);
       if (actions.dpadDown) this.skillsPanel.selectNext(this.skills);
     } else if (this.upgradeOpen) {
@@ -1367,7 +1372,9 @@ export default class Game {
 
     // Scroll routing: panels get scroll when open, otherwise camera zoom
     if (actions.scrollDelta !== 0) {
-      if (this.animalPenOpen) {
+      if (this.chestOpen) {
+        this.chestPanel.handleScroll(actions.scrollDelta);
+      } else if (this.animalPenOpen) {
         this.animalPenPanel.handleScroll(actions.scrollDelta);
       } else if (this.petCodexOpen) {
         this.petCodexPanel.handleScroll(actions.scrollDelta);
@@ -1574,18 +1581,10 @@ export default class Game {
     if (this.chestOpen) {
       this.chestPanel.handleMouseMove(uiMX, uiMY, this.inventory);
       if (actions.action || actions.screenTap) {
-        const result = this.chestPanel.handleClick(uiMX, uiMY, this.inventory);
-        if (result) {
-          if (result.action === 'close') {
-            this.network.sendChestClose(this.chestPanel.entityId);
-            this.chestPanel.close();
-            this.chestOpen = false;
-          } else if (result.action === 'deposit') {
-            this.network.sendChestDeposit(result.entityId, result.playerSlot, result.count);
-          } else if (result.action === 'withdraw') {
-            this.network.sendChestWithdraw(result.entityId, result.chestSlot, result.count);
-          }
-        }
+        const result = this.chestPanel.hasFocus
+          ? this.chestPanel.confirmFocus(this.inventory)
+          : this.chestPanel.handleClick(uiMX, uiMY, this.inventory);
+        this._processChestResult(result);
       }
     }
 
@@ -2115,6 +2114,27 @@ export default class Game {
     // Death screen (renders on top of everything)
     this.deathScreen.render(ctx, r.logicalWidth, r.logicalHeight);
     r.endUI();
+  }
+
+  _processChestResult(result) {
+    if (!result) return;
+    if (result.action === 'close') {
+      this.network.sendChestClose(this.chestPanel.entityId);
+      this.chestPanel.close();
+      this.chestOpen = false;
+    } else if (result.action === 'deposit') {
+      this.network.sendChestDeposit(result.entityId, result.playerSlot, result.count);
+    } else if (result.action === 'withdraw') {
+      this.network.sendChestWithdraw(result.entityId, result.chestSlot, result.count);
+    } else if (result.action === 'batch') {
+      for (const a of result.batch) {
+        if (a.action === 'deposit') {
+          this.network.sendChestDeposit(a.entityId, a.playerSlot, a.count);
+        } else if (a.action === 'withdraw') {
+          this.network.sendChestWithdraw(a.entityId, a.chestSlot, a.count);
+        }
+      }
+    }
   }
 
   _closePetBattle() {
