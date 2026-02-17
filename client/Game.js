@@ -2405,7 +2405,7 @@ export default class Game {
       const fh = this.followHorse;
       EntityRenderer.renderHorse(r, fh.x, fh.y, '#8B6C42', 30, 'Horse', true, null,
         fh.isMoving || false, fh.facingRight || false);
-      r.drawText('Press Q to ride', fh.x, fh.y + 26, '#90ee90', 8 * r.uiScale, 'center');
+      r.drawText('Ride ( Z )', fh.x, fh.y + 26, '#90ee90', 8 * r.uiScale, 'center');
     }
 
     // Render local player
