@@ -8,7 +8,7 @@ import { CHUNK_PIXEL_SIZE, VIEW_DISTANCE } from '../../../shared/Constants.js';
 import { PET_DB, PET_PASSIVE_VARIANT_CHANCE } from '../../../shared/PetTypes.js';
 
 const SPAWN_CHECK_INTERVAL = 5; // seconds between spawn checks
-const MAX_ENEMIES_PER_CHUNK = 6;
+const MAX_ENEMIES_PER_CHUNK = 3;
 const MAX_HORSES_PER_CHUNK = 2;
 
 export default class SpawnSystem extends System {
