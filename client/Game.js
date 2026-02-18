@@ -2162,8 +2162,8 @@ export default class Game {
     // Fishing state HUD
     this.renderFishingHUD(ctx, r);
 
-    // Minimap (always visible when not in world map)
-    if (!this.worldMap.visible) {
+    // Minimap (hidden on touch devices to save screen space, always visible on desktop when not in world map)
+    if (!this.worldMap.visible && !this.input.isTouchDevice()) {
       this.minimap.position(r.logicalWidth);
       this.minimap.render(ctx, this.worldManager, this.exploredChunks, this.localPlayer, this.remotePlayers, this.allStations);
     }
