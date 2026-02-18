@@ -3,6 +3,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { appendFileSync } from 'fs';
 import SocketManager from './network/SocketManager.js';
 import GameServer from './GameServer.js';
 import AuthManager from './auth/AuthManager.js';
@@ -104,6 +105,20 @@ async function boot() {
     gameServer.start();
   });
 }
+
+const CRASH_LOG = join(ROOT, 'crash.log');
+
+process.on('uncaughtException', (err) => {
+  const msg = `[${new Date().toISOString()}] UNCAUGHT: ${err.stack || err}\n`;
+  console.error(msg);
+  appendFileSync(CRASH_LOG, msg);
+});
+
+process.on('unhandledRejection', (err) => {
+  const msg = `[${new Date().toISOString()}] REJECTION: ${err?.stack || err}\n`;
+  console.error(msg);
+  appendFileSync(CRASH_LOG, msg);
+});
 
 boot().catch((err) => {
   console.error('[NordFolk] Failed to start:', err);
