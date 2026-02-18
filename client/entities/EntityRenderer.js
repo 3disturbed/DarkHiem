@@ -125,10 +125,15 @@ export default class EntityRenderer {
     const half = size / 2;
     const ctx = r.ctx;
 
-    // Try sprite first
+    // Try sprite first — 64x64, centered horizontally, base aligned to collider
     const sprite = resourceId ? resourceSprites.get(resourceId) : null;
+    let topY;
     if (sprite) {
-      ctx.drawImage(sprite, Math.round(x - half), Math.round(y - half), size, size);
+      const S = 64;
+      const drawX = Math.round(x - S / 2);
+      const drawY = Math.round(y - S + S / 2); // offset up 1 tile so base sits at collider y
+      ctx.drawImage(sprite, drawX, drawY, S, S);
+      topY = drawY;
     } else {
       // Fallback: colored circle
       r.drawCircle(x, y, half, color);
@@ -137,14 +142,15 @@ export default class EntityRenderer {
       ctx.beginPath();
       ctx.arc(Math.round(x), Math.round(y), half, 0, Math.PI * 2);
       ctx.stroke();
+      topY = y - half;
     }
 
     // Name tag
-    r.drawText(name, x, y - half - 12, '#c8d6e5', 8 * r.uiScale, 'center');
+    r.drawText(name, x, topY - 12, '#c8d6e5', 8 * r.uiScale, 'center');
 
     // Health bar (only show if damaged)
     if (hp < maxHp && maxHp > 0) {
-      EntityRenderer.renderHealthBar(r, x, y - half - 4, Math.max(size, 24), 3, hp, maxHp, '#f39c12');
+      EntityRenderer.renderHealthBar(r, x, topY - 4, Math.max(size, 24), 3, hp, maxHp, '#f39c12');
     }
   }
 
