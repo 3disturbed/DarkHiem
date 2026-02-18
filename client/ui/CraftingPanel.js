@@ -43,6 +43,13 @@ export default class CraftingPanel {
   handleClick(mx, my, inventory, onCraft) {
     if (!this.visible) return false;
 
+    // Close button (top-right)
+    if (mx >= this.x + this.width - 30 && mx <= this.x + this.width - 4 &&
+        my >= this.y + 4 && my < this.y + 26) {
+      this.close();
+      return true;
+    }
+
     // Check if click is inside panel
     if (mx < this.x || mx > this.x + this.width || my < this.y || my > this.y + this.height) {
       this.close();
@@ -154,6 +161,12 @@ export default class CraftingPanel {
     ctx.font = 'bold 13px monospace';
     ctx.textAlign = 'center';
     ctx.fillText(stationName.toUpperCase(), this.x + this.width / 2, this.y + 20);
+
+    // Close button
+    ctx.fillStyle = '#888';
+    ctx.font = '14px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText('[X]', this.x + this.width - 8, this.y + 20);
 
     // Recipe list
     const listY = this.y + this.headerHeight;

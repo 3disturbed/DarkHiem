@@ -96,6 +96,13 @@ export default class AnimalPenPanel {
 
   handleClick(mx, my, petCodex, sendBreedStart, sendBreedCollect, sendTrain, sendTierUp) {
     if (!this.visible) return false;
+
+    // Close button (top-right)
+    if (mx >= this.x + this.width - 30 && mx <= this.x + this.width - 4 &&
+        my >= this.y + 4 && my < this.y + 24) {
+      return 'close';
+    }
+
     if (mx < this.x || mx > this.x + this.width || my < this.y || my > this.y + this.height) {
       return false;
     }
@@ -357,6 +364,12 @@ export default class AnimalPenPanel {
       ctx.textAlign = 'center';
       ctx.fillText(TAB_LABELS[t], tx + tabW / 2, tabY + 16);
     }
+
+    // Close button (top-right)
+    ctx.fillStyle = '#888';
+    ctx.font = '14px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText('[X]', this.x + this.width - 8, tabY + 16);
 
     const contentY = this.y + 34;
     ctx.save();

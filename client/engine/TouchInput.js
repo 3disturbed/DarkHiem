@@ -28,6 +28,13 @@ export default class TouchInput {
     this.scrollDelta = 0;         // consumed by InputManager each frame
     this._scrollThreshold = 18;   // pixels per "scroll step"
 
+    // Pinch-to-zoom tracking
+    this._pinchTouchIds = [null, null]; // the two touch IDs involved in pinch
+    this.pinchActive = false;
+    this.pinchStartDist = 0;
+    this.pinchCurrentDist = 0;
+    this._pinchJustStarted = false;
+
     canvas.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: false });
     canvas.addEventListener('touchmove', (e) => this.onTouchMove(e), { passive: false });
     canvas.addEventListener('touchend', (e) => this.onTouchEnd(e), { passive: false });
@@ -83,11 +90,45 @@ export default class TouchInput {
         this.rightStick.y = 0;
       }
     }
+
+    // Detect pinch start: 2+ fingers on screen and no active pinch
+    if (e.touches.length >= 2 && !this.pinchActive) {
+      const t0 = e.touches[0];
+      const t1 = e.touches[1];
+      this._pinchTouchIds[0] = t0.identifier;
+      this._pinchTouchIds[1] = t1.identifier;
+      const dx = t0.clientX - t1.clientX;
+      const dy = t0.clientY - t1.clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      this.pinchActive = true;
+      this._pinchJustStarted = true;
+      this.pinchStartDist = dist;
+      this.pinchCurrentDist = dist;
+      // Cancel scroll-drag since this is a pinch
+      if (this._scrollTouchId !== null) {
+        this._scrollTouchId = null;
+        this._scrollAccum = 0;
+      }
+    }
   }
 
   onTouchMove(e) {
     e.preventDefault();
     const rect = this.canvas.getBoundingClientRect();
+
+    // Update pinch distance when both pinch fingers are active
+    if (this.pinchActive) {
+      let t0 = null, t1 = null;
+      for (const t of e.touches) {
+        if (t.identifier === this._pinchTouchIds[0]) t0 = t;
+        if (t.identifier === this._pinchTouchIds[1]) t1 = t;
+      }
+      if (t0 && t1) {
+        const dx = t0.clientX - t1.clientX;
+        const dy = t0.clientY - t1.clientY;
+        this.pinchCurrentDist = Math.sqrt(dx * dx + dy * dy);
+      }
+    }
 
     for (const touch of e.changedTouches) {
       const tx = touch.clientX - rect.left;
@@ -170,6 +211,15 @@ export default class TouchInput {
         this._scrollAccum = 0;
       }
 
+      // Release pinch if either pinch finger lifts
+      if (this.pinchActive && (touch.identifier === this._pinchTouchIds[0] || touch.identifier === this._pinchTouchIds[1])) {
+        this.pinchActive = false;
+        this._pinchTouchIds[0] = null;
+        this._pinchTouchIds[1] = null;
+        this.pinchStartDist = 0;
+        this.pinchCurrentDist = 0;
+      }
+
       // Release buttons
       for (const [id, state] of this.buttonStates) {
         if (state.touchId === touch.identifier) {
@@ -234,5 +284,7 @@ export default class TouchInput {
     this.hasTap = false;
     // Clear scroll delta
     this.scrollDelta = 0;
+    // Clear pinch justStarted flag
+    this._pinchJustStarted = false;
   }
 }

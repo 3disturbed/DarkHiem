@@ -20,7 +20,7 @@ export default class InputManager {
 
     // Poll gamepad
     this.gamepad.update();
-
+ENsure 
     // --- Keyboard + Mouse ---
     const kb = this.keyboard.getMoveAxes();
     if (Math.abs(kb.x) > 0 || Math.abs(kb.y) > 0) {
@@ -130,6 +130,14 @@ export default class InputManager {
         this.actions.screenTap = true;
         this.actions.mouseScreenX = this.touch.tapX;
         this.actions.mouseScreenY = this.touch.tapY;
+      }
+
+      // Pinch-to-zoom
+      if (this.touch.pinchActive) {
+        this.actions.pinchActive = true;
+        this.actions.pinchJustStarted = this.touch._pinchJustStarted;
+        this.actions.pinchStartDist = this.touch.pinchStartDist;
+        this.actions.pinchCurrentDist = this.touch.pinchCurrentDist;
       }
     }
 

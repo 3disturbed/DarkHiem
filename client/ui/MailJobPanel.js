@@ -40,6 +40,12 @@ export default class MailJobPanel {
   handleClick(mx, my) {
     if (!this.visible) return null;
 
+    // Close button (top-right)
+    if (mx >= this.x + this.width - 30 && mx <= this.x + this.width - 4 &&
+        my >= this.y + 6 && my < this.y + 28) {
+      return { action: 'close' };
+    }
+
     // Outside panel → close
     if (mx < this.x || mx > this.x + this.width || my < this.y || my > this.y + this.height) {
       return { action: 'close' };
@@ -100,6 +106,12 @@ export default class MailJobPanel {
     ctx.textAlign = 'center';
     const title = this.type === 'delivery' ? 'Mail Deliveries' : 'Package Collections';
     ctx.fillText(title, this.x + this.width / 2, this.y + 22);
+
+    // Close button
+    ctx.fillStyle = '#888';
+    ctx.font = '14px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText('[X]', this.x + this.width - 8, this.y + 22);
 
     // Slots indicator
     ctx.fillStyle = '#aaa';

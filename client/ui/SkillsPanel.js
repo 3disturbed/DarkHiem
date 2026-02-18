@@ -64,6 +64,13 @@ export default class SkillsPanel {
 
   handleClick(mx, my, skills, onHotbarSet) {
     if (!this.visible) return false;
+
+    // Close button (top-right)
+    if (mx >= this.x + this.width - 30 && mx <= this.x + this.width - 4 &&
+        my >= this.y + 4 && my < this.y + this.headerHeight) {
+      return 'close';
+    }
+
     if (mx < this.x || mx > this.x + this.width || my < this.y) return false;
 
     const list = this._getLearnedList(skills);
@@ -125,6 +132,13 @@ export default class SkillsPanel {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('SKILLS (K)', this.x + this.width / 2, this.y + this.headerHeight / 2);
+
+    // Close button
+    ctx.fillStyle = '#888';
+    ctx.font = '14px monospace';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('[X]', this.x + this.width - 8, this.y + this.headerHeight / 2);
 
     if (list.length === 0) {
       ctx.fillStyle = '#666';

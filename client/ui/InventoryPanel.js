@@ -110,6 +110,13 @@ export default class InventoryPanel {
 
   handleClick(mx, my, inventory, onEquip, onUse, onDrop, onSwap) {
     if (!this.visible) return false;
+
+    // Close button (top-right)
+    if (mx >= this.x + this.width - 30 && mx <= this.x + this.width - PANEL_PAD &&
+        my >= this.y + 4 && my < this.y + 24) {
+      return 'close';
+    }
+
     if (mx < this.x || mx > this.x + this.width) return false;
     if (my < this.y || my > this.y + this.height) return false;
 
@@ -372,6 +379,13 @@ export default class InventoryPanel {
     ctx.font = 'bold 13px monospace';
     ctx.textAlign = 'left';
     ctx.fillText('INVENTORY', this.x + PANEL_PAD, this.y + 18);
+
+    // Close button
+    ctx.fillStyle = '#888';
+    ctx.font = '14px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText('[X]', this.x + this.width - PANEL_PAD, this.y + 18);
+
     // Item count
     ctx.fillStyle = '#666';
     ctx.font = '10px monospace';

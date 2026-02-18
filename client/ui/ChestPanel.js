@@ -134,6 +134,12 @@ export default class ChestPanel {
   handleClick(mx, my, inventory) {
     if (!this.visible) return null;
 
+    // Close button (top-right)
+    if (mx >= this.x + this.width - 30 && mx <= this.x + this.width - 4 &&
+        my >= this.y + 4 && my < this.y + 24) {
+      return { action: 'close' };
+    }
+
     // Outside panel → close
     if (mx < this.x || mx > this.x + this.width ||
         my < this.y || my > this.y + this.height) {
@@ -376,6 +382,12 @@ export default class ChestPanel {
     ctx.font = 'bold 13px monospace';
     ctx.textAlign = 'center';
     ctx.fillText(title, this.x + this.width / 2, this.y + 18);
+
+    // Close button
+    ctx.fillStyle = '#888';
+    ctx.font = '14px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText('[X]', this.x + this.width - 8, this.y + 18);
 
     // Column labels
     ctx.fillStyle = '#aaa';

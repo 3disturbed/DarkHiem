@@ -68,6 +68,13 @@ export default class PetCodexPanel {
 
   handleClick(mx, my, sendTeamSet, sendRename) {
     if (!this.visible) return false;
+
+    // Close button (top-right)
+    if (mx >= this.x + PANEL_W - 30 && mx <= this.x + PANEL_W - 4 &&
+        my >= this.y + 4 && my < this.y + 24) {
+      return 'close';
+    }
+
     if (mx < this.x || mx > this.x + PANEL_W || my < this.y || my > this.y + PANEL_H) {
       return false;
     }
@@ -283,6 +290,12 @@ export default class PetCodexPanel {
       ctx.textAlign = 'center';
       ctx.fillText(t === 0 ? 'Collection' : 'Team', tx + tabW / 2, tabY + 16);
     }
+
+    // Close button (top-right, over tab area)
+    ctx.fillStyle = '#888';
+    ctx.font = '14px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText('[X]', this.x + PANEL_W - 8, tabY + 16);
 
     if (this.tab === TAB_COLLECTION) {
       this._renderCollection(ctx);

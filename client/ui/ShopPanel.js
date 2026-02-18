@@ -64,6 +64,12 @@ export default class ShopPanel {
     if (!this.visible) return null;
     this._lastInventory = inventory;
 
+    // Close button (top-right)
+    if (mx >= this.x + this.width - 30 && mx <= this.x + this.width - 4 &&
+        my >= this.y + 4 && my < this.y + 26) {
+      return { action: 'close' };
+    }
+
     // Outside panel
     if (mx < this.x || mx > this.x + this.width || my < this.y || my > this.y + this.height) {
       return { action: 'close' };
@@ -196,6 +202,12 @@ export default class ShopPanel {
     ctx.font = 'bold 13px monospace';
     ctx.textAlign = 'center';
     ctx.fillText(this.shopName, this.x + this.width / 2, this.y + 20);
+
+    // Close button
+    ctx.fillStyle = '#888';
+    ctx.font = '14px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText('[X]', this.x + this.width - 8, this.y + 20);
 
     // Tab buttons
     const tabY = this.y + 30;

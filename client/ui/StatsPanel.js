@@ -64,6 +64,13 @@ export default class StatsPanel {
 
   handleClick(mx, my, playerStats, onAllocate) {
     if (!this.visible) return false;
+
+    // Close button (top-right)
+    if (mx >= this.x + this.width - 30 && mx <= this.x + this.width - PANEL_PAD &&
+        my >= this.y + 4 && my < this.y + PANEL_PAD + 20) {
+      return 'close';
+    }
+
     if (mx < this.x || mx > this.x + this.width) return false;
     if (my < this.y || my > this.y + this.height) return false;
 
@@ -112,6 +119,12 @@ export default class StatsPanel {
     ctx.font = '14px monospace';
     ctx.textAlign = 'center';
     ctx.fillText('Stats', this.x + this.width / 2, this.y + PANEL_PAD + 14);
+
+    // Close button
+    ctx.fillStyle = '#888';
+    ctx.font = '14px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText('[X]', this.x + this.width - PANEL_PAD, this.y + PANEL_PAD + 14);
 
     const startY = this.y + PANEL_PAD + 30;
     this.buttonRects = {};

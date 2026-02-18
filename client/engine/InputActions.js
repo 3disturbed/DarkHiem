@@ -47,6 +47,12 @@ export default class InputActions {
     // Mouse scroll (positive = scroll up, negative = scroll down)
     this.scrollDelta = 0;
 
+    // Pinch-to-zoom (touch only)
+    this.pinchActive = false;
+    this.pinchJustStarted = false;
+    this.pinchStartDist = 0;
+    this.pinchCurrentDist = 0;
+
     // Mouse/touch screen position (set by InputManager)
     this.mouseWorldX = 0;
     this.mouseWorldY = 0;

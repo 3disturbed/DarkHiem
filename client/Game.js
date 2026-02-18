@@ -1363,6 +1363,9 @@ export default class Game {
       } else if (this.craftingOpen) {
         this.craftingPanel.close();
         this.craftingOpen = false;
+      } else if (this.fishingRodOpen) {
+        this.fishingRodPanel.close();
+        this.fishingRodOpen = false;
       } else if (this.panelsOpen && this.inventoryPanel.swapSource >= 0) {
         this.inventoryPanel.cancelSwap();
       } else if (this.contextMenu.visible) {
@@ -1434,6 +1437,24 @@ export default class Game {
       }
       if (actions.dpadLeft) this.inventoryPanel.selectDir(-1, 0);
       if (actions.dpadRight) this.inventoryPanel.selectDir(1, 0);
+    }
+
+    // Pinch-to-zoom: route to camera or convert to scroll for UI panels
+    if (actions.pinchActive) {
+      if (actions.pinchJustStarted) {
+        this.camera.onPinchStart(actions.pinchStartDist);
+      }
+      const anyPanel = this.chestOpen || this.animalPenOpen || this.petCodexOpen ||
+        this.shopOpen || this.worldMap.visible || this.skillsOpen ||
+        this.upgradeOpen || this.craftingOpen || this.panelsOpen;
+      if (!anyPanel) {
+        this.camera.onPinchMove(actions.pinchCurrentDist);
+      } else {
+        // Convert pinch to discrete scroll steps for panel scrolling
+        const scale = actions.pinchCurrentDist / (actions.pinchStartDist || 1);
+        if (scale > 1.08) actions.scrollDelta += 1;
+        else if (scale < 0.92) actions.scrollDelta -= 1;
+      }
     }
 
     // Scroll routing: panels get scroll when open, otherwise camera zoom
@@ -1564,7 +1585,11 @@ export default class Game {
       if (this.input.activeMethod === 'gamepad') {
         this.skillsPanel.confirmSelected(this.skills, onHotbarSet);
       } else {
-        this.skillsPanel.handleClick(uiMX, uiMY, this.skills, onHotbarSet);
+        const skillResult = this.skillsPanel.handleClick(uiMX, uiMY, this.skills, onHotbarSet);
+        if (skillResult === 'close' || skillResult === false) {
+          this.skillsPanel.close();
+          this.skillsOpen = false;
+        }
       }
     }
 
@@ -1675,6 +1700,10 @@ export default class Game {
           // Consume click so it doesn't fall through to other panels
           actions.action = false;
           actions.screenTap = false;
+        } else {
+          // Clicked outside panel → close
+          this.fishingRodPanel.close();
+          this.fishingRodOpen = false;
         }
       }
     }
@@ -1683,13 +1712,17 @@ export default class Game {
     if (this.animalPenOpen) {
       this.animalPenPanel.handleMouseMove(uiMX, uiMY);
       if (actions.action || actions.screenTap) {
-        this.animalPenPanel.handleClick(
+        const penResult = this.animalPenPanel.handleClick(
           uiMX, uiMY, this.petCodex,
           (s1, s2) => this.network.sendPetBreedStart(s1, s2),
           () => this.network.sendPetBreedCollect(),
           (codexIdx) => this.network.sendPetTrain(codexIdx),
           (target, sacrifices) => this.network.sendPetTierUp(target, sacrifices),
         );
+        if (penResult === 'close' || penResult === false) {
+          this.animalPenPanel.visible = false;
+          this.animalPenOpen = false;
+        }
       }
     }
 
@@ -1697,11 +1730,15 @@ export default class Game {
     if (this.petCodexOpen) {
       this.petCodexPanel.handleMouseMove(uiMX, uiMY);
       if (actions.action || actions.screenTap) {
-        this.petCodexPanel.handleClick(
+        const codexResult = this.petCodexPanel.handleClick(
           uiMX, uiMY,
           (codexIdx, teamIdx) => this.network.sendPetTeamSet(codexIdx, teamIdx),
           (codexIdx, newName) => this.network.sendPetRename(codexIdx, newName),
         );
+        if (codexResult === 'close' || codexResult === false) {
+          this.petCodexPanel.visible = false;
+          this.petCodexOpen = false;
+        }
       }
     }
 
@@ -1767,13 +1804,20 @@ export default class Game {
         });
       } else {
         const onSwap = (from, to) => this.network.sendItemMove(from, to);
-        this.inventoryPanel.handleClick(uiMX, uiMY, this.inventory, onEquip, onUse, onDrop, onSwap);
-        this.equipmentPanel.handleClick(uiMX, uiMY, this.equipment, (slotName) => {
+        const invResult = this.inventoryPanel.handleClick(uiMX, uiMY, this.inventory, onEquip, onUse, onDrop, onSwap);
+        const equipResult = this.equipmentPanel.handleClick(uiMX, uiMY, this.equipment, (slotName) => {
           this.network.sendUnequip(slotName);
         });
-        this.statsPanel.handleClick(uiMX, uiMY, this.playerStats, (stat) => {
+        const statResult = this.statsPanel.handleClick(uiMX, uiMY, this.playerStats, (stat) => {
           this.network.sendStatAllocate(stat);
         });
+        if (invResult === 'close' || equipResult === 'close' || statResult === 'close') {
+          this.panelsOpen = false;
+        }
+        // Click outside all panels → close the group
+        if (invResult === false && equipResult === false && statResult === false) {
+          this.panelsOpen = false;
+        }
       }
     }
 
