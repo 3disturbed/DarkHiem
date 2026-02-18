@@ -19,8 +19,10 @@ const ENEMY_IDS = [
   'greyling', 'boar', 'meadow_skeleton', 'bramblethorn', 'cave_bat', 'cave_spider', 'rabbit',
   // Dark Forest
   'greydwarf', 'troll', 'forest_ghost', 'shadow_lurker', 'deep_troll', 'forest_guardian',
+  'elder_treant', 'forest_sprite', 'shambling_mound', 'druid_spirit',
   // Swamp
   'draugr', 'blob', 'wraith', 'slime_beast', 'blind_crawler',
+  'swamp_witch', 'voodoo_witch_doctor', 'bog_zombie', 'phantom',
   // Mountain
   'wolf', 'drake', 'stone_golem', 'crystal_beetle', 'ice_golem',
   // Volcanic
