@@ -1186,6 +1186,7 @@ export default class Game {
         this.inventoryPanel.position(r.logicalWidth, r.logicalHeight);
         this.equipmentPanel.position(r.logicalWidth, r.logicalHeight);
         this.statsPanel.position(r.logicalWidth, r.logicalHeight);
+        actions.screenTap = false; // prevent same-frame tap from closing
       }
     }
 
@@ -1198,6 +1199,7 @@ export default class Game {
         this.questPanel.position(r.logicalWidth, r.logicalHeight);
         this.questPanel.openQuestLog(this.questLog.getActiveQuests(), this.questLog.getCompletedQuests());
         this.questPanelOpen = true;
+        actions.screenTap = false;
       }
     }
 
@@ -1267,6 +1269,7 @@ export default class Game {
         this.skillsPanel.position(r.logicalWidth, r.logicalHeight);
         this.skillsPanel.open();
         this.skillsOpen = true;
+        actions.screenTap = false;
         // Close crafting/upgrade if open
         if (this.craftingOpen) { this.craftingPanel.close(); this.craftingOpen = false; }
         if (this.upgradeOpen) { this.upgradePanel.close(); this.upgradeOpen = false; }
@@ -1282,12 +1285,14 @@ export default class Game {
         this.petCodexPanel.position(r.logicalWidth, r.logicalHeight);
         this.petCodexPanel.open(this.petCodex, this.petTeam);
         this.petCodexOpen = true;
+        actions.screenTap = false;
       }
     }
 
     // Toggle world map with M key
     if (actions.map && !this.placementMode) {
       this.worldMap.toggle(this.localPlayer);
+      actions.screenTap = false;
     }
 
     // World map drag panning + station click

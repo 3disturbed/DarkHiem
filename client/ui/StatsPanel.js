@@ -153,34 +153,49 @@ export default class StatsPanel {
       const bonus = playerStats.equipBonuses[stat] || 0;
       const total = base + bonus;
 
+      const valRight = playerStats.statPoints > 0 ? this.x + this.width - PANEL_PAD - 34 : this.x + this.width - PANEL_PAD - 6;
       ctx.textAlign = 'right';
       if (bonus > 0) {
         ctx.fillStyle = '#fff';
-        ctx.fillText(`${base}`, this.x + this.width - PANEL_PAD - 50, y + 14);
+        ctx.fillText(`${base}`, valRight - 24, y + 14);
         ctx.fillStyle = '#4a9';
-        ctx.fillText(`+${bonus}`, this.x + this.width - PANEL_PAD - 26, y + 14);
+        ctx.fillText(`+${bonus}`, valRight, y + 14);
       } else {
         ctx.fillStyle = '#fff';
-        ctx.fillText(`${total}`, this.x + this.width - PANEL_PAD - 26, y + 14);
+        ctx.fillText(`${total}`, valRight, y + 14);
       }
 
       // + button if stat points available
       if (playerStats.statPoints > 0) {
-        const btnX = this.x + this.width - PANEL_PAD - 18;
-        const btnW = 18;
-        const btnH = 16;
+        const btnW = 28;
+        const btnH = 20;
+        const btnX = this.x + this.width - PANEL_PAD - btnW;
         const btnY = y + Math.floor((LINE_HEIGHT - btnH) / 2);
 
-        ctx.fillStyle = '#3a5';
-        ctx.fillRect(btnX, btnY, btnW, btnH);
-        ctx.strokeStyle = '#5c7';
+        // Rounded button background
+        const rad = 4;
+        ctx.beginPath();
+        ctx.moveTo(btnX + rad, btnY);
+        ctx.lineTo(btnX + btnW - rad, btnY);
+        ctx.arcTo(btnX + btnW, btnY, btnX + btnW, btnY + rad, rad);
+        ctx.lineTo(btnX + btnW, btnY + btnH - rad);
+        ctx.arcTo(btnX + btnW, btnY + btnH, btnX + btnW - rad, btnY + btnH, rad);
+        ctx.lineTo(btnX + rad, btnY + btnH);
+        ctx.arcTo(btnX, btnY + btnH, btnX, btnY + btnH - rad, rad);
+        ctx.lineTo(btnX, btnY + rad);
+        ctx.arcTo(btnX, btnY, btnX + rad, btnY, rad);
+        ctx.closePath();
+        ctx.fillStyle = '#2ecc71';
+        ctx.fill();
+        ctx.strokeStyle = '#27ae60';
         ctx.lineWidth = 1;
-        ctx.strokeRect(btnX, btnY, btnW, btnH);
+        ctx.stroke();
 
         ctx.fillStyle = '#fff';
-        ctx.font = 'bold 12px monospace';
+        ctx.font = 'bold 14px monospace';
         ctx.textAlign = 'center';
-        ctx.fillText('+', btnX + btnW / 2, btnY + 12);
+        ctx.textBaseline = 'middle';
+        ctx.fillText('+', btnX + btnW / 2, btnY + btnH / 2);
 
         this.buttonRects[stat] = { x: btnX, y: btnY, w: btnW, h: btnH };
       }

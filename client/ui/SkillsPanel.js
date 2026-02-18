@@ -84,16 +84,18 @@ export default class SkillsPanel {
     const def = list[rowIndex];
     this.selectedIndex = rowIndex;
 
-    // Check if clicked one of the 5 hotbar bind buttons
-    const bindY = contentY + (rowIndex - this.scrollOffset) * this.rowHeight + 6;
-    if (my >= bindY && my <= bindY + 16) {
-      const bindStartX = this.x + this.width - 112;
-      for (let i = 0; i < 5; i++) {
-        const bx = bindStartX + i * 22;
-        if (mx >= bx && mx <= bx + 18) {
-          if (onHotbarSet) onHotbarSet(i, def.id);
-          return true;
-        }
+    // Check if clicked one of the 5 hotbar bind buttons (circular hit test)
+    const bindCY = contentY + (rowIndex - this.scrollOffset) * this.rowHeight + 14;
+    const bindStartX = this.x + this.width - 120;
+    const bindR = 12; // slightly larger hit area than visual radius
+    const bindGap = 24;
+    for (let i = 0; i < 5; i++) {
+      const bx = bindStartX + i * bindGap;
+      const dx = mx - bx;
+      const dy = my - bindCY;
+      if (dx * dx + dy * dy < bindR * bindR) {
+        if (onHotbarSet) onHotbarSet(i, def.id);
+        return true;
       }
     }
 
@@ -194,22 +196,30 @@ export default class SkillsPanel {
       const desc = def.description.length > 34 ? def.description.slice(0, 32) + '..' : def.description;
       ctx.fillText(desc, this.x + 38, rowY + 36);
 
-      // Hotbar bind buttons
-      const bindStartX = this.x + this.width - 112;
-      const bindY = rowY + 6;
+      // Hotbar bind buttons (circular, touch-friendly)
+      const bindStartX = this.x + this.width - 120;
+      const bindCY = rowY + 14;
+      const bindR = 10;
+      const bindGap = 24;
       for (let slot = 0; slot < 5; slot++) {
-        const bx = bindStartX + slot * 22;
+        const bx = bindStartX + slot * bindGap;
         const isBound = skills.hotbar[slot] === def.id;
-        ctx.fillStyle = isBound ? (def.color || '#f39c12') : 'rgba(255,255,255,0.1)';
-        ctx.fillRect(bx, bindY, 18, 16);
+
+        // Circle background
+        ctx.beginPath();
+        ctx.arc(bx, bindCY, bindR, 0, Math.PI * 2);
+        ctx.fillStyle = isBound ? (def.color || '#f39c12') : 'rgba(255,255,255,0.08)';
+        ctx.fill();
         ctx.strokeStyle = isBound ? '#fff' : '#555';
         ctx.lineWidth = 1;
-        ctx.strokeRect(bx, bindY, 18, 16);
+        ctx.stroke();
+
+        // Slot number
         ctx.fillStyle = isBound ? '#000' : '#888';
-        ctx.font = '10px monospace';
+        ctx.font = 'bold 10px monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`${slot + 1}`, bx + 9, bindY + 8);
+        ctx.fillText(`${slot + 1}`, bx, bindCY);
       }
     }
 

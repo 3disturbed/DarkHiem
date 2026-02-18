@@ -69,7 +69,11 @@ export default class TouchInput {
           break;
         }
       }
-      if (hitButton) continue;
+      if (hitButton) {
+        // Remove from pending so button press doesn't also fire as a screen tap
+        this._pendingTouches.delete(touch.identifier);
+        continue;
+      }
 
       // Left half = move stick
       if (tx < halfW && this.leftStick.touchId === null) {
