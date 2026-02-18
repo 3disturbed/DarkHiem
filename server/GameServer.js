@@ -526,39 +526,43 @@ export default class GameServer {
   }
 
   tick() {
-    const now = Date.now();
-    const dt = (now - this.lastTick) / 1000;
-    this.lastTick = now;
-    this.tickCount++;
+    try {
+      const now = Date.now();
+      const dt = (now - this.lastTick) / 1000;
+      this.lastTick = now;
+      this.tickCount++;
 
-    // Run ECS systems
-    this.systemManager.update(dt, this.entityManager, { worldManager: this.worldManager, combatResolver: this.combatResolver });
+      // Run ECS systems
+      this.systemManager.update(dt, this.entityManager, { worldManager: this.worldManager, combatResolver: this.combatResolver });
 
-    // Destroy marked entities
-    this.entityManager.flushDestroyed();
+      // Destroy marked entities
+      this.entityManager.flushDestroyed();
 
-    // Register newly discovered stations into global registry
-    if (this.structureSpawnSystem && this.stationRegistry) {
-      const pending = this.structureSpawnSystem.pendingRegistrations;
-      for (const s of pending) {
-        if (!this.stationRegistry.has(s.key)) {
-          this.stationRegistry.set(s.key, { x: s.x, y: s.y, stationId: s.stationId, name: s.name });
-          // Broadcast this addition to all connected players
-          for (const [, conn] of this.players) {
-            conn.emit(MSG.STATION_LIST, { add: { id: s.key, x: s.x, y: s.y, stationId: s.stationId, name: s.name } });
+      // Register newly discovered stations into global registry
+      if (this.structureSpawnSystem && this.stationRegistry) {
+        const pending = this.structureSpawnSystem.pendingRegistrations;
+        for (const s of pending) {
+          if (!this.stationRegistry.has(s.key)) {
+            this.stationRegistry.set(s.key, { x: s.x, y: s.y, stationId: s.stationId, name: s.name });
+            // Broadcast this addition to all connected players
+            for (const [, conn] of this.players) {
+              conn.emit(MSG.STATION_LIST, { add: { id: s.key, x: s.x, y: s.y, stationId: s.stationId, name: s.name } });
+            }
           }
         }
+        pending.length = 0;
       }
-      pending.length = 0;
-    }
 
-    // Passive pet healing: every 5 seconds (100 ticks at 20 TPS), heal 2% max HP
-    if (this.tickCount % 100 === 0) {
-      this._tickPetHealing();
-    }
+      // Passive pet healing: every 5 seconds (100 ticks at 20 TPS), heal 2% max HP
+      if (this.tickCount % 100 === 0) {
+        this._tickPetHealing();
+      }
 
-    // Broadcast state to all players
-    this.broadcastState();
+      // Broadcast state to all players
+      this.broadcastState();
+    } catch (err) {
+      console.error('[GameServer] Tick error:', err.stack || err);
+    }
   }
 
   _tickPetHealing() {
