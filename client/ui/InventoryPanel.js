@@ -4,20 +4,14 @@ import { SKILL_DB } from '../../shared/SkillTypes.js';
 import itemSprites from '../entities/ItemSprites.js';
 
 // Layout constants
-const PANEL_W = 520;
-const PANEL_H = 420;
 const PANEL_PAD = 10;
-const TAB_H = 22;
+const TAB_H = 24;
 const TAB_PAD = 2;
-const LIST_W = 210;
-const DETAIL_W = PANEL_W - LIST_W - PANEL_PAD * 3;
 const ROW_H = 24;
 const ICON_SIZE = 18;
-const VISIBLE_ROWS = 13;
 const BTN_W = 90;
-const BTN_H = 22;
+const BTN_H = 24;
 const BTN_GAP = 6;
-const HEADER_H = 28;
 
 const CATEGORIES = [
   { id: 'all', label: 'All', filter: () => true },
@@ -37,14 +31,57 @@ export default class InventoryPanel {
     this.selectedItemIndex = -1;
     this.hoveredItemIndex = -1;
     this.scrollOffset = 0;
-    this.swapSource = -1; // slotIndex in swap mode
+    this.swapSource = -1;
     this.mouseX = 0;
     this.mouseY = 0;
-    this.x = 0;
-    this.y = 0;
-    this.width = PANEL_W;
-    this.height = PANEL_H;
     this._cachedItems = [];
+
+    // Content area (set by parent container)
+    this.contentX = 0;
+    this.contentY = 0;
+    this.contentW = 520;
+    this.contentH = 374;
+
+    // Derived layout values
+    this._listW = 210;
+    this._detailW = 280;
+    this._detailMode = 'side'; // 'side' or 'bottom'
+    this._visibleRows = 13;
+  }
+
+  // Called by CharacterPanel to set the drawable area
+  setContentArea(area) {
+    this.contentX = area.x;
+    this.contentY = area.y;
+    this.contentW = area.width;
+    this.contentH = area.height;
+    this._recalcLayout();
+  }
+
+  _recalcLayout() {
+    const isNarrow = this.contentW < 360;
+    if (isNarrow) {
+      // Single-column: list full width, detail below
+      this._listW = this.contentW - PANEL_PAD * 2;
+      this._detailW = this.contentW - PANEL_PAD * 2;
+      this._detailMode = 'bottom';
+      this._visibleRows = Math.max(4, Math.floor((this.contentH * 0.45 - TAB_H - 10) / ROW_H));
+    } else {
+      // Side-by-side
+      this._listW = Math.min(210, Math.floor(this.contentW * 0.42));
+      this._detailW = this.contentW - this._listW - PANEL_PAD * 3;
+      this._detailMode = 'side';
+      this._visibleRows = Math.max(5, Math.floor((this.contentH - TAB_H - 14) / ROW_H));
+    }
+  }
+
+  // Legacy position() for backwards compat - now delegates to setContentArea
+  position(canvasWidth, canvasHeight) {
+    const w = canvasWidth < 540 ? canvasWidth - 16 : 520;
+    const h = canvasHeight < 500 ? canvasHeight - 60 : 420;
+    const x = Math.max(4, (canvasWidth - w) / 2);
+    const y = Math.max(4, (canvasHeight - h) / 2 + 20);
+    this.setContentArea({ x, y, width: w, height: h });
   }
 
   toggle() {
@@ -59,21 +96,11 @@ export default class InventoryPanel {
     this.swapSource = -1;
   }
 
-  position(canvasWidth, canvasHeight) {
-    // Responsive sizing: shrink panel to fit small screens
-    if (canvasWidth < PANEL_W + 20) {
-      this.width = canvasWidth - 16;
-    } else {
-      this.width = PANEL_W;
-    }
-    if (canvasHeight < PANEL_H + 80) {
-      this.height = canvasHeight - 60;
-    } else {
-      this.height = PANEL_H;
-    }
-    this.x = Math.max(4, (canvasWidth - this.width) / 2);
-    this.y = Math.max(4, (canvasHeight - this.height) / 2 + 20);
-  }
+  // Convenience getters referencing content area
+  get x() { return this.contentX; }
+  get y() { return this.contentY; }
+  get width() { return this.contentW; }
+  get height() { return this.contentH; }
 
   // API compat: selectedSlot returns the real inventory slot index of the selected item
   get selectedSlot() {
@@ -83,13 +110,11 @@ export default class InventoryPanel {
     return -1;
   }
   set selectedSlot(v) {
-    // Find item in cached list by slotIndex
     if (v < 0) { this.selectedItemIndex = -1; return; }
     const idx = this._cachedItems.findIndex(i => i.slotIndex === v);
     this.selectedItemIndex = idx;
   }
 
-  // API compat: hoveredSlot
   get hoveredSlot() {
     if (this.hoveredItemIndex >= 0 && this.hoveredItemIndex < this._cachedItems.length) {
       return this._cachedItems[this.hoveredItemIndex].slotIndex;
@@ -98,8 +123,7 @@ export default class InventoryPanel {
   }
 
   handleScroll(delta) {
-    if (!this.visible) return false;
-    const maxScroll = Math.max(0, this._cachedItems.length - VISIBLE_ROWS);
+    const maxScroll = Math.max(0, this._cachedItems.length - this._visibleRows);
     if (delta > 0) {
       this.scrollOffset = Math.min(this.scrollOffset + 1, maxScroll);
     } else if (delta < 0) {
@@ -109,16 +133,10 @@ export default class InventoryPanel {
   }
 
   handleClick(mx, my, inventory, onEquip, onUse, onDrop, onSwap) {
-    if (!this.visible) return false;
-
-    // Close button (top-right)
-    if (mx >= this.x + this.width - 30 && mx <= this.x + this.width - PANEL_PAD &&
-        my >= this.y + 4 && my < this.y + 24) {
-      return 'close';
+    if (mx < this.contentX || mx > this.contentX + this.contentW ||
+        my < this.contentY || my > this.contentY + this.contentH) {
+      return false;
     }
-
-    if (mx < this.x || mx > this.x + this.width) return false;
-    if (my < this.y || my > this.y + this.height) return false;
 
     this._updateCache(inventory);
 
@@ -170,7 +188,6 @@ export default class InventoryPanel {
     const clickedIdx = this._getItemIndexAt(mx, my);
     if (clickedIdx >= 0) {
       if (clickedIdx === this.selectedItemIndex) {
-        // Double-click behavior: equip equipment, use consumables
         const item = this._cachedItems[clickedIdx];
         const def = item.def;
         if (def && def.type === 'equipment' && onEquip) onEquip(item.slotIndex);
@@ -180,11 +197,10 @@ export default class InventoryPanel {
       return true;
     }
 
-    return true; // consumed click (inside panel)
+    return true;
   }
 
   handleRightClick(mx, my, inventory) {
-    if (!this.visible) return null;
     this._updateCache(inventory);
     const clickedIdx = this._getItemIndexAt(mx, my);
     if (clickedIdx < 0) return null;
@@ -215,14 +231,12 @@ export default class InventoryPanel {
   }
 
   selectDir(dx, dy) {
-    // Left/right = switch category tabs
     if (dx !== 0) {
       this.selectedCategory = Math.max(0, Math.min(CATEGORIES.length - 1, this.selectedCategory + dx));
       this.selectedItemIndex = -1;
       this.scrollOffset = 0;
       return;
     }
-    // Up/down = navigate item list
     if (dy !== 0) {
       const maxIdx = this._cachedItems.length - 1;
       if (this.selectedItemIndex === -1) {
@@ -230,11 +244,10 @@ export default class InventoryPanel {
       } else {
         this.selectedItemIndex = Math.max(0, Math.min(maxIdx, this.selectedItemIndex + dy));
       }
-      // Auto-scroll
       if (this.selectedItemIndex < this.scrollOffset) {
         this.scrollOffset = this.selectedItemIndex;
-      } else if (this.selectedItemIndex >= this.scrollOffset + VISIBLE_ROWS) {
-        this.scrollOffset = this.selectedItemIndex - VISIBLE_ROWS + 1;
+      } else if (this.selectedItemIndex >= this.scrollOffset + this._visibleRows) {
+        this.scrollOffset = this.selectedItemIndex - this._visibleRows + 1;
       }
     }
   }
@@ -249,7 +262,6 @@ export default class InventoryPanel {
   }
 
   handleMouseMove(mx, my) {
-    if (!this.visible) { this.hoveredItemIndex = -1; return; }
     this.mouseX = mx;
     this.mouseY = my;
     this.hoveredItemIndex = this._getItemIndexAt(mx, my);
@@ -279,7 +291,6 @@ export default class InventoryPanel {
         petIsRare: def.isPet ? (slot.isRare || false) : false,
       });
     }
-    // Sort: equipment first (by slot), then materials, consumables, gems; alphabetical within
     const typeOrder = { equipment: 0, consumable: 1, material: 2, gem: 3 };
     items.sort((a, b) => {
       const ta = typeOrder[a.def.type] ?? 9;
@@ -288,37 +299,36 @@ export default class InventoryPanel {
       return a.def.name.localeCompare(b.def.name);
     });
     this._cachedItems = items;
-    // Clamp selection
     if (this.selectedItemIndex >= items.length) {
       this.selectedItemIndex = items.length - 1;
     }
-    const maxScroll = Math.max(0, items.length - VISIBLE_ROWS);
+    const maxScroll = Math.max(0, items.length - this._visibleRows);
     if (this.scrollOffset > maxScroll) this.scrollOffset = maxScroll;
   }
 
   // ---- Hit Detection ----
 
   _getTabAt(mx, my) {
-    const tabY = this.y + HEADER_H;
+    const tabY = this.contentY + 4;
     if (my < tabY || my > tabY + TAB_H) return -1;
-    const tabTotalW = CATEGORIES.length * (this._tabWidth() + TAB_PAD);
-    const tabStartX = this.x + PANEL_PAD;
+    const tw = this._tabWidth();
+    const tabStartX = this.contentX + PANEL_PAD;
     for (let i = 0; i < CATEGORIES.length; i++) {
-      const tx = tabStartX + i * (this._tabWidth() + TAB_PAD);
-      if (mx >= tx && mx < tx + this._tabWidth()) return i;
+      const tx = tabStartX + i * (tw + TAB_PAD);
+      if (mx >= tx && mx < tx + tw) return i;
     }
     return -1;
   }
 
   _tabWidth() {
-    return Math.floor((PANEL_W - PANEL_PAD * 2) / CATEGORIES.length) - TAB_PAD;
+    return Math.floor((this.contentW - PANEL_PAD * 2) / CATEGORIES.length) - TAB_PAD;
   }
 
   _getItemIndexAt(mx, my) {
-    const listX = this.x + PANEL_PAD;
-    const listY = this.y + HEADER_H + TAB_H + TAB_PAD + 4;
-    const listH = VISIBLE_ROWS * ROW_H;
-    if (mx < listX || mx > listX + LIST_W) return -1;
+    const listX = this.contentX + PANEL_PAD;
+    const listY = this.contentY + 4 + TAB_H + TAB_PAD + 4;
+    const listH = this._visibleRows * ROW_H;
+    if (mx < listX || mx > listX + this._listW) return -1;
     if (my < listY || my > listY + listH) return -1;
     const row = Math.floor((my - listY) / ROW_H);
     const idx = this.scrollOffset + row;
@@ -330,8 +340,18 @@ export default class InventoryPanel {
     if (this.selectedItemIndex < 0 || this.selectedItemIndex >= this._cachedItems.length) return null;
     const item = this._cachedItems[this.selectedItemIndex];
     const btns = this._getButtons(item);
-    const detailX = this.x + PANEL_PAD + LIST_W + PANEL_PAD;
-    const btnY = this.y + this.height - PANEL_PAD - BTN_H * 2 - BTN_GAP;
+
+    const detailX = this._detailMode === 'side'
+      ? this.contentX + PANEL_PAD + this._listW + PANEL_PAD
+      : this.contentX + PANEL_PAD;
+    const detailY = this._detailMode === 'side'
+      ? this.contentY + 4 + TAB_H + TAB_PAD + 4
+      : this.contentY + 4 + TAB_H + TAB_PAD + 4 + this._visibleRows * ROW_H + 6;
+    const detailH = this._detailMode === 'side'
+      ? this._visibleRows * ROW_H
+      : this.contentH - (TAB_H + TAB_PAD + 4 + this._visibleRows * ROW_H + 10);
+
+    const btnY = detailY + detailH - PANEL_PAD - BTN_H * 2 - BTN_GAP;
     for (let row = 0; row < 2; row++) {
       for (let col = 0; col < 2; col++) {
         const bIdx = row * 2 + col;
@@ -364,33 +384,13 @@ export default class InventoryPanel {
   // ---- Rendering ----
 
   render(ctx, inventory) {
-    if (!this.visible) return;
     this._updateCache(inventory);
 
-    // Panel background
-    ctx.fillStyle = 'rgba(15, 15, 25, 0.94)';
-    ctx.fillRect(this.x, this.y, this.width, this.height);
-    ctx.strokeStyle = '#444';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(this.x, this.y, this.width, this.height);
-
-    // Header
-    ctx.fillStyle = '#ccc';
-    ctx.font = 'bold 13px monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText('INVENTORY', this.x + PANEL_PAD, this.y + 18);
-
-    // Close button
-    ctx.fillStyle = '#888';
-    ctx.font = '14px monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText('[X]', this.x + this.width - PANEL_PAD, this.y + 18);
-
-    // Item count
-    ctx.fillStyle = '#666';
+    // Item count label (top-right)
+    ctx.fillStyle = '#555';
     ctx.font = '10px monospace';
     ctx.textAlign = 'right';
-    ctx.fillText(`${this._cachedItems.length} items`, this.x + this.width - PANEL_PAD, this.y + 18);
+    ctx.fillText(`${this._cachedItems.length} items`, this.contentX + this.contentW - PANEL_PAD, this.contentY + 14);
 
     // Category tabs
     this._renderTabs(ctx);
@@ -403,71 +403,79 @@ export default class InventoryPanel {
 
     // Swap mode indicator
     if (this.swapSource >= 0) {
-      ctx.fillStyle = '#ff0';
+      ctx.fillStyle = '#c9a84c';
       ctx.font = '10px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('Click an item to swap with', this.x + this.width / 2, this.y + this.height - 4);
+      ctx.fillText('Click an item to swap with', this.contentX + this.contentW / 2, this.contentY + this.contentH - 4);
     }
 
-    ctx.textAlign = 'left'; // reset
+    ctx.textAlign = 'left';
   }
 
   _renderTabs(ctx) {
-    const tabY = this.y + HEADER_H;
+    const tabY = this.contentY + 4;
     const tw = this._tabWidth();
     for (let i = 0; i < CATEGORIES.length; i++) {
-      const tx = this.x + PANEL_PAD + i * (tw + TAB_PAD);
+      const tx = this.contentX + PANEL_PAD + i * (tw + TAB_PAD);
       const isActive = i === this.selectedCategory;
-      ctx.fillStyle = isActive ? '#3a3a5a' : '#1a1a2a';
+
+      // Tab background with subtle rounded corners
+      ctx.fillStyle = isActive ? '#2a2a4a' : '#14141e';
       ctx.fillRect(tx, tabY, tw, TAB_H);
-      ctx.strokeStyle = isActive ? '#88f' : '#333';
+
+      // Active tab gold underline instead of blue border
+      if (isActive) {
+        ctx.fillStyle = '#c9a84c';
+        ctx.fillRect(tx + 2, tabY + TAB_H - 2, tw - 4, 2);
+      }
+      ctx.strokeStyle = isActive ? '#c9a84c55' : '#222';
       ctx.lineWidth = 1;
       ctx.strokeRect(tx, tabY, tw, TAB_H);
-      ctx.fillStyle = isActive ? '#fff' : '#888';
+
+      ctx.fillStyle = isActive ? '#fff' : '#666';
       ctx.font = '10px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(CATEGORIES[i].label, tx + tw / 2, tabY + TAB_H - 6);
+      ctx.fillText(CATEGORIES[i].label, tx + tw / 2, tabY + TAB_H - 7);
     }
   }
 
   _renderItemList(ctx) {
-    const listX = this.x + PANEL_PAD;
-    const listY = this.y + HEADER_H + TAB_H + TAB_PAD + 4;
-    const listH = VISIBLE_ROWS * ROW_H;
+    const listX = this.contentX + PANEL_PAD;
+    const listY = this.contentY + 4 + TAB_H + TAB_PAD + 4;
+    const listH = this._visibleRows * ROW_H;
 
     // List background
-    ctx.fillStyle = '#0e0e1a';
-    ctx.fillRect(listX, listY, LIST_W, listH);
-    ctx.strokeStyle = '#333';
+    ctx.fillStyle = '#0a0a16';
+    ctx.fillRect(listX, listY, this._listW, listH);
+    ctx.strokeStyle = '#222';
     ctx.lineWidth = 1;
-    ctx.strokeRect(listX, listY, LIST_W, listH);
+    ctx.strokeRect(listX, listY, this._listW, listH);
 
     // Clip
     ctx.save();
     ctx.beginPath();
-    ctx.rect(listX, listY, LIST_W, listH);
+    ctx.rect(listX, listY, this._listW, listH);
     ctx.clip();
 
-    for (let i = 0; i < VISIBLE_ROWS; i++) {
+    for (let i = 0; i < this._visibleRows; i++) {
       const idx = this.scrollOffset + i;
       if (idx >= this._cachedItems.length) break;
       const item = this._cachedItems[idx];
       const rowY = listY + i * ROW_H;
 
-      // Row background
       const isSelected = idx === this.selectedItemIndex;
       const isHovered = idx === this.hoveredItemIndex;
       if (isSelected) {
         ctx.fillStyle = '#2a2a4a';
-        ctx.fillRect(listX + 1, rowY, LIST_W - 2, ROW_H);
+        ctx.fillRect(listX + 1, rowY, this._listW - 2, ROW_H);
       } else if (isHovered) {
-        ctx.fillStyle = '#1a1a30';
-        ctx.fillRect(listX + 1, rowY, LIST_W - 2, ROW_H);
+        ctx.fillStyle = '#181830';
+        ctx.fillRect(listX + 1, rowY, this._listW - 2, ROW_H);
       }
 
       // Selection indicator
       if (isSelected) {
-        ctx.fillStyle = '#88f';
+        ctx.fillStyle = '#c9a84c';
         ctx.font = '10px monospace';
         ctx.textAlign = 'left';
         ctx.fillText('>', listX + 4, rowY + ROW_H - 6);
@@ -481,14 +489,14 @@ export default class InventoryPanel {
         ctx.drawImage(icon, iconX, iconY, ICON_SIZE, ICON_SIZE);
       }
 
-      // Rarity color pip (shifted right if icon present)
+      // Rarity color pip
       const itemRarity = item.petIsRare ? 'rare' : item.def.rarity;
       const rarityColor = RARITY_COLORS[itemRarity] || '#888';
       const pipX = icon ? iconX + ICON_SIZE + 2 : listX + 14;
       ctx.fillStyle = rarityColor;
       ctx.fillRect(pipX, rowY + 6, 3, ROW_H - 12);
 
-      // Item name (shifted right to accommodate icon)
+      // Item name
       const nameX = pipX + 6;
       let displayName = item.petNickname || item.def.name;
       if (item.upgradeLevel > 0) displayName += ` +${item.upgradeLevel}`;
@@ -499,48 +507,59 @@ export default class InventoryPanel {
       if (displayName.length > maxNameLen) displayName = displayName.slice(0, maxNameLen - 1) + '.';
       ctx.fillText(displayName, nameX, rowY + ROW_H - 6);
 
-      // Count (right-aligned)
+      // Count
       if (item.count > 1) {
         ctx.fillStyle = '#aa0';
         ctx.font = '10px monospace';
         ctx.textAlign = 'right';
-        ctx.fillText(`x${item.count}`, listX + LIST_W - 6, rowY + ROW_H - 6);
+        ctx.fillText(`x${item.count}`, listX + this._listW - 6, rowY + ROW_H - 6);
       }
     }
 
-    ctx.restore(); // end clip
+    ctx.restore();
 
     // Scrollbar
-    if (this._cachedItems.length > VISIBLE_ROWS) {
-      const sbX = listX + LIST_W - 6;
-      const ratio = VISIBLE_ROWS / this._cachedItems.length;
+    if (this._cachedItems.length > this._visibleRows) {
+      const sbX = listX + this._listW - 6;
+      const ratio = this._visibleRows / this._cachedItems.length;
       const thumbH = Math.max(12, listH * ratio);
-      const maxScroll = this._cachedItems.length - VISIBLE_ROWS;
-      const thumbY = listY + (this.scrollOffset / maxScroll) * (listH - thumbH);
-      ctx.fillStyle = '#222';
+      const maxScroll = this._cachedItems.length - this._visibleRows;
+      const thumbY = listY + (maxScroll > 0 ? (this.scrollOffset / maxScroll) * (listH - thumbH) : 0);
+      ctx.fillStyle = '#181824';
       ctx.fillRect(sbX, listY, 4, listH);
-      ctx.fillStyle = '#555';
+      ctx.fillStyle = '#444';
       ctx.fillRect(sbX, thumbY, 4, thumbH);
     }
   }
 
   _renderDetailPanel(ctx, inventory) {
-    const detailX = this.x + PANEL_PAD + LIST_W + PANEL_PAD;
-    const detailY = this.y + HEADER_H + TAB_H + TAB_PAD + 4;
-    const detailH = VISIBLE_ROWS * ROW_H;
+    let detailX, detailY, detailW, detailH;
+
+    if (this._detailMode === 'side') {
+      detailX = this.contentX + PANEL_PAD + this._listW + PANEL_PAD;
+      detailY = this.contentY + 4 + TAB_H + TAB_PAD + 4;
+      detailW = this._detailW;
+      detailH = this._visibleRows * ROW_H;
+    } else {
+      // Bottom mode
+      detailX = this.contentX + PANEL_PAD;
+      detailY = this.contentY + 4 + TAB_H + TAB_PAD + 4 + this._visibleRows * ROW_H + 6;
+      detailW = this._detailW;
+      detailH = Math.max(80, this.contentH - (TAB_H + TAB_PAD + 8 + this._visibleRows * ROW_H + 10));
+    }
 
     // Detail background
-    ctx.fillStyle = '#0e0e1a';
-    ctx.fillRect(detailX, detailY, DETAIL_W, detailH);
-    ctx.strokeStyle = '#333';
+    ctx.fillStyle = '#0a0a16';
+    ctx.fillRect(detailX, detailY, detailW, detailH);
+    ctx.strokeStyle = '#222';
     ctx.lineWidth = 1;
-    ctx.strokeRect(detailX, detailY, DETAIL_W, detailH);
+    ctx.strokeRect(detailX, detailY, detailW, detailH);
 
     if (this.selectedItemIndex < 0 || this.selectedItemIndex >= this._cachedItems.length) {
-      ctx.fillStyle = '#555';
+      ctx.fillStyle = '#444';
       ctx.font = '10px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('Select an item', detailX + DETAIL_W / 2, detailY + detailH / 2);
+      ctx.fillText('Select an item', detailX + detailW / 2, detailY + detailH / 2);
       return;
     }
 
@@ -559,7 +578,7 @@ export default class InventoryPanel {
       ctx.drawImage(detailIcon, lx, lineY - 10, 32, 32);
     }
 
-    // Name (offset right if icon present)
+    // Name
     const detailRarity = item.petIsRare ? 'rare' : def.rarity;
     let name = item.petNickname || def.name;
     if (item.upgradeLevel > 0) name += ` +${item.upgradeLevel}`;
@@ -580,7 +599,7 @@ export default class InventoryPanel {
 
     // Type / slot
     if (def.type === 'equipment' && def.slot) {
-      ctx.fillStyle = '#777';
+      ctx.fillStyle = '#666';
       ctx.font = '10px monospace';
       ctx.fillText(def.slot.charAt(0).toUpperCase() + def.slot.slice(1), lx, lineY);
       lineY += lineH;
@@ -591,7 +610,7 @@ export default class InventoryPanel {
     ctx.strokeStyle = '#333';
     ctx.beginPath();
     ctx.moveTo(lx, lineY);
-    ctx.lineTo(detailX + DETAIL_W - 8, lineY);
+    ctx.lineTo(detailX + detailW - 8, lineY);
     ctx.stroke();
     lineY += 8;
 
@@ -599,10 +618,9 @@ export default class InventoryPanel {
     if (def.description) {
       ctx.fillStyle = '#999';
       ctx.font = '10px monospace';
-      // Word wrap
       const words = def.description.split(' ');
       let line = '';
-      const maxW = DETAIL_W - 16;
+      const maxW = detailW - 16;
       for (const word of words) {
         const test = line ? line + ' ' + word : word;
         if (ctx.measureText(test).width > maxW) {
@@ -742,7 +760,7 @@ export default class InventoryPanel {
       lineY += lineH;
     }
 
-    // Action buttons (2×2 grid at bottom of detail panel)
+    // Action buttons (2x2 grid at bottom of detail)
     const btns = this._getButtons(item);
     const btnY = detailY + detailH - PANEL_PAD - BTN_H * 2 - BTN_GAP;
     for (let i = 0; i < btns.length; i++) {
@@ -755,11 +773,26 @@ export default class InventoryPanel {
   }
 
   _renderBtn(ctx, x, y, w, h, label, bg, border) {
+    // Rounded button
+    const r = 4;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.arcTo(x + w, y, x + w, y + r, r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+    ctx.lineTo(x + r, y + h);
+    ctx.arcTo(x, y + h, x, y + h - r, r);
+    ctx.lineTo(x, y + r);
+    ctx.arcTo(x, y, x + r, y, r);
+    ctx.closePath();
+
     ctx.fillStyle = bg;
-    ctx.fillRect(x, y, w, h);
+    ctx.fill();
     ctx.strokeStyle = border;
     ctx.lineWidth = 1;
-    ctx.strokeRect(x, y, w, h);
+    ctx.stroke();
+
     ctx.fillStyle = '#ddd';
     ctx.font = '10px monospace';
     ctx.textAlign = 'center';

@@ -363,6 +363,141 @@ def gen_horseAction():
     return surface
 
 
+def gen_tabCharacter():
+    """Human figure with shield for Character tab icon."""
+    surface, ctx = make_ctx()
+
+    # Head
+    ctx.arc(CX, 14, 7, 0, 2 * math.pi)
+    ctx.fill()
+
+    # Neck
+    ctx.set_line_width(3)
+    ctx.move_to(CX, 21)
+    ctx.line_to(CX, 24)
+    ctx.stroke()
+
+    # Torso
+    ctx.move_to(CX - 12, 28)
+    ctx.line_to(CX - 10, 24)
+    ctx.line_to(CX + 10, 24)
+    ctx.line_to(CX + 12, 28)
+    ctx.line_to(CX + 9, 44)
+    ctx.line_to(CX - 9, 44)
+    ctx.close_path()
+    ctx.fill()
+
+    # Arms
+    ctx.set_line_width(3.5)
+    ctx.move_to(CX - 12, 28)
+    ctx.line_to(CX - 19, 40)
+    ctx.stroke()
+    ctx.move_to(CX + 12, 28)
+    ctx.line_to(CX + 19, 40)
+    ctx.stroke()
+
+    # Legs
+    ctx.set_line_width(3.5)
+    ctx.move_to(CX - 5, 44)
+    ctx.line_to(CX - 7, 56)
+    ctx.stroke()
+    ctx.move_to(CX + 5, 44)
+    ctx.line_to(CX + 7, 56)
+    ctx.stroke()
+
+    # Small shield at bottom-right
+    ctx.set_source_rgba(1, 1, 1, 0.8)
+    ctx.set_line_width(2)
+    ctx.move_to(CX + 16, 44)
+    ctx.line_to(CX + 24, 44)
+    ctx.line_to(CX + 24, 52)
+    ctx.line_to(CX + 20, 56)
+    ctx.line_to(CX + 16, 52)
+    ctx.close_path()
+    ctx.fill_preserve()
+    ctx.set_source_rgba(1, 1, 1, 1)
+    ctx.stroke()
+
+    return surface
+
+
+def gen_characterSilhouette():
+    """Full-body human silhouette for paper-doll background decoration."""
+    surface, ctx = make_ctx()
+
+    # Head
+    ctx.set_source_rgba(1, 1, 1, 0.6)
+    ctx.arc(CX, 10, 6, 0, 2 * math.pi)
+    ctx.fill()
+
+    # Neck
+    ctx.set_line_width(2.5)
+    ctx.set_source_rgba(1, 1, 1, 0.4)
+    ctx.move_to(CX, 16)
+    ctx.line_to(CX, 19)
+    ctx.stroke()
+
+    # Shoulders + torso outline
+    ctx.set_line_width(2)
+    ctx.set_source_rgba(1, 1, 1, 0.35)
+    ctx.move_to(CX - 16, 23)
+    ctx.line_to(CX - 11, 19)
+    ctx.line_to(CX + 11, 19)
+    ctx.line_to(CX + 16, 23)
+    ctx.stroke()
+
+    # Torso body fill
+    ctx.move_to(CX - 11, 19)
+    ctx.line_to(CX - 9, 38)
+    ctx.line_to(CX + 9, 38)
+    ctx.line_to(CX + 11, 19)
+    ctx.close_path()
+    ctx.set_source_rgba(1, 1, 1, 0.15)
+    ctx.fill_preserve()
+    ctx.set_source_rgba(1, 1, 1, 0.3)
+    ctx.set_line_width(1.5)
+    ctx.stroke()
+
+    # Arms
+    ctx.set_line_width(2.5)
+    ctx.set_source_rgba(1, 1, 1, 0.3)
+    ctx.move_to(CX - 16, 23)
+    ctx.line_to(CX - 18, 36)
+    ctx.stroke()
+    ctx.move_to(CX + 16, 23)
+    ctx.line_to(CX + 18, 36)
+    ctx.stroke()
+
+    # Hips
+    ctx.set_line_width(1.5)
+    ctx.move_to(CX - 9, 38)
+    ctx.line_to(CX - 10, 42)
+    ctx.stroke()
+    ctx.move_to(CX + 9, 38)
+    ctx.line_to(CX + 10, 42)
+    ctx.stroke()
+
+    # Legs
+    ctx.set_line_width(2.5)
+    ctx.move_to(CX - 7, 42)
+    ctx.line_to(CX - 8, 58)
+    ctx.stroke()
+    ctx.move_to(CX + 7, 42)
+    ctx.line_to(CX + 8, 58)
+    ctx.stroke()
+
+    # Feet
+    ctx.set_line_width(2)
+    ctx.move_to(CX - 8, 58)
+    ctx.line_to(CX - 12, 60)
+    ctx.stroke()
+    ctx.move_to(CX + 8, 58)
+    ctx.line_to(CX + 12, 60)
+    ctx.stroke()
+
+    return surface
+
+
 ICONS = {
     'action': gen_action,
     'interact': gen_interact,
@@ -374,6 +509,8 @@ ICONS = {
     'map': gen_map,
     'petTeam': gen_petTeam,
     'horseAction': gen_horseAction,
+    'tabCharacter': gen_tabCharacter,
+    'characterSilhouette': gen_characterSilhouette,
 }
 
 

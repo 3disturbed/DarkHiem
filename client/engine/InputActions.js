@@ -34,6 +34,8 @@ export default class InputActions {
     this.horseAction = false;
     this.petTeam = false;
     this.dash = false;
+    this.tabLeft = false;   // LB when panels open (tab switching)
+    this.tabRight = false;  // RB when panels open (tab switching)
 
     // D-pad (for UI navigation)
     this.dpadUp = false;

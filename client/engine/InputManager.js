@@ -93,6 +93,8 @@ export default class InputManager {
       this.actions.mergeButton('secondaryAction', this.gamepad.wasButtonJustPressed(3)); // Y
       this.actions.mergeButton('skill1', this.gamepad.wasButtonJustPressed(4));       // LB
       this.actions.mergeButton('skill2', this.gamepad.wasButtonJustPressed(5));       // RB
+      this.actions.mergeButton('tabLeft', this.gamepad.wasButtonJustPressed(4));      // LB (tab switch)
+      this.actions.mergeButton('tabRight', this.gamepad.wasButtonJustPressed(5));     // RB (tab switch)
       this.actions.mergeButton('skill3', this.gamepad.wasButtonJustPressed(6));       // LT
       this.actions.mergeButton('skill4', this.gamepad.wasButtonJustPressed(7));       // RT
       this.actions.mergeButton('inventory', this.gamepad.wasButtonJustPressed(8));    // Select

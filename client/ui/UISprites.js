@@ -1,6 +1,7 @@
 const UI_ICON_IDS = [
   'action', 'interact', 'cancel', 'inventory', 'dash',
   'questLog', 'skills', 'map', 'petTeam', 'horseAction',
+  'tabCharacter', 'characterSilhouette',
 ];
 
 class UISprites {

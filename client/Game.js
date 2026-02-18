@@ -15,8 +15,8 @@ import ParticleSystem from './effects/ParticleSystem.js';
 import HealthBar from './ui/HealthBar.js';
 import XpBar from './ui/XpBar.js';
 import InventoryPanel from './ui/InventoryPanel.js';
-import EquipmentPanel from './ui/EquipmentPanel.js';
-import StatsPanel from './ui/StatsPanel.js';
+import CharacterTabContent from './ui/CharacterTabContent.js';
+import CharacterPanel from './ui/CharacterPanel.js';
 import PlayerStats from './state/PlayerStats.js';
 import Inventory from './state/Inventory.js';
 import Equipment from './state/Equipment.js';
@@ -94,9 +94,9 @@ export default class Game {
     this.skillBar = new SkillBar();
 
     // UI panels
-    this.inventoryPanel = new InventoryPanel();
-    this.equipmentPanel = new EquipmentPanel();
-    this.statsPanel = new StatsPanel();
+    this.inventoryContent = new InventoryPanel();
+    this.characterContent = new CharacterTabContent();
+    this.characterPanel = new CharacterPanel(this.inventoryContent, this.characterContent);
     this.craftingPanel = new CraftingPanel();
     this.upgradePanel = new UpgradePanel();
     this.skillsPanel = new SkillsPanel();
@@ -316,9 +316,7 @@ export default class Game {
           this.fishingState = null;
           this.fishingMinigame.close();
         }
-        this.inventoryPanel.visible = false;
-        this.equipmentPanel.visible = false;
-        this.statsPanel.visible = false;
+        this.characterPanel.close();
         this.craftingPanel.close();
         this.upgradePanel.close();
         this.skillsPanel.close();
@@ -883,6 +881,9 @@ export default class Game {
       }
     }
 
+    // Update character panel animation
+    this.characterPanel.update(dt);
+
     // Pet battle takes over all input when active
     if (this.inPetBattle) {
       this.petBattlePanel.update(dt);
@@ -1176,18 +1177,18 @@ export default class Game {
       }
     }
 
-    // Toggle inventory/equipment/stats panels with I key
+    // Toggle character panel (inventory / equipment+stats tabs) with I key
     if (actions.inventory) {
-      this.panelsOpen = !this.panelsOpen;
-      this.inventoryPanel.visible = this.panelsOpen;
-      this.equipmentPanel.visible = this.panelsOpen;
-      this.statsPanel.visible = this.panelsOpen;
+      this.panelsOpen = this.characterPanel.toggle();
       if (this.panelsOpen) {
-        this.inventoryPanel.position(r.logicalWidth, r.logicalHeight);
-        this.equipmentPanel.position(r.logicalWidth, r.logicalHeight);
-        this.statsPanel.position(r.logicalWidth, r.logicalHeight);
-        actions.screenTap = false; // prevent same-frame tap from closing
+        this.characterPanel.position(r.logicalWidth, r.logicalHeight);
+        actions.screenTap = false;
       }
+    }
+    // Tab switching with LB/RB (gamepad shoulder buttons)
+    if (this.panelsOpen) {
+      if (actions.tabLeft) this.characterPanel.handleTabSwitch(-1);
+      if (actions.tabRight) this.characterPanel.handleTabSwitch(1);
     }
 
     // Toggle quest log with J key
@@ -1371,15 +1372,13 @@ export default class Game {
       } else if (this.fishingRodOpen) {
         this.fishingRodPanel.close();
         this.fishingRodOpen = false;
-      } else if (this.panelsOpen && this.inventoryPanel.swapSource >= 0) {
-        this.inventoryPanel.cancelSwap();
+      } else if (this.panelsOpen && this.inventoryContent.swapSource >= 0) {
+        this.inventoryContent.cancelSwap();
       } else if (this.contextMenu.visible) {
         this.contextMenu.close();
       } else if (this.panelsOpen) {
         this.panelsOpen = false;
-        this.inventoryPanel.visible = false;
-        this.equipmentPanel.visible = false;
-        this.statsPanel.visible = false;
+        this.characterPanel.close();
       }
     }
 
@@ -1430,18 +1429,10 @@ export default class Game {
       if (actions.dpadUp) this.craftingPanel.selectPrev();
       if (actions.dpadDown) this.craftingPanel.selectNext();
     } else if (this.panelsOpen) {
-      if (actions.dpadUp) {
-        this.inventoryPanel.selectDir(0, -1);
-        this.equipmentPanel.selectPrev();
-        this.statsPanel.selectPrev();
-      }
-      if (actions.dpadDown) {
-        this.inventoryPanel.selectDir(0, 1);
-        this.equipmentPanel.selectNext();
-        this.statsPanel.selectNext();
-      }
-      if (actions.dpadLeft) this.inventoryPanel.selectDir(-1, 0);
-      if (actions.dpadRight) this.inventoryPanel.selectDir(1, 0);
+      if (actions.dpadUp) this.characterPanel.selectDir(0, -1);
+      if (actions.dpadDown) this.characterPanel.selectDir(0, 1);
+      if (actions.dpadLeft) this.characterPanel.selectDir(-1, 0);
+      if (actions.dpadRight) this.characterPanel.selectDir(1, 0);
     }
 
     // Pinch-to-zoom: route to camera or convert to scroll for UI panels
@@ -1481,7 +1472,7 @@ export default class Game {
       } else if (this.craftingOpen) {
         this.craftingPanel.handleScroll(actions.scrollDelta);
       } else if (this.panelsOpen) {
-        this.inventoryPanel.handleScroll(actions.scrollDelta);
+        this.characterPanel.handleScroll(actions.scrollDelta);
       } else {
         this.camera.zoomBy(actions.scrollDelta * 0.2);
       }
@@ -1757,9 +1748,7 @@ export default class Game {
 
     // Track mouse hover for tooltips
     if (this.panelsOpen) {
-      this.inventoryPanel.handleMouseMove(uiMX, uiMY);
-      this.equipmentPanel.handleMouseMove(uiMX, uiMY);
-      this.statsPanel.handleMouseMove(uiMX, uiMY);
+      this.characterPanel.handleMouseMove(uiMX, uiMY);
     }
 
     // Context menu interaction (must come before other panel handlers)
@@ -1775,16 +1764,13 @@ export default class Game {
       }
     }
 
-    // Secondary action (right-click / gamepad Y): open context menu for inventory items
-    if (this.panelsOpen && actions.secondaryAction) {
+    // Secondary action (right-click / gamepad Y): context menu for inventory tab
+    if (this.panelsOpen && actions.secondaryAction && this.characterPanel.activeTab === 0) {
       if (this.input.activeMethod === 'gamepad') {
         const onDrop = (slotIndex, count) => this.network.sendItemDrop(slotIndex, count);
-        this.inventoryPanel.dropSelected(this.inventory, onDrop);
+        this.characterPanel.dropSelected(this.inventory, onDrop);
       } else {
-        const menuDesc = this.inventoryPanel.handleRightClick(
-          uiMX, uiMY,
-          this.inventory
-        );
+        const menuDesc = this.characterPanel.handleRightClick(uiMX, uiMY, this.inventory);
         if (menuDesc) {
           this.contextMenu.open(
             menuDesc.x, menuDesc.y, menuDesc.options, menuDesc.slotIndex,
@@ -1794,34 +1780,27 @@ export default class Game {
       }
     }
 
-    // Handle inventory/equipment/stats panel interaction
+    // Handle character panel interaction (inventory tab + character tab)
     if (this.panelsOpen && (actions.action || actions.screenTap)) {
       const onEquip = (slotIndex) => this.network.sendEquip(slotIndex);
       const onUse = (slotIndex) => this.network.sendItemUse(slotIndex);
       const onDrop = (slotIndex, count) => this.network.sendItemDrop(slotIndex, count);
+      const onSwap = (from, to) => this.network.sendItemMove(from, to);
+      const onUnequip = (slotName) => this.network.sendUnequip(slotName);
+      const onAllocate = (stat) => this.network.sendStatAllocate(stat);
       if (this.input.activeMethod === 'gamepad') {
-        this.inventoryPanel.confirmSelected(this.inventory, onEquip, onUse);
-        this.equipmentPanel.confirmSelected(this.equipment, (slotName) => {
-          this.network.sendUnequip(slotName);
-        });
-        this.statsPanel.confirmSelected(this.playerStats, (stat) => {
-          this.network.sendStatAllocate(stat);
-        });
+        this.characterPanel.confirmSelected(
+          this.inventory, this.equipment, this.playerStats,
+          onEquip, onUse, onUnequip, onAllocate
+        );
       } else {
-        const onSwap = (from, to) => this.network.sendItemMove(from, to);
-        const invResult = this.inventoryPanel.handleClick(uiMX, uiMY, this.inventory, onEquip, onUse, onDrop, onSwap);
-        const equipResult = this.equipmentPanel.handleClick(uiMX, uiMY, this.equipment, (slotName) => {
-          this.network.sendUnequip(slotName);
-        });
-        const statResult = this.statsPanel.handleClick(uiMX, uiMY, this.playerStats, (stat) => {
-          this.network.sendStatAllocate(stat);
-        });
-        if (invResult === 'close' || equipResult === 'close' || statResult === 'close') {
+        const result = this.characterPanel.handleClick(
+          uiMX, uiMY, this.inventory, this.equipment, this.playerStats,
+          onEquip, onUse, onDrop, onSwap, onUnequip, onAllocate
+        );
+        if (result === 'close') {
           this.panelsOpen = false;
-        }
-        // Click outside all panels → close the group
-        if (invResult === false && equipResult === false && statResult === false) {
-          this.panelsOpen = false;
+          this.characterPanel.close();
         }
       }
     }
@@ -2127,9 +2106,7 @@ export default class Game {
     this.skillBar.renderDashIndicator(ctx, this.skills, this.input.getActiveMethod());
 
     // Panels (screen space)
-    this.inventoryPanel.render(ctx, this.inventory);
-    this.equipmentPanel.render(ctx, this.equipment);
-    this.statsPanel.render(ctx, this.playerStats);
+    this.characterPanel.render(ctx, this.inventory, this.equipment, this.playerStats);
     this.craftingPanel.render(ctx, this.inventory);
     this.upgradePanel.render(ctx, this.inventory);
     this.skillsPanel.render(ctx, this.skills, this.playerStats);
@@ -2857,7 +2834,7 @@ export default class Game {
     } else if (action === 'use') {
       this.network.sendItemUse(sourceSlot);
     } else if (action === 'swap') {
-      this.inventoryPanel.swapSource = sourceSlot;
+      this.inventoryContent.swapSource = sourceSlot;
     } else if (action === 'drop1') {
       this.network.sendItemDrop(sourceSlot, 1);
     } else if (action === 'dropAll') {
