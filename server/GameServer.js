@@ -835,6 +835,22 @@ export default class GameServer {
   }
 
   async onPlayerJoin(playerConn) {
+    // Clean up any stale entity/connection for this player (handles reconnect race conditions)
+    const existingEntity = this.entityManager.get(playerConn.id);
+    if (existingEntity) {
+      console.log(`[GameServer] Cleaning up stale entity for reconnecting player ${playerConn.id.slice(0, 8)}`);
+      this.entityManager.remove(playerConn.id);
+    }
+    const existingConn = this.players.get(playerConn.id);
+    if (existingConn && existingConn !== playerConn) {
+      console.log(`[GameServer] Disconnecting stale socket for ${playerConn.id.slice(0, 8)}`);
+      existingConn.connected = false;
+      if (existingConn.socket && existingConn.socket.connected) {
+        existingConn.socket.disconnect(true);
+      }
+      this.players.delete(playerConn.id);
+    }
+
     // Check for existing save
     const saveData = await this.playerRepo.load(playerConn.id);
     let spawnX, spawnY;
@@ -962,6 +978,13 @@ export default class GameServer {
   }
 
   async onPlayerLeave(playerConn) {
+    // Guard: ignore stale disconnect if a newer connection has replaced this one
+    const currentConn = this.players.get(playerConn.id);
+    if (currentConn && currentConn !== playerConn) {
+      console.log(`[GameServer] Ignoring stale disconnect for ${playerConn.name} (${playerConn.id.slice(0, 8)})`);
+      return;
+    }
+
     // Clean up PVP battle state
     if (this.pvpBattleManager) {
       this.pvpBattleManager.onPlayerLeave(playerConn.id);
@@ -985,7 +1008,7 @@ export default class GameServer {
     this.players.delete(playerConn.id);
     const entity = this.entityManager.get(playerConn.id);
     if (entity) {
-      this.entityManager.markForDestroy(entity);
+      this.entityManager.remove(playerConn.id);
     }
     this.io.emit(MSG.PLAYER_LEAVE, { id: playerConn.id });
     console.log(`[GameServer] Player left: ${playerConn.name} (${playerConn.id.slice(0, 8)})`);
