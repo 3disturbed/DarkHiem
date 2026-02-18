@@ -50,6 +50,10 @@ export default class EntityRenderer {
     const half = size / 2;
     const ctx = r.ctx;
 
+    // Doubled sprite draw size, centered horizontally, base at collider y
+    const drawSize = size * 2;
+    const drawHalf = drawSize / 2;
+
     // Boss: pulsing copper glow behind entity
     if (isBoss) {
       const pulse = 0.4 + Math.sin(Date.now() / 400) * 0.15;
@@ -64,10 +68,12 @@ export default class EntityRenderer {
 
     // Try sprite first
     const sprite = enemyId ? enemySprites.get(enemyId) : null;
+    let topY;
     if (sprite) {
       const animMeta = getAnimMeta(sprite);
-      const dx = Math.round(x - half);
-      const dy = Math.round(y - half);
+      const dx = Math.round(x - drawHalf);
+      const dy = Math.round(y - drawSize + half); // base aligned to collider bottom
+      topY = dy;
       if (animMeta) {
         // Animated sprite sheet: animate when moving, freeze frame 0 when still
         const isMoving = aiState === 'patrol' || aiState === 'chase' || aiState === 'flee';
@@ -78,18 +84,19 @@ export default class EntityRenderer {
           ctx.translate(Math.round(x), 0);
           ctx.scale(-1, 1);
           ctx.drawImage(sprite, sx, 0, animMeta.frameWidth, animMeta.frameHeight,
-            -half, dy, size, size);
+            -drawHalf, dy, drawSize, drawSize);
           ctx.restore();
         } else {
           ctx.drawImage(sprite, sx, 0, animMeta.frameWidth, animMeta.frameHeight,
-            dx, dy, size, size);
+            dx, dy, drawSize, drawSize);
         }
       } else {
         // Single-frame sprite
-        ctx.drawImage(sprite, dx, dy, size, size);
+        ctx.drawImage(sprite, dx, dy, drawSize, drawSize);
       }
     } else {
-      // Fallback: colored rectangle
+      // Fallback: colored rectangle at original size
+      topY = y - half;
       r.drawRect(x - half, y - half, size, size, color);
 
       // Outline - red if aggro, gold for boss
@@ -105,17 +112,17 @@ export default class EntityRenderer {
 
     // Name tag — gold for boss
     if (isBoss) {
-      r.drawText(name, x, y - half - 18, '#ffd700', 12 * r.uiScale, 'center');
+      r.drawText(name, x, topY - 18, '#ffd700', 12 * r.uiScale, 'center');
     } else {
-      r.drawText(name, x, y - half - 12, '#ddd', 9 * r.uiScale, 'center');
+      r.drawText(name, x, topY - 12, '#ddd', 9 * r.uiScale, 'center');
     }
 
     // Health bar — wider and copper-tinted for boss
     if (maxHp > 0) {
       if (isBoss) {
-        EntityRenderer.renderHealthBar(r, x, y - half - 8, Math.max(size + 16, 56), 5, hp, maxHp, '#B87333');
+        EntityRenderer.renderHealthBar(r, x, topY - 8, Math.max(size + 16, 56), 5, hp, maxHp, '#B87333');
       } else {
-        EntityRenderer.renderHealthBar(r, x, y - half - 4, Math.max(size, 28), 3, hp, maxHp, '#e74c3c');
+        EntityRenderer.renderHealthBar(r, x, topY - 4, Math.max(size, 28), 3, hp, maxHp, '#e74c3c');
       }
     }
   }
