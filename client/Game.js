@@ -1996,8 +1996,9 @@ export default class Game {
     }
 
     // Clean up removed resources
-    for (const [id] of this.resources) {
+    for (const [id, res] of this.resources) {
       if (!this.network.entities.has(id)) {
+        this.worldManager.depleteResource(res.x, res.y);
         this.resources.delete(id);
       }
     }
