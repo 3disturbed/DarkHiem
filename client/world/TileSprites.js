@@ -26,6 +26,13 @@ const TILE_SPRITE_NAMES = {
   [TILE.LAVA]:         'lava',
   [TILE.OBSIDIAN]:     'obsidian',
   [TILE.CHARRED_STONE]: 'charred_stone',
+
+  // Town
+  [TILE.WALL]:         'wall',
+  [TILE.FLOOR_WOOD]:   'floor_wood',
+  [TILE.FLOOR_STONE]:  'floor_stone',
+  [TILE.DOOR]:         'door',
+  [TILE.MARKET_STALL]: 'market_stall',
 };
 
 class TileSprites {
