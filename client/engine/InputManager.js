@@ -20,7 +20,7 @@ export default class InputManager {
 
     // Poll gamepad
     this.gamepad.update();
-ENsure 
+
     // --- Keyboard + Mouse ---
     const kb = this.keyboard.getMoveAxes();
     if (Math.abs(kb.x) > 0 || Math.abs(kb.y) > 0) {
