@@ -91,6 +91,21 @@ export default class ClientWorldManager {
     return this.chunks.get(`${chunkX},${chunkY}`) || null;
   }
 
+  // Mark a chunk resource as depleted by matching world position
+  depleteResource(worldX, worldY) {
+    const cx = Math.floor(worldX / CHUNK_PIXEL_SIZE);
+    const cy = Math.floor(worldY / CHUNK_PIXEL_SIZE);
+    const chunk = this.chunks.get(`${cx},${cy}`);
+    if (!chunk) return;
+    for (const r of chunk.resources) {
+      if (r.depleted) continue;
+      if (Math.abs(r.x - worldX) < 2 && Math.abs(r.y - worldY) < 2) {
+        r.depleted = true;
+        return;
+      }
+    }
+  }
+
   // Update a single tile (from server tile mining)
   updateTile(chunkX, chunkY, localX, localY, newTileId) {
     const chunk = this.chunks.get(`${chunkX},${chunkY}`);
