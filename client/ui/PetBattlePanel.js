@@ -1600,6 +1600,65 @@ export default class PetBattlePanel {
 
   handleClick(mx, my, width, height, sendAction) {
     if (!this.active || !this.teams) return false;
+
+    // End screen — any tap closes
+    if (this.ended && !this.isAnimating) {
+      return 'close';
+    }
+
+    // Block input during animations or enemy turns
+    if (this.isAnimating || this.activeUnit?.team !== 'a') return true;
+
+    const menuY = height * 0.76;
+    const menuH = height - menuY - 8;
+
+    // Only handle clicks in the menu area
+    if (my < menuY || my > menuY + menuH) return true;
+
+    if (this.menuMode === 'main') {
+      // Main menu: 5 horizontal cells
+      const options = ['attack', 'skills', 'defend', 'flee', 'pass'];
+      const cellW = (width - 24) / options.length;
+      const cellIdx = Math.floor((mx - 12) / cellW);
+      if (cellIdx >= 0 && cellIdx < options.length) {
+        this.menuIndex = cellIdx;
+        this.confirm(sendAction);
+      }
+    } else if (this.menuMode === 'skills') {
+      const unit = this._getMyActiveUnit();
+      if (!unit || !unit.skills) return true;
+      // Back button area (top-left of menu)
+      if (my < menuY + 18) { this.back(); return true; }
+      const startY = menuY + 18;
+      const rowH = Math.min(24, (menuH - 22) / Math.max(1, unit.skills.length));
+      const idx = Math.floor((my - startY) / rowH);
+      if (idx >= 0 && idx < unit.skills.length) {
+        this.menuIndex = idx;
+        this.confirm(sendAction);
+      }
+    } else if (this.menuMode === 'target_enemy') {
+      // Back button area
+      if (my < menuY + 22) { this.back(); return true; }
+      const targets = this.teams?.b?.filter(u => !u.fainted) || [];
+      const startY = menuY + 22;
+      const rowH = Math.min(28, (menuH - 26) / Math.max(1, targets.length));
+      const idx = Math.floor((my - startY) / rowH);
+      if (idx >= 0 && idx < targets.length) {
+        this.menuIndex = idx;
+        this.confirm(sendAction);
+      }
+    } else if (this.menuMode === 'target_ally') {
+      if (my < menuY + 22) { this.back(); return true; }
+      const allies = this.teams?.a?.filter(u => !u.fainted) || [];
+      const startY = menuY + 22;
+      const rowH = Math.min(28, (menuH - 26) / Math.max(1, allies.length));
+      const idx = Math.floor((my - startY) / rowH);
+      if (idx >= 0 && idx < allies.length) {
+        this.menuIndex = idx;
+        this.confirm(sendAction);
+      }
+    }
+
     return true; // Consume click
   }
 }

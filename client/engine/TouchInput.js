@@ -21,6 +21,13 @@ export default class TouchInput {
     this.hasTap = false;
     this._pendingTouches = new Map(); // touchId -> {x, y, time}
 
+    // Touch-drag scroll tracking (for scrollable panels)
+    this._scrollTouchId = null;
+    this._scrollLastY = 0;
+    this._scrollAccum = 0;        // accumulated scroll delta in pixels
+    this.scrollDelta = 0;         // consumed by InputManager each frame
+    this._scrollThreshold = 18;   // pixels per "scroll step"
+
     canvas.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: false });
     canvas.addEventListener('touchmove', (e) => this.onTouchMove(e), { passive: false });
     canvas.addEventListener('touchend', (e) => this.onTouchEnd(e), { passive: false });
@@ -41,8 +48,8 @@ export default class TouchInput {
       const ty = touch.clientY - rect.top;
       const halfW = rect.width / 2;
 
-      // Track all touches for tap detection
-      this._pendingTouches.set(touch.identifier, { x: tx, y: ty, time: performance.now() });
+      // Track all touches for tap detection and scroll origin
+      this._pendingTouches.set(touch.identifier, { x: tx, y: ty, time: performance.now(), lastY: ty });
 
       // Check button zones first
       let hitButton = false;
@@ -92,7 +99,28 @@ export default class TouchInput {
         const dx = tx - pending.x;
         const dy = ty - pending.y;
         if (dx * dx + dy * dy > 15 * 15) {
+          // Touch moved enough to be a drag — start tracking scroll
+          if (this._scrollTouchId === null && touch.identifier !== this.leftStick.touchId && touch.identifier !== this.rightStick.touchId) {
+            this._scrollTouchId = touch.identifier;
+            this._scrollLastY = ty;
+          }
           this._pendingTouches.delete(touch.identifier);
+        }
+      }
+
+      // Accumulate vertical scroll from drag
+      if (touch.identifier === this._scrollTouchId) {
+        const scrollDy = this._scrollLastY - ty; // positive = scroll down (drag up)
+        this._scrollAccum += scrollDy;
+        this._scrollLastY = ty;
+        // Convert accumulated pixels into discrete scroll steps
+        while (this._scrollAccum >= this._scrollThreshold) {
+          this.scrollDelta -= 1; // scroll down
+          this._scrollAccum -= this._scrollThreshold;
+        }
+        while (this._scrollAccum <= -this._scrollThreshold) {
+          this.scrollDelta += 1; // scroll up
+          this._scrollAccum += this._scrollThreshold;
         }
       }
 
@@ -134,6 +162,12 @@ export default class TouchInput {
         this.rightStick.touchId = null;
         this.rightStick.x = 0;
         this.rightStick.y = 0;
+      }
+
+      // Release scroll tracking
+      if (touch.identifier === this._scrollTouchId) {
+        this._scrollTouchId = null;
+        this._scrollAccum = 0;
       }
 
       // Release buttons

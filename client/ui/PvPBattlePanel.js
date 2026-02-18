@@ -700,8 +700,65 @@ export default class PvPBattlePanel {
     ctx.fillText('Press SPACE or ESC to continue', width / 2, menuY + 62);
   }
 
-  handleClick(mx, my, width, height, sendAction) {
+  handleClick(mx, my, width, height, sendAction, sendForfeit) {
     if (!this.active || !this.teams) return false;
+
+    // End screen — any tap closes
+    if (this.ended && !this.isAnimating) {
+      return 'close';
+    }
+
+    // Block input during animations or opponent turns
+    if (this.isAnimating || !this._isMyTurn()) return true;
+
+    const menuY = height * 0.76;
+    const menuH = height - menuY - 8;
+
+    if (my < menuY || my > menuY + menuH) return true;
+
+    const enemyKey = this._getEnemyTeamKey();
+
+    if (this.menuMode === 'main') {
+      const optionCount = 5;
+      const cellW = (width - 24) / optionCount;
+      const cellIdx = Math.floor((mx - 12) / cellW);
+      if (cellIdx >= 0 && cellIdx < optionCount) {
+        this.menuIndex = cellIdx;
+        this.confirm(sendAction, sendForfeit);
+      }
+    } else if (this.menuMode === 'skills') {
+      const unit = this._getMyActiveUnit();
+      if (!unit || !unit.skills) return true;
+      if (my < menuY + 18) { this.back(); return true; }
+      const startY = menuY + 18;
+      const rowH = Math.min(24, (menuH - 22) / Math.max(1, unit.skills.length));
+      const idx = Math.floor((my - startY) / rowH);
+      if (idx >= 0 && idx < unit.skills.length) {
+        this.menuIndex = idx;
+        this.confirm(sendAction, sendForfeit);
+      }
+    } else if (this.menuMode === 'target_enemy') {
+      if (my < menuY + 22) { this.back(); return true; }
+      const targets = this.teams?.[enemyKey]?.filter(u => !u.fainted) || [];
+      const startY = menuY + 22;
+      const rowH = Math.min(28, (menuH - 26) / Math.max(1, targets.length));
+      const idx = Math.floor((my - startY) / rowH);
+      if (idx >= 0 && idx < targets.length) {
+        this.menuIndex = idx;
+        this.confirm(sendAction, sendForfeit);
+      }
+    } else if (this.menuMode === 'target_ally') {
+      if (my < menuY + 22) { this.back(); return true; }
+      const allies = this.teams?.[this.myTeam]?.filter(u => !u.fainted) || [];
+      const startY = menuY + 22;
+      const rowH = Math.min(28, (menuH - 26) / Math.max(1, allies.length));
+      const idx = Math.floor((my - startY) / rowH);
+      if (idx >= 0 && idx < allies.length) {
+        this.menuIndex = idx;
+        this.confirm(sendAction, sendForfeit);
+      }
+    }
+
     return true;
   }
 }

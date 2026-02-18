@@ -885,6 +885,19 @@ export default class Game {
           });
         }
       }
+      // Touch tap: click on menu items directly
+      if (actions.screenTap) {
+        const r = this.renderer;
+        const s = r.uiScale;
+        const tapMX = actions.mouseScreenX / s;
+        const tapMY = actions.mouseScreenY / s;
+        const clickResult = this.petBattlePanel.handleClick(tapMX, tapMY, r.logicalWidth, r.logicalHeight, (action) => {
+          this.petBattlePanel.executeLocalAction(action);
+        });
+        if (clickResult === 'close') {
+          this._closePetBattle();
+        }
+      }
       // Back/close with cancel (Escape)
       if (actions.cancel) {
         if (this.petBattlePanel.ended || this.petBattlePanel.battleEndData) {
@@ -913,6 +926,20 @@ export default class Game {
             (action) => { this.network.sendPvpBattleAction(action); },
             () => { this.network.sendPvpBattleForfeit(); }
           );
+        }
+      }
+      // Touch tap: click on menu items directly
+      if (actions.screenTap) {
+        const r = this.renderer;
+        const s = r.uiScale;
+        const tapMX = actions.mouseScreenX / s;
+        const tapMY = actions.mouseScreenY / s;
+        const clickResult = this.pvpBattlePanel.handleClick(tapMX, tapMY, r.logicalWidth, r.logicalHeight,
+          (action) => { this.network.sendPvpBattleAction(action); },
+          () => { this.network.sendPvpBattleForfeit(); }
+        );
+        if (clickResult === 'close') {
+          this._closePvpBattle();
         }
       }
       if (actions.cancel) {
