@@ -322,7 +322,11 @@ export default class Game {
         this.skillsPanel.close();
       } else {
         this.enemies.delete(String(data.id));
-        this.resources.delete(String(data.id));
+        const removedRes = this.resources.get(String(data.id));
+        if (removedRes) {
+          this.worldManager.depleteResource(removedRes.x, removedRes.y);
+          this.resources.delete(String(data.id));
+        }
       }
     };
 
