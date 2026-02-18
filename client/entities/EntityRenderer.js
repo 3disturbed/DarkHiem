@@ -3,6 +3,7 @@ import stationSprites from './StationSprites.js';
 import enemySprites, { ANIMATED_SPRITES, getAnimMeta } from './EnemySprites.js';
 import npcSprites from './NPCSprites.js';
 import playerSprites from './PlayerSprites.js';
+import resourceSprites from './ResourceSprites.js';
 
 export default class EntityRenderer {
   // Render a player entity
@@ -120,18 +121,23 @@ export default class EntityRenderer {
   }
 
   // Render a resource node entity
-  static renderResource(r, x, y, color, size, name, hp, maxHp) {
+  static renderResource(r, x, y, color, size, name, hp, maxHp, resourceId) {
     const half = size / 2;
+    const ctx = r.ctx;
 
-    // Body (circle shape to distinguish from enemies)
-    r.drawCircle(x, y, half, color);
-
-    // Outline
-    r.ctx.strokeStyle = '#000';
-    r.ctx.lineWidth = 1;
-    r.ctx.beginPath();
-    r.ctx.arc(Math.round(x), Math.round(y), half, 0, Math.PI * 2);
-    r.ctx.stroke();
+    // Try sprite first
+    const sprite = resourceId ? resourceSprites.get(resourceId) : null;
+    if (sprite) {
+      ctx.drawImage(sprite, Math.round(x - half), Math.round(y - half), size, size);
+    } else {
+      // Fallback: colored circle
+      r.drawCircle(x, y, half, color);
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(Math.round(x), Math.round(y), half, 0, Math.PI * 2);
+      ctx.stroke();
+    }
 
     // Name tag
     r.drawText(name, x, y - half - 12, '#c8d6e5', 8 * r.uiScale, 'center');

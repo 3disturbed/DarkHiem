@@ -1,6 +1,7 @@
 import { CHUNK_SIZE, TILE_SIZE } from '../../shared/Constants.js';
 import { TILE_COLORS, SOLID_TILES, TILE } from '../../shared/TileTypes.js';
 import tileSprites from './TileSprites.js';
+import resourceSprites from '../entities/ResourceSprites.js';
 
 const WATER_TILES = new Set([TILE.WATER, TILE.DEEP_WATER, TILE.LAVA, TILE.MARSH_WATER, TILE.BOG, TILE.ICE]);
 const CAVE_TILES = new Set([TILE.CAVE_FLOOR, TILE.CAVE_WALL, TILE.CAVE_ENTRANCE, TILE.CAVE_MOSS, TILE.CAVE_CRYSTAL]);
@@ -293,11 +294,16 @@ export default class ClientChunk {
     for (const r of this.resources) {
       if (r.depleted) continue;
       const half = r.size / 2;
-      ctx.fillStyle = r.color;
-      ctx.fillRect(Math.round(r.x - half), Math.round(r.y - half), r.size, r.size);
-      ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(Math.round(r.x - half), Math.round(r.y - half), r.size, r.size);
+      const sprite = r.id ? resourceSprites.get(r.id) : null;
+      if (sprite) {
+        ctx.drawImage(sprite, Math.round(r.x - half), Math.round(r.y - half), r.size, r.size);
+      } else {
+        ctx.fillStyle = r.color;
+        ctx.fillRect(Math.round(r.x - half), Math.round(r.y - half), r.size, r.size);
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(Math.round(r.x - half), Math.round(r.y - half), r.size, r.size);
+      }
     }
   }
 }

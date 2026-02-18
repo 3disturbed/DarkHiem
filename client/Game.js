@@ -2290,7 +2290,8 @@ export default class Game {
         res.size || 24,
         res.name || 'Resource',
         res.hp ?? 0,
-        res.maxHp ?? 0
+        res.maxHp ?? 0,
+        res.resourceId
       );
     }
   }

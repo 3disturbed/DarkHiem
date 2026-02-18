@@ -7,6 +7,7 @@ import playerSprites from './entities/PlayerSprites.js';
 import skillSprites from './entities/SkillSprites.js';
 import itemSprites from './entities/ItemSprites.js';
 import uiSprites from './ui/UISprites.js';
+import resourceSprites from './entities/ResourceSprites.js';
 
 // Check for valid session before loading game
 const token = localStorage.getItem('darkheim_token');
@@ -58,6 +59,7 @@ function startGame() {
     { name: 'Skills', fn: () => skillSprites.load() },
     { name: 'Items', fn: () => itemSprites.load() },
     { name: 'UI Icons', fn: () => uiSprites.load() },
+    { name: 'Resources', fn: () => resourceSprites.load() },
   ];
 
   let loaded = 0;
