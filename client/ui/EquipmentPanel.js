@@ -39,8 +39,17 @@ export default class EquipmentPanel {
   }
 
   position(canvasWidth, canvasHeight) {
-    this.x = canvasWidth / 2 - 260 - 8 - this.width; // left of inventory (520/2 = 260)
-    this.y = canvasHeight / 2 - this.height / 2 + 40;
+    // On small screens, stack below inventory instead of side-by-side
+    const invW = Math.min(520, canvasWidth - 16);
+    const leftOfInv = canvasWidth / 2 - invW / 2 - 8 - this.width;
+    if (leftOfInv >= 4) {
+      this.x = leftOfInv;
+      this.y = canvasHeight / 2 - this.height / 2 + 20;
+    } else {
+      // Stack: center horizontally, position at top
+      this.x = Math.max(4, (canvasWidth - this.width) / 2 - invW / 4);
+      this.y = Math.max(4, canvasHeight / 2 - this.height / 2 - 10);
+    }
   }
 
   selectPrev() {

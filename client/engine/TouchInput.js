@@ -213,6 +213,12 @@ export default class TouchInput {
     return null;
   }
 
+  consumeScroll() {
+    const delta = this.scrollDelta;
+    this.scrollDelta = 0;
+    return delta;
+  }
+
   update() {
     // Clear justPressed flags
     for (const state of this.buttonStates.values()) {
@@ -226,5 +232,7 @@ export default class TouchInput {
     }
     // Clear tap flag
     this.hasTap = false;
+    // Clear scroll delta
+    this.scrollDelta = 0;
   }
 }

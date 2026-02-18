@@ -41,8 +41,10 @@ export default class ShopPanel {
   }
 
   position(screenWidth, screenHeight) {
-    this.x = (screenWidth - this.width) / 2;
-    this.y = (screenHeight - this.height) / 2;
+    this.width = Math.min(300, screenWidth - 16);
+    this.height = Math.min(380, screenHeight - 40);
+    this.x = Math.max(4, (screenWidth - this.width) / 2);
+    this.y = Math.max(4, (screenHeight - this.height) / 2);
   }
 
   _listHeight() {

@@ -36,8 +36,9 @@ export default class DialogPanel {
   }
 
   position(screenWidth, screenHeight) {
-    this.x = (screenWidth - this.width) / 2;
-    this.y = screenHeight - this.height - 60;
+    this.width = Math.min(340, screenWidth - 16);
+    this.x = Math.max(4, (screenWidth - this.width) / 2);
+    this.y = Math.max(4, screenHeight - this.height - 60);
   }
 
   handleClick(mx, my) {

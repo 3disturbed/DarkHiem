@@ -24,9 +24,10 @@ export default class SkillsPanel {
   }
 
   position(canvasWidth, canvasHeight) {
-    this.x = Math.floor((canvasWidth - this.width) / 2);
-    this.y = 60;
-    this.maxRows = Math.floor((canvasHeight - 140 - this.headerHeight) / this.rowHeight);
+    this.width = Math.min(320, canvasWidth - 16);
+    this.x = Math.max(4, Math.floor((canvasWidth - this.width) / 2));
+    this.y = Math.max(4, Math.min(60, canvasHeight * 0.1));
+    this.maxRows = Math.max(2, Math.floor((canvasHeight - this.y - 80 - this.headerHeight) / this.rowHeight));
   }
 
   _getLearnedList(skills) {

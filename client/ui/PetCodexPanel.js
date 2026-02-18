@@ -60,8 +60,10 @@ export default class PetCodexPanel {
   }
 
   position(screenW, screenH) {
-    this.x = Math.floor((screenW - PANEL_W) / 2);
-    this.y = Math.floor((screenH - PANEL_H) / 2);
+    const w = Math.min(PANEL_W, screenW - 16);
+    const h = Math.min(PANEL_H, screenH - 40);
+    this.x = Math.max(4, Math.floor((screenW - w) / 2));
+    this.y = Math.max(4, Math.floor((screenH - h) / 2));
   }
 
   handleClick(mx, my, sendTeamSet, sendRename) {

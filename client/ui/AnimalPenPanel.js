@@ -67,8 +67,10 @@ export default class AnimalPenPanel {
   }
 
   position(screenW, screenH) {
-    this.x = Math.floor((screenW - this.width) / 2);
-    this.y = Math.floor((screenH - this.height) / 2);
+    this.width = Math.min(320, screenW - 16);
+    this.height = Math.min(440, screenH - 40);
+    this.x = Math.max(4, Math.floor((screenW - this.width) / 2));
+    this.y = Math.max(4, Math.floor((screenH - this.height) / 2));
   }
 
   _refreshPetSlots(petCodex) {

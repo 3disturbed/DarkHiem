@@ -31,8 +31,10 @@ export default class MailJobPanel {
   }
 
   position(screenWidth, screenHeight) {
-    this.x = (screenWidth - this.width) / 2;
-    this.y = (screenHeight - this.height) / 2;
+    this.width = Math.min(320, screenWidth - 16);
+    this.height = Math.min(400, screenHeight - 40);
+    this.x = Math.max(4, (screenWidth - this.width) / 2);
+    this.y = Math.max(4, (screenHeight - this.height) / 2);
   }
 
   handleClick(mx, my) {

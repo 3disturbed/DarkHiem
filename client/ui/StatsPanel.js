@@ -35,8 +35,16 @@ export default class StatsPanel {
   }
 
   position(canvasWidth, canvasHeight) {
-    this.x = canvasWidth / 2 + 260 + 8; // right of inventory (520/2 = 260)
-    this.y = canvasHeight / 2 - this.height / 2 + 40;
+    // On small screens, stack instead of side-by-side with inventory
+    const invW = Math.min(520, canvasWidth - 16);
+    const rightOfInv = canvasWidth / 2 + invW / 2 + 8;
+    if (rightOfInv + this.width <= canvasWidth - 4) {
+      this.x = rightOfInv;
+      this.y = canvasHeight / 2 - this.height / 2 + 20;
+    } else {
+      this.x = Math.max(4, (canvasWidth - this.width) / 2 + invW / 4);
+      this.y = Math.max(4, canvasHeight / 2 - this.height / 2 - 10);
+    }
   }
 
   selectPrev() {

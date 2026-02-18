@@ -45,8 +45,10 @@ export default class FishingRodPanel {
   }
 
   position(canvasWidth, canvasHeight) {
-    this.x = Math.floor(canvasWidth / 2 - PANEL_W / 2);
-    this.y = Math.floor(canvasHeight / 2 - PANEL_H / 2);
+    const w = Math.min(PANEL_W, canvasWidth - 16);
+    const h = Math.min(PANEL_H, canvasHeight - 40);
+    this.x = Math.max(4, Math.floor(canvasWidth / 2 - w / 2));
+    this.y = Math.max(4, Math.floor(canvasHeight / 2 - h / 2));
   }
 
   handleMouseMove(mx, my) {

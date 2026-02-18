@@ -71,6 +71,12 @@ export default class InputManager {
       this.actions.scrollDelta = scroll;
     }
 
+    // Touch scroll (drag-to-scroll on panels)
+    const touchScroll = this.touch.consumeScroll();
+    if (touchScroll !== 0) {
+      this.actions.scrollDelta += touchScroll;
+    }
+
     // --- Gamepad ---
     if (this.gamepad.connected) {
       const gpMove = this.gamepad.getMoveAxes();
@@ -111,6 +117,13 @@ export default class InputManager {
       this.actions.mergeButton('cancel', this.touch.wasButtonJustPressed('cancel'));
       this.actions.mergeButton('inventory', this.touch.wasButtonJustPressed('inventory'));
       this.actions.mergeButton('dash', this.touch.wasButtonJustPressed('dash'));
+
+      // Toolbar buttons (quest log, skills, map, pet team, chat)
+      this.actions.mergeButton('questLog', this.touch.wasButtonJustPressed('questLog'));
+      this.actions.mergeButton('skills', this.touch.wasButtonJustPressed('skills'));
+      this.actions.mergeButton('map', this.touch.wasButtonJustPressed('map'));
+      this.actions.mergeButton('petTeam', this.touch.wasButtonJustPressed('petTeam'));
+      this.actions.mergeButton('horseAction', this.touch.wasButtonJustPressed('horseAction'));
 
       // Screen tap: any quick tap provides coordinates for UI panel clicks
       if (this.touch.hasTap) {

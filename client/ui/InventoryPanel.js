@@ -60,8 +60,19 @@ export default class InventoryPanel {
   }
 
   position(canvasWidth, canvasHeight) {
-    this.x = canvasWidth / 2 - this.width / 2;
-    this.y = canvasHeight / 2 - this.height / 2 + 40;
+    // Responsive sizing: shrink panel to fit small screens
+    if (canvasWidth < PANEL_W + 20) {
+      this.width = canvasWidth - 16;
+    } else {
+      this.width = PANEL_W;
+    }
+    if (canvasHeight < PANEL_H + 80) {
+      this.height = canvasHeight - 60;
+    } else {
+      this.height = PANEL_H;
+    }
+    this.x = Math.max(4, (canvasWidth - this.width) / 2);
+    this.y = Math.max(4, (canvasHeight - this.height) / 2 + 20);
   }
 
   // API compat: selectedSlot returns the real inventory slot index of the selected item

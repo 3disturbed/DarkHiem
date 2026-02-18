@@ -73,8 +73,8 @@ export default class ChestPanel {
   }
 
   position(screenWidth, screenHeight) {
-    this.x = Math.floor((screenWidth - this.width) / 2);
-    this.y = Math.floor((screenHeight - this.height) / 2);
+    this.x = Math.max(4, Math.floor((screenWidth - this.width) / 2));
+    this.y = Math.max(4, Math.floor((screenHeight - this.height) / 2));
   }
 
   // ─── Quick action helpers ──────────────────────────────

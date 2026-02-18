@@ -13,6 +13,15 @@ export default class TouchControls {
       { id: 'inventory', label: 'I', color: '#f39c12' },
       { id: 'dash',      label: 'D', color: '#3498db' },
     ];
+
+    // Top toolbar buttons for quick access (touch-only)
+    this.toolbarButtons = [
+      { id: 'questLog',  label: 'Q', color: '#2ecc71' },
+      { id: 'skills',    label: 'K', color: '#9b59b6' },
+      { id: 'map',        label: 'M', color: '#1abc9c' },
+      { id: 'petTeam',    label: 'P', color: '#e67e22' },
+      { id: 'horseAction',label: 'Z', color: '#8e44ad' },
+    ];
   }
 
   show() { this.visible = true; this.updateButtonZones(); }
@@ -24,7 +33,7 @@ export default class TouchControls {
     const r = Math.max(TOUCH_MIN_TARGET / 2, 28);
     const pad = 16;
 
-    // Button positions - right side, diamond layout
+    // Action button positions - right side, diamond layout
     const baseX = w - r - pad - 60;
     const baseY = h - r - pad - 100;
 
@@ -35,6 +44,19 @@ export default class TouchControls {
       { id: 'inventory', x: baseX - 60, y: baseY,       radius: r },      // left
       { id: 'dash',      x: baseX + 60, y: baseY + 60,  radius: r },      // below action
     ];
+
+    // Toolbar buttons - top-left row, small circular buttons
+    const tbR = Math.max(TOUCH_MIN_TARGET / 2, 20);
+    const tbGap = tbR * 2 + 8;
+    const tbY = pad + tbR + 30; // below fullscreen button area
+    for (let i = 0; i < this.toolbarButtons.length; i++) {
+      zones.push({
+        id: this.toolbarButtons[i].id,
+        x: pad + tbR + i * tbGap,
+        y: tbY,
+        radius: tbR,
+      });
+    }
 
     this.buttonZones = zones;
     this.touchInput.setButtonZones(zones);
@@ -80,8 +102,8 @@ export default class TouchControls {
       ctx.fill();
     }
 
-    // Draw buttons
-    for (let i = 0; i < this.buttonZones.length; i++) {
+    // Draw action buttons (diamond layout)
+    for (let i = 0; i < this.buttons.length; i++) {
       const zone = this.buttonZones[i];
       const btn = this.buttons[i];
       const pressed = this.touchInput.isButtonDown(zone.id);
@@ -95,6 +117,26 @@ export default class TouchControls {
       ctx.globalAlpha = pressed ? 1.0 : 0.6;
       ctx.fillStyle = '#fff';
       ctx.font = `${16 / s}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(btn.label, zone.x / s, zone.y / s);
+    }
+
+    // Draw toolbar buttons (top-left row)
+    for (let i = 0; i < this.toolbarButtons.length; i++) {
+      const zone = this.buttonZones[this.buttons.length + i];
+      const btn = this.toolbarButtons[i];
+      const pressed = this.touchInput.isButtonDown(zone.id);
+
+      ctx.globalAlpha = pressed ? 0.65 : 0.3;
+      ctx.fillStyle = btn.color;
+      ctx.beginPath();
+      ctx.arc(zone.x / s, zone.y / s, zone.radius / s, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.globalAlpha = pressed ? 1.0 : 0.55;
+      ctx.fillStyle = '#fff';
+      ctx.font = `${12 / s}px monospace`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(btn.label, zone.x / s, zone.y / s);

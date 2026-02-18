@@ -553,7 +553,21 @@ export default class Game {
             panelQuest.state = 'active';
           }
           panelQuest.progress = data.objectives;
+          // Check if all objectives are complete — mark as ready for hand-in
+          if (panelQuest.state === 'active' && panelQuest.objectives) {
+            const allDone = panelQuest.objectives.every((obj, i) => {
+              const prog = data.objectives[i];
+              return prog && prog.current >= (prog.required || obj.required);
+            });
+            if (allDone) {
+              panelQuest.state = 'ready';
+            }
+          }
         }
+      }
+      // Also refresh quest log panel if open in log mode
+      if (this.questPanelOpen && this.questPanel.mode === 'log') {
+        this._refreshQuestLogPanel();
       }
       // Show floating progress text
       if (this.localPlayer) {
@@ -574,8 +588,15 @@ export default class Game {
     this.network.onQuestComplete = (data) => {
       this.questLog.markCompleted(data.questId);
       if (this.questPanelOpen && this.questPanel.mode === 'npc') {
-        this.questPanel.close();
-        this.questPanelOpen = false;
+        // Refresh NPC quest panel — remove completed quest and show updated list
+        this.questPanel.quests = this.questPanel.quests.filter(q => q.id !== data.questId);
+        if (this.questPanel.selectedIndex >= this.questPanel.quests.length) {
+          this.questPanel.selectedIndex = Math.max(0, this.questPanel.quests.length - 1);
+        }
+      }
+      // Refresh quest log if open
+      if (this.questPanelOpen && this.questPanel.mode === 'log') {
+        this._refreshQuestLogPanel();
       }
       if (this.localPlayer) {
         this.damageNumbers.add(
@@ -832,6 +853,13 @@ export default class Game {
     if (this.input.isTouchDevice()) {
       this.touchControls.show();
     }
+
+    // Re-calculate touch button zones on resize/orientation change
+    window.addEventListener('resize', () => {
+      if (this.touchControls.visible) {
+        this.touchControls.updateButtonZones();
+      }
+    });
 
     this.loop.start();
     console.log('[Game] Started');
@@ -1561,6 +1589,10 @@ export default class Game {
     if (this.questPanelOpen) {
       this.questPanel.handleMouseMove(uiMX, uiMY);
       if (actions.action || actions.screenTap) {
+        // Refresh quest log data before handling click so buttons are up-to-date
+        if (this.questPanel.mode === 'log') {
+          this._refreshQuestLogPanel();
+        }
         const result = this.questPanel.handleClick(uiMX, uiMY);
         if (result) {
           if (result.action === 'close') {
@@ -2191,6 +2223,16 @@ export default class Game {
         }
       }
     }
+  }
+
+  _refreshQuestLogPanel() {
+    if (!this.questPanelOpen || this.questPanel.mode !== 'log') return;
+    const scrollOffset = this.questPanel.scrollOffset;
+    const selectedIndex = this.questPanel.selectedIndex;
+    this.questPanel.openQuestLog(this.questLog.getActiveQuests(), this.questLog.getCompletedQuests());
+    this.questPanel.scrollOffset = scrollOffset;
+    this.questPanel.selectedIndex = Math.min(selectedIndex, this.questPanel.quests.length - 1);
+    this.questPanel.position(this.renderer.logicalWidth, this.renderer.logicalHeight);
   }
 
   _closePvpBattle() {
