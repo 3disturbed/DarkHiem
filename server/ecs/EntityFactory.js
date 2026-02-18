@@ -147,7 +147,7 @@ export default class EntityFactory {
       armor: config.armor || 0,
     }));
 
-    entity.addComponent(new AIComponent({
+    const ai = new AIComponent({
       behavior: config.behavior || 'aggressive',
       aggroRange: config.aggroRange || 160,
       deaggroRange: config.deaggroRange || 288,
@@ -155,7 +155,8 @@ export default class EntityFactory {
       homeX: spawnData.x,
       homeY: spawnData.y,
       leashRange: config.leashRange || 384,
-    }));
+    });
+    entity.addComponent(ai);
 
     const loot = new LootTableComponent(config.drops || []);
     loot.xpReward = config.xpReward || 0;
