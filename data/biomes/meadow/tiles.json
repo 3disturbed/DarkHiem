@@ -2,6 +2,5 @@
   "baseTile": 0,
   "tileRules": [
     { "condition": "elevation < 1 AND moisture > -1", "tile": 0, "solid": false }
-
   ]
 }
