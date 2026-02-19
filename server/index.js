@@ -94,7 +94,7 @@ app.get('/api/session', requireAuth, async (req, res) => {
 const gameServer = new GameServer(io);
 const socketManager = new SocketManager(io, gameServer, authManager);
 
-const PORT = process.env.PORT || 80;
+const PORT = process.env.PORT || 3080;
 
 async function boot() {
   await authManager.init();

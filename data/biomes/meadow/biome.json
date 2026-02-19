@@ -10,8 +10,8 @@
   "terrain": {
     "elevationScale": 0.02,
     "moistureScale": 0.03,
-    "treeChance": 0.08,
-    "rockChance": 0.03,
+    "treeChance": 0.04,
+    "rockChance": 0.02,
     "waterLevel": 0.3,
     "zones": {
       "enabled": true,
@@ -23,7 +23,7 @@
     "caveThreshold": 0.32,
     "caveMinElevation": 0.55,
     "caveMaxElevation": 0.85,
-    "caveScale": 0.5,
+    "caveScale": 5,
     "caveMossChance": 0.3,
     "caveCrystalChance": 0.1
   },
