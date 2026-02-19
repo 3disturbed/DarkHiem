@@ -89,7 +89,7 @@ export default class SpawnSystem extends System {
         const shuffled = [...enemySpawns].sort(() => Math.random() - 0.5);
         for (let i = 0; i < Math.min(toSpawn, shuffled.length); i++) {
           const sp = shuffled[i];
-          const spawnPos = this._getReachableSpawnPos(sp.x, sp.y, sp.spawnRadius || 64, worldManager);
+          const spawnPos = this._getReachableSpawnPos(sp.x, sp.y, sp.spawnRadius || 256, worldManager);
           const enemy = EntityFactory.createEnemy({ ...sp, x: spawnPos.x, y: spawnPos.y });
 
           // 5% chance to spawn as passive variant if creature is in PET_DB

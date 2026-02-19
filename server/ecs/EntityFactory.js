@@ -154,7 +154,7 @@ export default class EntityFactory {
       attackRange: config.size ? config.size + 12 : 36,
       homeX: spawnData.x,
       homeY: spawnData.y,
-      leashRange: config.leashRange || 384,
+      leashRange: config.leashRange || 640,
     });
     entity.addComponent(ai);
 

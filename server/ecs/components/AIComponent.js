@@ -22,7 +22,7 @@ export default class AIComponent extends Component {
     // Home position (spawn point) for leashing
     this.homeX = options.homeX || 0;
     this.homeY = options.homeY || 0;
-    this.leashRange = options.leashRange || 384;
+    this.leashRange = options.leashRange || 640;
 
     // Timers
     this.stateTimer = 0;
@@ -30,6 +30,6 @@ export default class AIComponent extends Component {
     this.patrolDirX = 0;
     this.patrolDirY = 0;
     this.idleDuration = 2 + Math.random() * 3;
-    this.patrolDuration = 1.5 + Math.random() * 2;
+    this.patrolDuration = 2 + Math.random() * 2;
   }
 }

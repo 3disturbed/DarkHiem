@@ -21,7 +21,7 @@ export default class PatrolBehavior {
       const angle = Math.random() * Math.PI * 2;
       ai.patrolDirX = Math.cos(angle);
       ai.patrolDirY = Math.sin(angle);
-      ai.patrolDuration = 1 + Math.random() * 2;
+      ai.patrolDuration = 2 + Math.random() * 2;
     }
 
     // Stay near home
@@ -29,13 +29,13 @@ export default class PatrolBehavior {
     const dy = pos.y - ai.homeY;
     const distHome = Math.sqrt(dx * dx + dy * dy);
 
-    if (distHome > ai.leashRange * 0.5) {
+    if (distHome > ai.leashRange * 0.65) {
       // Steer back toward home
       ai.patrolDirX = -dx / distHome;
       ai.patrolDirY = -dy / distHome;
     }
 
-    vel.dx = ai.patrolDirX * vel.speed * 0.4;
-    vel.dy = ai.patrolDirY * vel.speed * 0.4;
+    vel.dx = ai.patrolDirX * vel.speed * 0.5;
+    vel.dy = ai.patrolDirY * vel.speed * 0.5;
   }
 }
