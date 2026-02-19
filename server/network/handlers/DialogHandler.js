@@ -117,6 +117,15 @@ export default class DialogHandler {
       return;
     }
 
+    if (choice.action === 'start_npc_pet_battle') {
+      this.dialogStates.delete(player.id);
+      player.emit(MSG.DIALOG_END, { npcId: state.npcId });
+      if (this.gameServer.petBattleManager) {
+        this.gameServer.petBattleManager.startNpcBattle(player, state.npcId);
+      }
+      return;
+    }
+
     if (choice.action === 'heal_pets') {
       this._healAllPets(player, entity);
       // Stay in dialog so player can continue talking

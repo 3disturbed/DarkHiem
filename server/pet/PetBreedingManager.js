@@ -353,6 +353,11 @@ export default class PetBreedingManager {
       message: `${targetPet.nickname || petDef?.name} tiered up to T${targetPet.tierUp}! (+${targetPet.tierUp * 20}% stats)`,
       sender: 'System',
     });
+
+    // Track tier-up for quest objectives
+    if (this.gameServer.questTrackingSystem) {
+      this.gameServer.questTrackingSystem.onPetTierUp(playerConn.id, targetPet.petId, targetPet.tierUp);
+    }
   }
 
   _findNearestPen(pos) {

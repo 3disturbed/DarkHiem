@@ -255,6 +255,70 @@
         }
       }
     },
+    "bjorn_harebane_dialog": {
+      "startNode": "greeting",
+      "nodes": {
+        "greeting": {
+          "text": "Well I'll be frozen in the fjord... Astrid found herself another cub.",
+          "choices": [
+            { "text": "Who are you?", "nextNode": "who_are_you" },
+            { "text": "Do you have any work for me?", "action": "show_quests" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        },
+        "who_are_you": {
+          "text": "Bjorn Harebane. Best rabbit trainer in Darkheim. (Astrid, calmly: Debatable.)",
+          "choices": [
+            { "text": "Tell me more.", "nextNode": "about_training" },
+            { "text": "Got any challenges for me?", "action": "show_quests" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        },
+        "about_training": {
+          "text": "Bjorn circles you, inspecting your pet. \"Tier 1? Fresh capture? Hah. You planning to win battles or knit it a scarf?\"",
+          "choices": [
+            { "text": "It will grow.", "nextNode": "it_will_grow" },
+            { "text": "Show me what you've got.", "action": "show_quests" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        },
+        "it_will_grow": {
+          "text": "Everything grows. Few become dangerous. Tell you what, cub. Finish your ten rabbits. Then face me. No killing blows from your own hands. Let your pets do the work.",
+          "choices": [
+            { "text": "Challenge accepted.", "action": "show_quests" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        },
+        "pre_battle": {
+          "text": "Now we test you. Three rounds. No potions. No cowardice. (Astrid: Remember what I taught you. Patience wins wars.)",
+          "choices": [
+            { "text": "Let's fight.", "action": "start_npc_pet_battle" },
+            { "text": "Not yet.", "action": "close" }
+          ]
+        },
+        "post_battle_win": {
+          "text": "Bjorn kneels, laughing loudly. \"HA! That's what I wanted to see!\" He stands and offers his hand. \"You didn't panic. Didn't rush. That's trainer blood. But listen closely. Wild rabbits are nothing. Tier 2 is where it begins.\"",
+          "choices": [
+            { "text": "What's next?", "action": "show_quests" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        },
+        "pen_building": {
+          "text": "Bjorn watches you. \"You're serious about this.\" You reply: \"I don't half-build.\" Bjorn grins. \"Good. Because once that rabbit hits Tier 2... We rematch. And next time? I won't hold back.\"",
+          "choices": [
+            { "text": "I'll be ready.", "action": "show_quests" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        },
+        "tier2_achieved": {
+          "text": "Bjorn whistles sharply. His rabbits stand alert. \"Now THAT... is respectable.\" (Astrid: The cub has teeth now.) Bjorn smirks. \"Tier 2 rabbit? Super cool. You're officially a pro trainer in my book. But don't get comfortable. Darkheim has stronger beasts. And I plan to catch them first.\"",
+          "choices": [
+            { "text": "We'll see about that.", "action": "close" },
+            { "text": "Farewell.", "action": "close" }
+          ]
+        }
+      }
+    },
     "postmaster_paul_dialog": {
       "startNode": "greeting",
       "nodes": {

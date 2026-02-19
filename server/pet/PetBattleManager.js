@@ -4,10 +4,18 @@ import PlayerComponent from '../ecs/components/PlayerComponent.js';
 
 let battleIdCounter = 0;
 
+const NPC_BATTLE_TEAMS = {
+  bjorn_harebane: [
+    { petId: 'rabbit', level: 5, nickname: "Bjorn's Champion" },
+    { petId: 'rabbit', level: 4, nickname: "Bjorn's Runner" },
+    { petId: 'rabbit', level: 3, nickname: "Bjorn's Scout" },
+  ],
+};
+
 export default class PetBattleManager {
   constructor(gameServer) {
     this.gameServer = gameServer;
-    this.activeBattles = new Map(); // playerId -> { playerConn, wildTeam, teamPetsCount, battleId }
+    this.activeBattles = new Map(); // playerId -> { playerConn, wildTeam, teamPetsCount, battleId, mode, npcId }
   }
 
   register(router) {
@@ -123,6 +131,77 @@ export default class PetBattleManager {
     return true;
   }
 
+  startNpcBattle(playerConn, npcId) {
+    const teamDef = NPC_BATTLE_TEAMS[npcId];
+    if (!teamDef) {
+      playerConn.emit(MSG.CHAT_RECEIVE, { message: 'This NPC does not have a battle team.', sender: 'System' });
+      return false;
+    }
+
+    const entity = this.gameServer.getPlayerEntity(playerConn.id);
+    if (!entity) return false;
+
+    const pc = entity.getComponent(PlayerComponent);
+    if (!pc) return false;
+
+    if (pc.activeBattle || this.activeBattles.has(playerConn.id)) return false;
+
+    // Collect player team from codex
+    const teamPets = [];
+    for (const codexIdx of pc.petTeam) {
+      if (codexIdx === null || codexIdx === undefined) continue;
+      const petData = pc.petCodex[codexIdx];
+      if (!petData || !petData.petId || petData.fainted) continue;
+      teamPets.push(petData);
+    }
+
+    if (teamPets.length === 0) {
+      playerConn.emit(MSG.CHAT_RECEIVE, { message: 'No healthy pets in your team!', sender: 'System' });
+      return false;
+    }
+
+    // Build NPC team from definition
+    const npcTeam = teamDef.map(def => {
+      const stats = getPetStats(def.petId, def.level);
+      return {
+        petId: def.petId,
+        nickname: def.nickname,
+        level: def.level,
+        currentHp: stats.hp,
+        maxHp: stats.hp,
+        learnedSkills: getRandomPetSkills(def.petId, def.level),
+        fainted: false,
+      };
+    });
+
+    const battleId = `npc_${battleIdCounter++}`;
+    const session = { playerConn, wildTeam: npcTeam, teamPetsCount: teamPets.length, battleId, mode: 'npc', npcId };
+    this.activeBattles.set(playerConn.id, session);
+    pc.activeBattle = battleId;
+
+    playerConn.emit(MSG.PET_BATTLE_START, {
+      battleId,
+      mode: 'npc',
+      npcId,
+      teamA: teamPets.map(p => ({
+        petId: p.petId,
+        nickname: p.nickname,
+        level: p.level,
+        xp: p.xp || 0,
+        currentHp: p.currentHp,
+        maxHp: p.maxHp,
+        learnedSkills: p.learnedSkills || [],
+        fainted: p.fainted || false,
+        isRare: p.isRare || false,
+        tierUp: p.tierUp || 0,
+        bonusStats: p.bonusStats || 0,
+      })),
+      teamB: npcTeam,
+    });
+
+    return true;
+  }
+
   handleReport(playerConn, data) {
     const session = this.activeBattles.get(playerConn.id);
     if (!session) return;
@@ -223,9 +302,22 @@ export default class PetBattleManager {
       }
     }
 
-    // Capture defeated wild creatures on win
+    // Track pet battle kills and NPC battle wins for quests
+    if (result === 'win_a' && this.gameServer.questTrackingSystem) {
+      const qts = this.gameServer.questTrackingSystem;
+      // Track each defeated creature for pet_battle_kill objectives
+      for (const enemy of session.wildTeam) {
+        qts.onPetBattleKill(playerConn.id, enemy.petId);
+      }
+      // Track NPC pet battle win
+      if (session.mode === 'npc' && session.npcId) {
+        qts.onNpcPetBattleWin(playerConn.id, session.npcId);
+      }
+    }
+
+    // Capture defeated wild creatures on win (PvE only, not NPC battles)
     let captured = false;
-    if (result === 'win_a' && pc) {
+    if (result === 'win_a' && pc && session.mode !== 'npc') {
       for (const enemy of session.wildTeam) {
         const petDef = PET_DB[enemy.petId];
         if (!petDef) continue;

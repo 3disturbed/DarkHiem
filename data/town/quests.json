@@ -299,6 +299,54 @@
       "prerequisiteQuests": ["quest_deep_water_fishing"]
     },
     {
+      "id": "quest_rabbit_trial",
+      "name": "The Rabbit Trial",
+      "description": "Bjorn Harebane challenges you to defeat 10 rabbits using only your pets. No killing blows from your own hands.",
+      "giverNpcId": "bjorn_harebane",
+      "turnInNpcId": "bjorn_harebane",
+      "objectives": [
+        { "type": "pet_battle_kill", "target": "rabbit", "required": 10, "description": "Defeat 10 Rabbits in Pet Battles" }
+      ],
+      "rewards": { "xp": 50, "items": [{ "itemId": "wooden_cage", "count": 3 }, { "itemId": "gold", "count": 25 }] },
+      "prerequisiteQuests": []
+    },
+    {
+      "id": "quest_rival_meadow",
+      "name": "Rival of the Meadow",
+      "description": "Face Bjorn Harebane in a pet battle. Three rounds. No potions. No cowardice.",
+      "giverNpcId": "bjorn_harebane",
+      "turnInNpcId": "bjorn_harebane",
+      "objectives": [
+        { "type": "npc_pet_battle", "target": "bjorn_harebane", "required": 1, "description": "Defeat Bjorn Harebane in a Pet Battle" }
+      ],
+      "rewards": { "xp": 100, "items": [{ "itemId": "pet_salve", "count": 5 }, { "itemId": "gold", "count": 50 }] },
+      "prerequisiteQuests": ["quest_rabbit_trial"]
+    },
+    {
+      "id": "quest_build_pen",
+      "name": "Build Your Pen",
+      "description": "Bjorn says a real trainer needs a proper pen. Build an Animal Pen to house and breed your creatures.",
+      "giverNpcId": "bjorn_harebane",
+      "turnInNpcId": "bjorn_harebane",
+      "objectives": [
+        { "type": "craft", "target": "animal_pen", "required": 1, "description": "Build an Animal Pen" }
+      ],
+      "rewards": { "xp": 75, "items": [{ "itemId": "raw_meat", "count": 10 }, { "itemId": "berry", "count": 10 }, { "itemId": "gold", "count": 30 }] },
+      "prerequisiteQuests": ["quest_rival_meadow"]
+    },
+    {
+      "id": "quest_tier2_rabbit",
+      "name": "Rise to Tier 2",
+      "description": "Train your rabbit to Tier 2. Bjorn says that's where it really begins.",
+      "giverNpcId": "bjorn_harebane",
+      "turnInNpcId": "bjorn_harebane",
+      "objectives": [
+        { "type": "pet_tier", "target": "rabbit", "required": 2, "description": "Upgrade a Rabbit to Tier 2" }
+      ],
+      "rewards": { "xp": 150, "items": [{ "itemId": "iron_cage", "count": 1 }, { "itemId": "gold", "count": 75 }] },
+      "prerequisiteQuests": ["quest_build_pen"]
+    },
+    {
       "id": "quest_stat_reset",
       "name": "Realignment of Spirit",
       "description": "The Wise Old Man will reset your stat allocations, returning all spent points.",

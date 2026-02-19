@@ -277,6 +277,18 @@
       "interactRange": 64
     },
     {
+      "id": "bjorn_harebane",
+      "name": "Bjorn Harebane",
+      "type": "quest_giver",
+      "x": 860,
+      "y": 1060,
+      "color": "#a0522d",
+      "size": 26,
+      "dialogId": "bjorn_harebane_dialog",
+      "questIds": ["quest_rabbit_trial", "quest_rival_meadow", "quest_build_pen", "quest_tier2_rabbit"],
+      "interactRange": 64
+    },
+    {
       "id": "postmaster_paul",
       "name": "Postmaster Paul",
       "type": "quest_giver",

@@ -142,4 +142,109 @@ export default class QuestTrackingSystem extends System {
       }
     }
   }
+
+  // Called when a player wins a pet battle — check pet_battle_kill objectives
+  onPetBattleKill(playerId, petId) {
+    const entity = this.gameServer.entityManager.get(playerId);
+    if (!entity) return;
+
+    const questComp = entity.getComponent(QuestComponent);
+    if (!questComp) return;
+
+    const playerConn = this.gameServer.players.get(playerId);
+    if (!playerConn) return;
+
+    for (const [questId, quest] of questComp.activeQuests) {
+      let changed = false;
+      for (let i = 0; i < quest.objectives.length; i++) {
+        const obj = quest.objectives[i];
+        if (obj.type === 'pet_battle_kill' && obj.target === petId && obj.current < obj.required) {
+          obj.current++;
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        playerConn.emit(MSG.QUEST_PROGRESS, {
+          questId,
+          objectives: quest.objectives.map(o => ({
+            type: o.type,
+            target: o.target,
+            current: o.current,
+            required: o.required,
+          })),
+        });
+      }
+    }
+  }
+
+  // Called when a player wins an NPC pet battle — check npc_pet_battle objectives
+  onNpcPetBattleWin(playerId, npcId) {
+    const entity = this.gameServer.entityManager.get(playerId);
+    if (!entity) return;
+
+    const questComp = entity.getComponent(QuestComponent);
+    if (!questComp) return;
+
+    const playerConn = this.gameServer.players.get(playerId);
+    if (!playerConn) return;
+
+    for (const [questId, quest] of questComp.activeQuests) {
+      let changed = false;
+      for (let i = 0; i < quest.objectives.length; i++) {
+        const obj = quest.objectives[i];
+        if (obj.type === 'npc_pet_battle' && obj.target === npcId && obj.current < obj.required) {
+          obj.current++;
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        playerConn.emit(MSG.QUEST_PROGRESS, {
+          questId,
+          objectives: quest.objectives.map(o => ({
+            type: o.type,
+            target: o.target,
+            current: o.current,
+            required: o.required,
+          })),
+        });
+      }
+    }
+  }
+
+  // Called when a player tiers up a pet — check pet_tier objectives
+  onPetTierUp(playerId, petId, newTier) {
+    const entity = this.gameServer.entityManager.get(playerId);
+    if (!entity) return;
+
+    const questComp = entity.getComponent(QuestComponent);
+    if (!questComp) return;
+
+    const playerConn = this.gameServer.players.get(playerId);
+    if (!playerConn) return;
+
+    for (const [questId, quest] of questComp.activeQuests) {
+      let changed = false;
+      for (let i = 0; i < quest.objectives.length; i++) {
+        const obj = quest.objectives[i];
+        if (obj.type === 'pet_tier' && obj.target === petId && newTier > obj.current) {
+          obj.current = Math.min(newTier, obj.required);
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        playerConn.emit(MSG.QUEST_PROGRESS, {
+          questId,
+          objectives: quest.objectives.map(o => ({
+            type: o.type,
+            target: o.target,
+            current: o.current,
+            required: o.required,
+          })),
+        });
+      }
+    }
+  }
 }
